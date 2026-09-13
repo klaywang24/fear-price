@@ -2972,7 +2972,7 @@
         </div>
         ${senti.vxn ? `
         <div class="senti-card">
-          <div class="lc-name">纳指恐慌溢价 <span>VXN ÷ VIX</span></div>
+          <div class="lc-name">纳指波动溢价 <span>VXN ÷ VIX</span></div>
           <div class="lc-val">${senti.vxn.current.toFixed(2)}</div>
           <div class="lc-meta"><span class="nw"><span>当前 VXN</span> <b>${senti.vxn.vxn.toFixed(1)}</b></span> · <span class="nw"><span>全史百分位</span> <b>${senti.vxn.pctile.toFixed(0)}</b></span><br><span>越高 = 市场为纳指波动付的保费越贵</span></div>
         </div>` : ""}
