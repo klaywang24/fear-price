@@ -474,7 +474,7 @@
         <div class="stat-strip" id="${basket}-fd-dash-cards"></div>
       </div>
       <div class="chapter" id="${basket}-fd-profit">
-        <div class="chapter-head"><span class="chapter-no"></span><h2>利润基本面</h2></div>
+        <div class="chapter-head"><span class="chapter-no"></span><h2>利润这条线</h2></div>
         <p class="chapter-q">股价背后，利润跟上了吗？</p>
         <div class="card"><h3>EPS（TTM · 季频）</h3><div class="chart short" id="${basket}-fd-eps"></div></div>
         <div class="grid-2">
@@ -2076,7 +2076,7 @@
     };
   }
 
-  // LEAPS 净值序列（净值曲线与滚动年化共用）：每次窗口首日买入纳指 100 持有 12 个月，
+  // LEAPS 净值序列（净值曲线与滚动矩阵共用）：每次窗口首日买入纳指 100 持有 12 个月，
   // 持有期内新窗口跳过、空仓期记零、不计成本
   async function leapsEquitySeries() {
     const lp = await load("leaps");

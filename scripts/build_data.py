@@ -886,7 +886,7 @@ CBOE_HIST = "https://cdn.cboe.com/api/global/us_indices/daily_prices/{}_History.
 def build_sentiment(vix_close: pd.Series, vxn_close: pd.Series = None):
     """情绪仪表盘：CNN 恐贪七子指标快照 + Put/Call 比（CNN 原始 5 日均值，滚动累积自建历史）
     + VIX 期限结构（Cboe 官方历史 CSV：VIX9D/VIX3M/VIX6M + yfinance VIX）
-    + SKEW（黑天鹅保险价格，Cboe 官方 CSV）+ VXN/VIX 比值（纳指恐慌溢价）。"""
+    + SKEW（黑天鹅保险价格，Cboe 官方 CSV）+ VXN/VIX 比值（纳指波动溢价）。"""
     print("== 情绪仪表盘")
     live = requests.get(FNG_LIVE, headers=UA, timeout=30).json()
 
@@ -951,7 +951,7 @@ def build_sentiment(vix_close: pd.Series, vxn_close: pd.Series = None):
     except Exception as e:
         print(f"  SKEW 拉取失败（跳过该卡）: {e}")
 
-    # --- VXN/VIX 比值：纳指恐慌溢价（>1 = 市场为纳指波动付更高保费）
+    # --- VXN/VIX 比值：纳指波动溢价（>1 = 市场为纳指波动付更高保费）
     vxn_obj = None
     if vxn_close is not None:
         try:
@@ -2028,11 +2028,11 @@ def build_index_val():
 # ------------------------------------------------- 指数扩容章节（SPY/QQQ 专用）
 
 def build_index_extras(prefix: str, close: pd.Series):
-    """收益分布 / 持有期胜率 / 滚动年化矩阵 / 牛熊周期 / 左尾放大镜。"""
+    """年度回报分桶 / 持有期胜率 / 5-10-20 年滚动矩阵 / 牛熊交替 / 最坏的那些日子。"""
     print(f"== extras {prefix}")
     close = close.dropna()
 
-    # 收益分布：年度回报分桶（每桶列出年份，前端 tooltip 展示）
+    # 年度回报分桶（每桶列出年份，前端 tooltip 展示）
     annual = close.resample("YE").last().pct_change().dropna() * 100
     buckets = [(-100, -30), (-30, -20), (-20, -10), (-10, 0),
                (0, 10), (10, 20), (20, 30), (30, 200)]
@@ -2043,7 +2043,7 @@ def build_index_extras(prefix: str, close: pd.Series):
         dist.append({"label": label, "count": len(yrs), "years": yrs})
     write_json(f"{prefix}_distribution.json", {"buckets": dist, "years_total": len(annual)})
 
-    # 入场与离场：持有 1/3/5/10/20 年（月频滚动）的胜率与年化分位
+    # 买入之后持有多久：持有 1/3/5/10/20 年（月频滚动）的胜率与年化分位
     m = close.resample("ME").last().dropna()
     hp = []
     for y in (1, 3, 5, 10, 20):
@@ -2060,7 +2060,7 @@ def build_index_extras(prefix: str, close: pd.Series):
         })
     write_json(f"{prefix}_holding.json", {"rows": hp})
 
-    # 滚动年化矩阵：5 / 10 / 20 年（月频）
+    # 5 / 10 / 20 年滚动矩阵（月频）
     out = {"dates": dates(m.index)}
     for y in (5, 10, 20):
         r = ((m / m.shift(12 * y)) ** (1 / y) - 1) * 100
@@ -2100,7 +2100,7 @@ def build_index_extras(prefix: str, close: pd.Series):
                    "ret": round(ret, 1), "days": int((close.index[-1] - prev_d).days)})
     write_json(f"{prefix}_bullbear.json", {"cycles": cycles})
 
-    # 左尾放大镜：最差/最好单日 + 日收益分布
+    # 最坏的那些日子：最差/最好单日 + 单日涨跌分布
     d = close.pct_change().dropna() * 100
     def top(series, n=12):
         return [{"date": dt.strftime("%Y-%m-%d"), "ret": round(float(v), 2)}

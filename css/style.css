@@ -1065,7 +1065,7 @@ td.left-col { padding-left: 18px; }
    要的是「块居中、块内左对齐」：表头居中；每行内容包进同宽 inline-block（21em）：
    整块坐在列中间，logo 仍排成一条竖线（盒内 text-align:left）。
    21em 按最长名「Meta Platforms Inc Class A」量的（≈17.8em），盒子略宽只吃右侧空白。
-   仅用于公司列很宽的两张表（前二十大持仓 / 五百家一览）；篮子对照表列窄，保持 18px 左对齐。 */
+   仅用于公司列很宽的两张表（前二十大持仓 / 五百家逐个看）；篮子对照表列窄，保持 18px 左对齐。 */
 .co-wrap { display: inline-block; width: 21em; max-width: 100%; text-align: left; }
 /* 2026-07-16：持仓表「公司」「行业」两列改居中（用户要的是居中，不是「表头与内容对齐」：
    此前一轮把需求读成后者、改了 padding，所以他说「还是居左」）。
