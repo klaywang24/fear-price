@@ -90,8 +90,7 @@ a{color:var(--bad)}
 <h4>红了怎么办</h4>
 <ol class="steps">
   <li><b>先本地复现一次</b>，看到底哪一项坏了：
-    <pre>cd "/Users/klay/Documents/个人 Agent/恐惧的标价：market-chronicle/KAPX/market-chronicle 公开 git 仓库" \\
-  &amp;&amp; git pull -q &amp;&amp; python3 scripts/check_witness_health.py</pre></li>
+    <pre>cd &lt;本仓根目录&gt; &amp;&amp; git pull -q &amp;&amp; python3 scripts/check_witness_health.py</pre></li>
   <li><b>「锚定日志」红</b> = 存档结果没被留档。看
     <a href="REPO_URL/actions/workflows/daily.yml" target="_blank">daily 的运行记录</a>，
     锚定那步是不是失败了。</li>
