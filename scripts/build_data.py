@@ -2180,7 +2180,7 @@ _SECTOR_ZH = {
 # 🔑 单位（2026-07-20 CI debug 实测定死）：七个序列**全是百万美元同一单位**，不需换算——
 #    首跑我误以为债务是十亿、给股票 ÷1000，造出 1000 倍错配（值 0.0011），被 sane_check 拦下。
 #    实测 CMDEBT=21万亿/FGSDODNS=34.5万亿等原始值都在千万量级=百万单位；不除后 AIAE=0.5289 ✅。
-# ⚠️ 本机代理连不上 FRED（HANDOFF:145），数据正确性靠 CI 验；现已用 CI 真实分量值算对 0.5289。
+# ⚠️ 本机代理连不上 FRED，数据正确性靠 CI 验；现已用 CI 真实分量值算对 0.5289。
 # 🚫 只取「今天在历史上排第几」的位置读数，绝不发布 implied_10y_forecast（撞「永不预测方向」红线）。
 AIAE_EQUITY = ["NCBEILQ027S", "FBCELLQ027S"]                    # 股票市值：非金融企业 + 金融部门
 AIAE_DEBT = ["BCNSDODNS", "CMDEBT", "FGSDODNS", "SLGSDODNS", "WCMITCMFODNS"]  # 五类借款人债务
@@ -2467,7 +2467,7 @@ def build_cape():
 
 # ---- 2026-07-19：非致命小节的失败必须留痕 ----
 # 2026-07-12→14 管线静默死 4 天，根因**不是**没有 try/except，是 except 里只 print——
-# print 进了 Actions 日志，而没有人每天读日志（「真洞=人不看」，见 HANDOFF §17.10）。
+# print 进了 Actions 日志，而没有人每天读日志（「真洞=人不看」）。
 # ∴ 失败除了打印，还要写进 data/meta.json，让 notify_discord 看得见、当天就吵。
 _FAILURES: list[dict] = []
 

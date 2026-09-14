@@ -72,7 +72,6 @@ jobs:
               `运行：${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',
               '本地复现：`python3 scripts/check_witness_health.py`',
-              '背景：`HANDOFF.md` §48.7',
             ].join('\n');
             const open = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,

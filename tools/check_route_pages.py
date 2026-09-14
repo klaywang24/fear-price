@@ -93,7 +93,7 @@ for m in re.finditer(r"<(\w+)[^>]*class=\"tab[ \"][^>]*data-panel=\"([a-z]+)\"[^
     if tag != "a" or 'href="' not in m.group(0):
         err(f'index.html：tab data-panel="{panel}" 是 <{tag}> 不是带 href 的 <a> —— 爬虫看不见这条内链')
 
-# ⑦ JSON-LD 语法闸（2026-08-25 加·HANDOFF §64）
+# ⑦ JSON-LD 语法闸（2026-08-25 加）
 # 为什么要有：GSC 08-25 对 /leaps 报「无法解析的结构化数据：含有语法错误」，
 # 当时靠人手动全站扫一遍才确认现网是好的（告警指向部署前的旧抓取）。
 # 结构化数据坏掉不会让页面报错、不会让别的闸变红——它只是静默地让富媒体结果消失，
@@ -117,7 +117,7 @@ for p in ld_pages:
         except json.JSONDecodeError as e:
             err(f"{p.name} 第 {i+1} 个 ld+json 块语法错：{e}")
 
-# ⑧ sitemap / canonical / hreflang 不许出现 .html 形态（2026-09-07 加·HANDOFF §77）
+# ⑧ sitemap / canonical / hreflang 不许出现 .html 形态（2026-09-07 加）
 # 为什么要有：Cloudflare Pages 把 /x.html 一律 308 到 /x（无扩展）。08-25 把 EN 归档索引以
 # /digest/index.en.html 形态写进 sitemap，且页内 canonical 也写成 .html ⇒ sitemap 条目是跳转页、
 # 落地页 /digest/index.en 的 canonical 又指回那个跳转页，成环。GSC 09-06 两封邮件：

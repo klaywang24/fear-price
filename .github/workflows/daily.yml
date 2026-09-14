@@ -72,14 +72,12 @@ jobs:
         run: python tools/check_i18n_leak.py
         env:
           CHROME_BIN: /usr/bin/google-chrome
-      # 禁词闸（2026-08-07 命名线接线，见 HANDOFF §58）。
-      # 「恐慌指数」是 VIX 的中文俗名：自称它 = 把检索流量捐给 Cboe，且与自家
-      # 「恐惧的标价指数」撞名。但归属性提及 VIX 本身放行（行情条标签「VIX 恐慌指数」
-      # 与本站指数并列反而形成消歧）。判据 = 前 4 字内须有 VIX，机器可判不靠自觉。
+      # 禁词闸（2026-08-07 接线）。「恐慌指数」只允许作为 VIX 的归属性提及
+      # （前 4 字内须有 VIX），不用来指称本站任何指数。机器可判不靠自觉。
       # 建闸当天已用负向样本实测报红（植入一处→exit 1→还原→复绿），不是只写不验。
       - name: verify banned terms
         run: python tools/check_banned_terms.py
-      # 路由页判重闸（2026-08-17 接线，见 HANDOFF §63）。
+      # 路由页判重闸（2026-08-17 接线）。
       # 07-30 路由页只换 head、正文 17 份相同 → 08-08 GSC 判重复拒收；本闸保证
       # 每个路由页只含自己的 panel、canonical 自指、sitemap 与实际页面清单精确对账。
       # 建闸当天先对修复前产物实测：166 条红 exit 1，修复后转绿 —— 负向已验，不是只写不验。

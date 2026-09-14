@@ -56,7 +56,7 @@
     "免费订阅": ["Subscribe free", "", "", ""],
     "订阅": ["Subscribe", "", "", ""],
     "免费 · 由读数触发，不按日历 · 随时退订，不发广告": ["Free · triggered by readings, not the calendar · unsubscribe anytime, no ads", "", "", ""],
-    // 2026-07-26 今日判读卡 + 前向计数器 + 定价 Free 档恢复（HANDOFF §39）。
+    // 2026-07-26 今日判读卡 + 前向计数器 + 定价 Free 档恢复。
     // teaser 正文本身不走 D（逐日动态），中英双渲染由 CSS 按 html[lang] 切换；这里只译卡的外壳。
     "最新一期判读": ["The latest read", "", "", ""],
     // 2026-07-26 §41：头版台账区两段压一行 + 判读卡标签带节奏承诺

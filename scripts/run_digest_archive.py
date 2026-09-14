@@ -4,7 +4,7 @@
 为什么是 launchd 而不是 daily.yml：
     build_digest_archive.py 取材自 ../../生意与起号/（稿件 + 卡片）。那个目录不在公开仓里、
     自身也没有远端 ⇒ GitHub Actions 的 runner 上根本没有源文件，挂进 CI 只会每天跑出 0 页。
-    稿件在本地，定时也只能在本地。（HANDOFF.md:3502 早有同样结论。）
+    稿件在本地，定时也只能在本地。
 
 为什么必须写成 Python 而不是 .sh：
     macOS TCC 挡 launchd 下的 /bin/bash 读 ~/Documents —— 实测 `/bin/bash <脚本>` 直接
