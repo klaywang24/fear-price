@@ -487,7 +487,6 @@
     "估值的两把尺": ["Two Rulers for Valuation", "Deux règles pour la valorisation", "Zwei Maßstäbe für die Bewertung", "Dos reglas para la valoración"],
     "离中位数多远": ["Distance from the Median", "Distance à la médiane", "Abstand zum Median", "Distancia a la mediana"],
     "利润这条线": ["The Earnings Line", "La ligne des bénéfices", "Die Gewinnlinie", "La línea de beneficios"],
-    "恐惧的标价": ["Fear-Price Index", "Fear-Price Index", "Fear-Price Index", "Fear-Price Index"],
     "十二个月的脾气": ["Month by Month", "Mois par mois", "Monat für Monat", "Mes a mes"],
     "行业占比": ["Sector Weights", "Poids des secteurs", "Sektorgewichte", "Pesos sectoriales"],
     "五百家逐个看": ["Five Hundred, One by One", "Les cinq cents, une à une", "Fünfhundert, einzeln", "Las quinientas, una a una"],
