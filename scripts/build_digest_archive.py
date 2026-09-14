@@ -714,16 +714,21 @@ def en_title_of(en_body, cn_title, folder_date=None):
     #    末条正则把标签行「Title」当成标题，09-09/09-10/09-11 三页英文版顶着 <title>Title · …</title>
     #    上了站，Google 已收录「Title · …」。修法：标签行一律跳过；跳过后取不到 ⇒ 退回发布台账
     #    substack_en 的实发标题（标题一律取实发）；台账也没有才退回中文标题并标 en_explicit=False。
+    # 🔴 2026-09-13 再修：09-04 / 09-08 稿子的标签行写成 `**Title**`（加粗），09-12 那版只认裸 title，
+    #    `**Title**` 没被当标签 ⇒ 两页英文版顶着 <title>**Title** · …</title> 上站，Google 又收录了一条
+    #    「Title · 美股编年史」。判标签前先剥 markdown 强调符号（* _ ` 与冒号），再比。
+    def _is_label(x):
+        return x.strip().strip("*_`").strip().rstrip(":").strip().lower() in _EN_LABELS
     for pat in EN_TITLE_PATS:
         m = re.search(pat, en_body, re.M | re.S)
         if m and m.group(1).strip():
             t = m.group(1).strip()
-            if t.lower() in _EN_LABELS:
+            if _is_label(t):
                 # 标签行之后继续找：跳过空行/标签/围栏，取第一行真文本
                 rest = en_body[m.end():].split("\n")
                 for ln in rest:
                     x = ln.strip()
-                    if not x or x.lower() in _EN_LABELS or x.startswith("```"):
+                    if not x or _is_label(x) or x.startswith("```"):
                         continue
                     return x, True
                 continue
@@ -836,6 +841,12 @@ def _selftest():
             chk(f"实史：{why}（取不到提交）", False); continue
         miss = shrink_check(feed_slugs(b.stdout), g.stdout)
         chk(f"实史回放：{why} {len(feed_slugs(g.stdout))}→{len(feed_slugs(b.stdout))} 必红（缺 {len(miss)}）", len(miss) > 0)
+    # 标题闸（2026-09-13）：两种实犯的标签写法都要被跳过，真标题要取到；裸「Title」旧写法照常
+    hdr = "## English edition · title + subtitle\n\n"
+    chk("标题：`**Title**` 加粗标签跳过（09-04/09-08 实犯）", en_title_of(hdr + "**Title**\n\n```\nReal One\n```\n", "cn")[0] == "Real One")
+    chk("标题：裸 Title 标签跳过（09-09 到 09-11 实犯）", en_title_of(hdr + "Title\n\n```\nReal Two\n```\n", "cn")[0] == "Real Two")
+    chk("标题：`Title:` 带冒号标签跳过", en_title_of(hdr + "Title:\n\nReal Three\n", "cn")[0] == "Real Three")
+    chk("标题：直接写标题照常取到", en_title_of(hdr + "Real Four\n", "cn")[0] == "Real Four")
     print("selftest", "全过" if ok else "有红")
     return 0 if ok else 1
 
@@ -915,6 +926,12 @@ def main():
         # 中英各出一页：一页只有一种语言，右上角切换是**跳转**，不是同页拼接。
         cn_body, en_body = split_cn_en(body)
         en_title, en_explicit = en_title_of(raw, title, date)  # 标题去 raw 里找：08-14 的英文标题写在正文起点之前；标签行跳过、台账兜底（09-12）
+        # 🔴 标题闸（2026-09-13 立，两次实犯换来的：09-09 到 09-11 顶着「Title」、09-04/09-08 顶着「**Title**」上站，
+        #    Google 各收录了一条）：英文标题若剥掉强调符后是标签词、或短得不像标题，硬红退出，一个字不写。
+        _bare = en_title.strip().strip("*_`").strip().rstrip(":").strip()
+        if _bare.lower() in _EN_LABELS or len(_bare.split()) < 3:   # 标签词是单词，真标题至少三个词
+            print(f"\n🔴 标题闸：{date} 英文标题取到「{en_title}」，这是标签行或占位符，不是标题。修稿子里的 English edition 段再跑。")
+            sys.exit(3)
         has_en = bool(en_body.strip())
         variants = [("cn", slug, cn_body, title)]
         if has_en:
