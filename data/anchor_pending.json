@@ -3,17 +3,14 @@
  "_rule": "unknown（没测到）不入队、也不计 attempts；只有『测到了且在 SLA 内』才离队。attempts ≥ 10 仍未离队的单独报——永不排空的队列就是下一个僵尸。",
  "_seed": "2026-09-03 Klay 令播种：GH 每日 commit 页是**永久 URL**，今天重新提交照样能存档——证据链从「永久缺口」变成「晚补齐、带标注」。capture 日期会晚于 commit 日期，这点必须如实标注，不许当成当天存的。",
  "updated": "2026-09-15",
- "queue_len": 1,
- "pending": [
+ "queue_len": 0,
+ "pending": [],
+ "resolved_recent": [
   {
    "url": "https://github.com/klaywang24/fear-price/commit/84691b7eb30c679931b5fb688b5acad889ef5fb5",
-   "since": "2026-09-14",
-   "attempts": 1,
-   "last_try": "2026-09-15",
-   "why": "确实无快照"
-  }
- ],
- "resolved_recent": [
+   "on": "2026-09-15",
+   "timestamp": "20260915045349"
+  },
   {
    "url": "https://chronicle.klay-wang.com/kapx",
    "on": "2026-09-15",
