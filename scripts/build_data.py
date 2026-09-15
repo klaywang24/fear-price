@@ -1718,6 +1718,208 @@ def build_vol_family(vix_close: pd.Series):
     })
 
 
+# ================================================================================
+# 2026-09-15 仓位与杠杆四件（Klay 09-15 令：免费的全接入直接上线）
+#   起因：09-09 期引了「对冲基金杠杆回升」「半导体波动率 65→36」两条外部信号，回头查，
+#   波动率那条站上本来就有（vol_family 的 VXSMH），杠杆那条本该看 NAAIM 而 NAAIM 08-01 起收费停更。
+#   ⇒ 补四张免费公开表：CFTC 股指期货站位（周）、FINRA 融资余额（月）、OFR 对冲基金杠杆（季）、
+#      Cboe 指数波动率家族（日）。全部只报位置与四条腿原值，不合成综合分，不做方向判断。
+# ================================================================================
+COT_EQUITY_MARKETS = {
+    # TFF 的市场名逐字匹配。Consolidated＝大合约+E-mini 合并，2010→，是最长的连续序列。
+    "spx": ("S&P 500 Consolidated - CHICAGO MERCANTILE EXCHANGE", "标普 500 期货（合并）"),
+    "ndx": ("NASDAQ-100 Consolidated - CHICAGO MERCANTILE EXCHANGE", "纳斯达克 100 期货（合并）"),
+}
+
+
+def _cot_tff_market(name: str) -> list:
+    r = requests.get(COT_TFF, params={
+        "$where": f"market_and_exchange_names='{name}'",
+        "$order": "report_date_as_yyyy_mm_dd ASC",
+        "$limit": "5000",
+        "$select": ("report_date_as_yyyy_mm_dd,lev_money_positions_long,lev_money_positions_short,"
+                    "asset_mgr_positions_long,asset_mgr_positions_short,open_interest_all"),
+    }, headers=UA, timeout=60)
+    r.raise_for_status()
+    out = []
+    for row in r.json():
+        try:
+            ll, ls = int(row["lev_money_positions_long"]), int(row["lev_money_positions_short"])
+            al, am = int(row["asset_mgr_positions_long"]), int(row["asset_mgr_positions_short"])
+            out.append({"date": row["report_date_as_yyyy_mm_dd"][:10],
+                        "lev_long": ll, "lev_short": ls, "lev_net": ll - ls,
+                        "am_long": al, "am_short": am, "am_net": al - am,
+                        "oi": int(row["open_interest_all"])})
+        except (KeyError, ValueError):
+            pass
+    out.sort(key=lambda x: x["date"])
+    return out
+
+
+def build_cot_equity():
+    """CFTC TFF 里**股指期货**的机构站位（标普 500 / 纳斯达克 100，合并合约，周频 2010→）→ data/cot_equity.json。
+    ⚠️ 口径警告（必须与读数同时出现）：杠杆基金在股指期货上长期净空，大头是基差交易与对冲，
+       不是「对冲基金看空股市」。本表只报四条腿原值与净额在自己历史里的位置，不解读方向。"""
+    print("== CFTC COT（股指期货站位）")
+    markets = {}
+    for key, (name, label) in COT_EQUITY_MARKETS.items():
+        series = _cot_tff_market(name)
+        if not series:
+            raise RuntimeError(f"CFTC TFF 返回空：{name}")
+        net = pd.Series([x["lev_net"] for x in series], index=pd.to_datetime([x["date"] for x in series]))
+        markets[key] = {
+            "market": name, "label": label,
+            "latest": series[-1],
+            "lev_net_pctile_full": round(float((net <= net.iloc[-1]).mean() * 100), 1),
+            "lev_net_pctile_3y": round(float((net.iloc[-156:] <= net.iloc[-1]).mean() * 100), 1),
+            "weeks_net_short_52": sum(1 for x in series[-52:] if x["lev_net"] < 0),
+            "series": series,
+        }
+    write_json("cot_equity.json", {
+        "_what": "CFTC 交易者分类报告（TFF）：杠杆基金与资管机构在标普 500、纳斯达克 100 期货上的多空持仓，周二数据周五 15:30 ET 发布。",
+        "_caveat": "杠杆基金在股指期货上长期净空，大头是基差交易与对冲，不等于看空；只报位置，不报方向。",
+        "markets": markets,
+    })
+
+
+FINRA_MARGIN_XLSX = "https://www.finra.org/sites/default/files/2021-03/margin-statistics.xlsx"
+FINRA_MARGIN_PAGE = "https://www.finra.org/investors/learn-to-invest/advanced-investing/margin-statistics"
+
+
+def build_margin_debt():
+    """FINRA 客户保证金账户余额（月频，1997→，滞后约三周）→ data/margin_debt.json。
+    三列原值：融资余额（借出去的钱）、现金账户闲置资金、保证金账户闲置资金；派生「净融资」＝融资余额−两项闲置资金。
+    xlsx 路径带 2021-03 是 FINRA 的历史遗留，文件本身每月更新（2026-09-15 实测含 2026-08）。"""
+    print("== FINRA 融资余额")
+    # ⚠️ FINRA 的 WAF 对全站通用的 Chrome UA 回 403（2026-09-15 实测），裸 "Mozilla/5.0" 或 curl 都放行。别换回 UA。
+    r = requests.get(FINRA_MARGIN_XLSX, headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
+    r.raise_for_status()
+    df = pd.read_excel(pd.io.common.BytesIO(r.content), header=None)
+    rows = []
+    for _, row in df.iterrows():
+        ym = str(row[0]).strip()
+        if not re.match(r"^\d{4}-\d{2}$", ym):
+            continue
+        def _n(v):
+            try:
+                return int(float(v))
+            except (TypeError, ValueError):
+                return None
+        rows.append({"month": ym, "debit": _n(row[1]), "free_cash": _n(row[2]), "free_margin": _n(row[3])})
+    if not rows:
+        raise RuntimeError("FINRA margin xlsx 解析为空")
+    rows.sort(key=lambda x: x["month"])
+    for x in rows:
+        fc, fm = x["free_cash"] or 0, x["free_margin"] or 0
+        x["net"] = (x["debit"] - fc - fm) if x["debit"] is not None else None
+    debit = pd.Series([x["debit"] for x in rows], index=[x["month"] for x in rows], dtype="float")
+    cur = rows[-1]
+    yoy = None
+    prev_y = next((x for x in rows if x["month"] == f"{int(cur['month'][:4]) - 1}{cur['month'][4:]}"), None)
+    if prev_y and prev_y["debit"]:
+        yoy = round((cur["debit"] / prev_y["debit"] - 1) * 100, 1)
+    mom = round((cur["debit"] / rows[-2]["debit"] - 1) * 100, 1) if len(rows) > 1 and rows[-2]["debit"] else None
+    write_json("margin_debt.json", {
+        "_what": "FINRA 会员经纪商客户账户余额，单位百万美元，月频，参考月次月第三周发布。融资余额＝客户借券商的钱买股票。",
+        "_caveat": "融资余额随市值一起涨，绝对值创新高不等于杠杆创新高；看同比、看它与闲置资金的差、看它在自己历史里的位置。",
+        "latest": {**cur, "yoy_pct": yoy, "mom_pct": mom,
+                   "debit_pctile_full": round(float((debit <= debit.iloc[-1]).mean() * 100), 1),
+                   "debit_record_high": bool(debit.iloc[-1] >= debit.max())},
+        "series": rows,
+        "source": FINRA_MARGIN_PAGE,
+    })
+
+
+OFR_HFM = "https://data.financialresearch.gov/hf/v1"
+OFR_SERIES = {
+    # 全部来自 SEC Form PF 汇总（合格对冲基金），季频，2013→，滞后约两个季度。
+    "equity_leverage": ("FPF-STRATEGY_EQUITY_LEVERAGERATIO_GAVWMEAN", "股票策略对冲基金杠杆率（总资产/净资产，按总资产加权）"),
+    "all_top10_leverage": ("FPF-ALLQHF_GAVN10_LEVERAGERATIO_AVERAGE", "最大十家合格对冲基金平均杠杆率"),
+    "pb_borrowing": ("FPF-BORROW_PRIMEBROKER_SUM", "向主经纪商借款总额（美元）"),
+    "gav": ("FPF-ALLQHF_GAV_SUM", "合格对冲基金总资产（美元）"),
+    "nav": ("FPF-ALLQHF_NAV_SUM", "合格对冲基金净资产（美元）"),
+}
+
+
+def build_ofr_hedge_funds():
+    """OFR 对冲基金监测（Form PF 汇总，季频 2013→）→ data/ofr_hedge_funds.json。免费公开 API，免鉴权。"""
+    print("== OFR 对冲基金杠杆")
+    out = {}
+    for key, (mn, label) in OFR_SERIES.items():
+        r = requests.get(f"{OFR_HFM}/series/timeseries", params={"mnemonic": mn}, headers=UA, timeout=60)
+        r.raise_for_status()
+        pts = [[d[:10], v] for d, v in r.json() if v is not None]
+        if not pts:
+            raise RuntimeError(f"OFR 返回空：{mn}")
+        vals = pd.Series([v for _, v in pts])
+        out[key] = {"mnemonic": mn, "label": label, "dates": [d for d, _ in pts], "values": [v for _, v in pts],
+                    "latest": {"date": pts[-1][0], "value": pts[-1][1]},
+                    "pctile_full": round(float((vals <= vals.iloc[-1]).mean() * 100), 1)}
+    if "gav" in out and "nav" in out:
+        g, n = out["gav"], out["nav"]
+        common = [d for d in g["dates"] if d in set(n["dates"])]
+        gi, ni = dict(zip(g["dates"], g["values"])), dict(zip(n["dates"], n["values"]))
+        ratio = [[d, round(gi[d] / ni[d], 3)] for d in common if ni[d]]
+        out["all_leverage_gav_nav"] = {"label": "全部合格对冲基金总资产/净资产", "dates": [d for d, _ in ratio],
+                                       "values": [v for _, v in ratio], "latest": {"date": ratio[-1][0], "value": ratio[-1][1]}}
+    write_json("ofr_hedge_funds.json", {
+        "_what": "美国财政部金融研究办公室对冲基金监测：SEC Form PF 汇总，只含合格对冲基金，季频，滞后约两个季度。",
+        "_caveat": "杠杆率＝总资产/净资产，含衍生品名义敞口的处理按 Form PF 口径；不同策略不可横比，看各自历史位置。",
+        "series": out,
+        "source": "https://www.financialresearch.gov/hedge-fund-monitor/",
+    })
+
+
+VOL_INDICES = {
+    # Cboe 官方指数波动率家族（30 天口径），全部免费 CSV；VXSMH 已在 vol_family（板块）里，此处只放指数与利率。
+    "VIX": "标普 500", "VXN": "纳斯达克 100", "RVX": "罗素 2000", "VXD": "道琼斯", "VXTLT": "20 年以上国债 ETF",
+    "VVIX": "VIX 的波动率",
+}
+
+
+def build_vol_indices():
+    """Cboe 指数波动率家族（VIX/VXN/RVX/VXD/VXTLT/VVIX，日频）→ data/vol_indices.json。只报现值与三年/全史分位。"""
+    print("== 指数波动率家族")
+    members, closes = [], {}
+    for sym, label in VOL_INDICES.items():
+        try:
+            s = _cboe_close(sym).dropna()
+        except Exception as e:
+            print(f"  {sym} 拉取失败，跳过: {e}")
+            continue
+        closes[sym] = s
+        enough = len(s) >= MIN_PCTILE_DAYS
+        tail = s.iloc[-260:]
+        members.append({
+            "symbol": sym, "label": label,
+            "current": round(float(s.iloc[-1]), 2), "prev": round(float(s.iloc[-2]), 2),
+            "date": s.index[-1].strftime("%Y-%m-%d"), "start": s.index[0].strftime("%Y-%m-%d"), "days": len(s),
+            "p3y": _pctile_now(s, 756) if enough else None, "pfull": _pctile_now(s) if enough else None,
+            "hi_1y": round(float(tail.max()), 2), "lo_1y": round(float(tail.min()), 2),
+            "dates_1y": dates(tail.index), "values_1y": rnd(tail, 2),
+        })
+    if not members:
+        raise RuntimeError("指数波动率家族一条都没拉到")
+    ratios = {}
+    if "VXN" in closes and "VIX" in closes:
+        idx = closes["VXN"].index.intersection(closes["VIX"].index)
+        r = (closes["VXN"][idx] / closes["VIX"][idx]).dropna()
+        ratios["vxn_vix"] = {"what": "VXN ÷ VIX：纳指相对标普的波动溢价", "current": round(float(r.iloc[-1]), 3),
+                             "p3y": _pctile_now(r, 756), "pfull": _pctile_now(r), "date": r.index[-1].strftime("%Y-%m-%d")}
+    if "RVX" in closes and "VIX" in closes:
+        idx = closes["RVX"].index.intersection(closes["VIX"].index)
+        r = (closes["RVX"][idx] / closes["VIX"][idx]).dropna()
+        ratios["rvx_vix"] = {"what": "RVX ÷ VIX：小盘相对大盘的波动溢价", "current": round(float(r.iloc[-1]), 3),
+                             "p3y": _pctile_now(r, 756), "pfull": _pctile_now(r), "date": r.index[-1].strftime("%Y-%m-%d")}
+    write_json("vol_indices.json", {
+        "meta": {"name": "指数波动率家族", "tenor": "30 天",
+                 "headline": "各指数 30 天隐含波动率在过去 3 年（756 交易日）的百分位，高=贵",
+                 "nature": "描述性温度计，非交易信号/非预测；仅为数据，非投资建议。",
+                 "note": "VVIX 量的是 VIX 自己的波动率（VIX 期权隐含），单位不同，只看分位。"},
+        "members": members, "ratios": ratios,
+    })
+
+
 # ---------------- 做空成交结构（2026-07-18 新建）：FINRA 逐日 RegSHO ----------------
 # 🚨 口径警告（必须与读数同时出现，勿弱化）：做空占比高 ≠ 有人看空。
 #    做市商对冲、ETF 申赎套利、可转债对冲全部计入做空量。它量的是**卖方向成交的
@@ -2510,6 +2712,11 @@ def main():
     _guard("政策路径（联邦基金期货隐含利率）", build_policy_path)   # 2026-08-28 Klay 拍板
     _guard("银行优先股（单名 CDS 替代）", build_bank_credit)        # 同上
     _guard("波动率家族", build_vol_family, vix)
+    # 🆕 2026-09-15 仓位与杠杆四件（Klay 令：免费的全接入直接上线）
+    _guard("COT 股指期货站位", build_cot_equity)
+    _guard("FINRA 融资余额", build_margin_debt)
+    _guard("OFR 对冲基金杠杆", build_ofr_hedge_funds)
+    _guard("指数波动率家族", build_vol_indices)
     _guard("做空成交结构", build_short_flow)   # 增量：日常只补 1 天；回填另用大 max_backfill 手动跑
     _guard("做空持仓", build_short_interest)   # 双月，滞后约 2 周；只追加、修订另注
     _guard("行业暴露", build_sector_weights)   # 按权重（Yahoo funds_data，每 ETF 1 次调用）

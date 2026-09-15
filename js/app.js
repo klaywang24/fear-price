@@ -2330,6 +2330,76 @@
     };
   });
 
+  // 宏观 · 仓位与杠杆：CFTC 标普 500 期货站位（2026-09-15 加，Klay 令免费源全接入）
+  chart("macro", "ch-cot-equity", async (p) => {
+    const d = await load("cot_equity");
+    const m = d.markets.spx;
+    const lev = m.series.map((s) => [s.date, s.lev_net]);
+    const am = m.series.map((s) => [s.date, s.am_net]);
+    return {
+      tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toLocaleString("en-US")) }),
+      legend: { top: 0, textStyle: { color: p.ink, fontSize: 11 }, itemWidth: 18 },
+      grid: { left: 70, right: 24, top: 34, bottom: 60 },
+      dataZoom: ledgerZoom(p),
+      xAxis: timeX(p),
+      yAxis: Object.assign({ type: "value", name: "净头寸（手）" }, baseAxis(p)),
+      series: [
+        { name: "杠杆基金", type: "line", showSymbol: false, data: lev,
+          lineStyle: { color: p.accent, width: 1.6 }, itemStyle: { color: p.accent },
+          markLine: { silent: true, symbol: "none", label: { show: false },
+            lineStyle: { color: p.muted, type: "dashed", width: 1 }, data: [{ yAxis: 0 }] } },
+        { name: "资管机构", type: "line", showSymbol: false, data: am,
+          lineStyle: { color: p.moss, width: 1.1, type: "dashed" }, itemStyle: { color: p.moss } },
+      ],
+    };
+  });
+
+  // 宏观 · 仓位与杠杆：FINRA 融资余额（月频，1997→）
+  chart("macro", "ch-margin-debt", async (p) => {
+    const d = await load("margin_debt");
+    const bn = (v) => (v == null ? null : +(v / 1000).toFixed(1));   // 百万美元 → 十亿美元
+    const debit = d.series.map((s) => [s.month + "-01", bn(s.debit)]);
+    const net = d.series.map((s) => [s.month + "-01", bn(s.net)]);
+    return {
+      tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toLocaleString("en-US") + " B") }),
+      legend: { top: 0, textStyle: { color: p.ink, fontSize: 11 }, itemWidth: 18 },
+      grid: { left: 64, right: 60, top: 34, bottom: 60 },
+      dataZoom: ledgerZoom(p),
+      xAxis: timeX(p),
+      yAxis: Object.assign({ type: "value", name: "十亿美元" }, baseAxis(p)),
+      series: [
+        { name: "融资余额", type: "line", showSymbol: false, data: debit,
+          lineStyle: { color: p.accent, width: 1.6 }, itemStyle: { color: p.accent },
+          endLabel: { show: true, formatter: (o) => Math.round(+o.value[1]).toLocaleString("en-US"),
+            fontFamily: "JetBrains Mono", fontSize: 11, color: p.accent } },
+        { name: "净融资", type: "line", showSymbol: false, data: net,
+          lineStyle: { color: p.moss, width: 1.1, type: "dashed" }, itemStyle: { color: p.moss } },
+      ],
+    };
+  });
+
+  // 宏观 · 仓位与杠杆：OFR 对冲基金杠杆率（季频，2013→）
+  chart("macro", "ch-ofr-lev", async (p) => {
+    const d = await load("ofr_hedge_funds");
+    const eq = d.series.equity_leverage, all = d.series.all_leverage_gav_nav;
+    const fmt = (v) => (v == null ? "--" : (+v).toFixed(2) + "×");
+    return {
+      tooltip: tip(p, { valueFormatter: fmt }),
+      legend: { top: 0, textStyle: { color: p.ink, fontSize: 11 }, itemWidth: 18 },
+      grid: { left: 52, right: 60, top: 34, bottom: 40 },
+      xAxis: timeX(p),
+      yAxis: Object.assign({ type: "value", scale: true, axisLabel: { formatter: "{value}×" } }, baseAxis(p)),
+      series: [
+        { name: "股票策略杠杆率", type: "line", data: zip(eq.dates, eq.values), symbolSize: 5,
+          lineStyle: { color: p.accent, width: 1.6 }, itemStyle: { color: p.accent },
+          endLabel: { show: true, formatter: (o) => (+o.value[1]).toFixed(2) + "×",
+            fontFamily: "JetBrains Mono", fontSize: 11, color: p.accent } },
+        { name: "全部合格基金", type: "line", data: zip(all.dates, all.values), symbolSize: 4,
+          lineStyle: { color: p.moss, width: 1.1, type: "dashed" }, itemStyle: { color: p.moss } },
+      ],
+    };
+  });
+
   // K / LEAPS 页注册台账图表（带缩放的完整版；头版是紧凑钩子）
   chart("kindex", "ch-k-map", buildKMap);
   chart("kindex", "ch-k-eq", buildKEq);
@@ -2617,6 +2687,16 @@
     // 2026-07-18：这两张图不吃页面默认的 Cboe+FRED+CNN+Yahoo 那串：写错出处比不写更糟。
     // ⚠️ 源名必须纯英文（本串不走 i18n，中文会在 EN 下泄漏）。
     ["ch-vol-family", "Cboe equity & sector volatility indices"],
+    ["ch-vol-indices", "Cboe index volatility indices"],
+    // 2026-09-15 仓位与杠杆四件：三张不是日频，出处行要写它们自己的频率与截止日，不吃默认那句
+    ["ch-cot-equity", "CFTC · Traders in Financial Futures",
+      { asofFrom: "cot_equity", asofPick: (d) => d.markets.spx.latest.date, freq: "周二数据周五 15:30 ET 发布，每周更新" }],
+    ["ch-margin-debt", "FINRA margin statistics",
+      { asofFrom: "margin_debt", asofPick: (d) => d.latest.month, freq: "月频，参考月次月第三周发布" }],
+    ["ch-ofr-lev", "OFR Hedge Fund Monitor (SEC Form PF)",
+      { asofFrom: "ofr_hedge_funds", asofPick: (d) => d.series.equity_leverage.latest.date, freq: "季频，滞后约两个季度" }],
+    ["ch-naaim", "NAAIM Exposure Index",
+      { asofFrom: "naaim", asofPick: (d) => d.date, freq: "NAAIM 2026-08 起改订阅制，公开数据延迟三个月，本图停更" }],
     ["ch-short-flow", "FINRA RegSHO daily short volume"],
     // 2026-07-18 夜：这张卡不能吃「数据截至 <今天> · 每交易日更新」：它是双月结算且
     // 滞后约两周。一张主打「我滞后」的卡片若把日期写成今天，是自己打自己。
@@ -2640,7 +2720,11 @@
     const needed = [...new Set(SRC_OVERRIDES.filter((o) => o[2] && o[2].asofFrom).map((o) => o[2].asofFrom))];
     await Promise.all(needed.map(async (name) => {
       if (_asofCache[name] !== undefined) return;
-      try { _asofCache[name] = (await load(name)).meta.asof || null; } catch (e) { _asofCache[name] = null; }
+      try {
+        const dd = await load(name);
+        const picker = (SRC_OVERRIDES.find((o) => o[2] && o[2].asofFrom === name) || [])[2];
+        _asofCache[name] = (picker && picker.asofPick) ? (picker.asofPick(dd) || null) : ((dd.meta || {}).asof || null);
+      } catch (e) { _asofCache[name] = null; }
     }));
     document.querySelectorAll(".panel .card").forEach((card) => {
       if (card.querySelector(".src-note")) return;
@@ -2657,7 +2741,9 @@
         const asof = _asofCache[opts.asofFrom];
         if (!asof) return;          // 拿不到就不写：宁可缺一行，也不写一个错的日期
         const [y, mo, dd] = asof.split("-");
-        line = `数据截至 ${dd}-${mo}-${y}（结算日） · ${src} · 每月两次结算，结算日后约 8 个交易日发布`;
+        line = opts.freq
+          ? `数据截至 ${asof} · ${src} · ${opts.freq}`
+          : `数据截至 ${dd}-${mo}-${y}（结算日） · ${src} · 每月两次结算，结算日后约 8 个交易日发布`;
       } else if (/-fd-/.test(inner.id || "")) {
         line = `数据截至 ${metaDate} · macrotrends + Yahoo Finance · 每周六自动更新`;
       } else {
@@ -3127,6 +3213,30 @@
         markLine: { silent: true, symbol: "none",
           lineStyle: { color: p.ink, type: "dashed", width: 1 },
           label: { color: p.ink, formatter: "50 中性", fontSize: 10, fontFamily: "JetBrains Mono" },
+          data: [{ xAxis: 50 }] },
+      }],
+    };
+  });
+
+  // 指数波动率家族（2026-09-15 加）：Cboe VIX/VXN/RVX/VXD/VXTLT/VVIX 的三年分位横条
+  chart("leaps", "ch-vol-indices", async (p) => {
+    const d = await load("vol_indices");
+    const rows = d.members.filter((m) => m.p3y != null).sort((a, b) => a.p3y - b.p3y);
+    const T = (x) => (window.MC_I18N ? MC_I18N.translate(x) : x);
+    return {
+      tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toFixed(1) + " " + T("分位")) }),
+      grid: { left: 150, right: 44, top: 22, bottom: 34 },
+      xAxis: Object.assign({ type: "value", min: 0, max: 100 }, baseAxis(p)),
+      yAxis: Object.assign({ type: "category", data: rows.map((r) => `${T(r.label)} (${r.current.toFixed(1)})`) },
+        baseAxis(p), { axisLabel: { color: p.muted, fontSize: 11 } }),
+      series: [{
+        type: "bar", data: rows.map((r) => r.p3y), barMaxWidth: 18,
+        itemStyle: { color: (x) => (x.value < 50 ? p.moss : p.accent), borderRadius: [0, 4, 4, 0] },
+        label: { show: true, position: "right", color: p.muted, fontSize: 11,
+          fontFamily: "JetBrains Mono", formatter: (x) => x.value.toFixed(1) },
+        markLine: { silent: true, symbol: "none",
+          lineStyle: { color: p.ink, type: "dashed", width: 1 },
+          label: { color: p.ink, formatter: "50 " + T("中性"), fontSize: 10, fontFamily: "JetBrains Mono" },
           data: [{ xAxis: 50 }] },
       }],
     };

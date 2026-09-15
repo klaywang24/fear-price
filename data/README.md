@@ -35,15 +35,16 @@
 | 来源 | 用途 |
 |---|---|
 | [Cboe](https://www.cboe.com/tradable_products/vix/vix_historical_data/) | VIX9D / VIX / VIX3M / VIX6M / VIX1Y / VXN / SKEW（官方日收盘）；VX 期货结算曲线；个股与板块波动率指数 |
-| [FINRA](https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data) | RegSHO 逐日做空成交占比；双月合并短仓 |
-| [CFTC](https://publicreporting.cftc.gov/) | COT 持仓报告（Traders in Financial Futures，VIX 期货） |
+| [FINRA](https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data) | RegSHO 逐日做空成交占比；双月合并短仓；[客户融资余额](https://www.finra.org/investors/learn-to-invest/advanced-investing/margin-statistics)（月频，1997→） |
+| [CFTC](https://publicreporting.cftc.gov/) | COT 持仓报告（Traders in Financial Futures：VIX 期货、国债期货、标普 500 与纳斯达克 100 期货） |
+| [OFR 对冲基金监测](https://www.financialresearch.gov/hedge-fund-monitor/) | SEC Form PF 汇总：合格对冲基金杠杆率、主经纪商借款、总资产与净资产（季频，2013→） |
 | [FRED](https://fred.stlouisfed.org/) | 10 年期实际利率（DFII10）、信用利差（DBAA/DAAA） |
 | CNN Fear & Greed（含第三方存档回填） | 恐贪指数与七个分量 |
 | Yahoo Finance | 指数与个股价格、基本面快照 |
 | [multpl.com](https://www.multpl.com/) / Robert Shiller | 标普 500 PE(TTM)、CAPE 长史 |
 | [Wikipedia](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies) | 标普 500 / 纳斯达克 100 成分股名单 |
 | macrotrends | 个股基本面长史 |
-| NAAIM | 主动管理人仓位（周频） |
+| NAAIM | 主动管理人仓位（周频）· 2026-08 起改订阅制，公开数据延迟三个月，站上序列停在 2026-07-29 |
 
 各源对自己数据的条款不尽相同（有的明确限制再分发）。我们的做法是：**只发衍生统计与位置读数，不做原始文件的整表镜像，并逐图署名出处**——站上每张图下方那行「数据截至 X · 来源 · 更新频率」就是这条规矩的执行。发现我们哪里越界了，写信来，我们改。
 
@@ -83,6 +84,10 @@ https://chronicle.klay-wang.com · retrieved YYYY-MM-DD
 | `meta.json` | 数据 as-of 日期与数据源署名 |
 | `ledger_audit.json` | 每日自核结果：git 里当天发布过的值 vs 今天重算的值，分歧逐条公开 |
 | `gauge_math.json` | 每日口径自检：当日头条读数用参考实现独立重算的比对结果（2026-07-26 起） |
+| `cot_equity.json` | CFTC TFF 标普 500 / 纳斯达克 100 期货站位：杠杆基金与资管机构四条腿原值、净额及其历史分位（周频，2010→，2026-09-15 起） |
+| `margin_debt.json` | FINRA 客户融资余额、两项闲置资金、净融资，含同比与全史分位（月频，1997→，2026-09-15 起） |
+| `ofr_hedge_funds.json` | OFR 对冲基金监测：股票策略杠杆率、最大十家杠杆率、主经纪商借款、总资产、净资产（季频，2013→，2026-09-15 起） |
+| `vol_indices.json` | Cboe 指数波动率家族 VIX / VXN / RVX / VXD / VXTLT / VVIX 的现值与三年、全史分位，另带 VXN÷VIX、RVX÷VIX 两个比值（日频，2026-09-15 起） |
 
 其余按面板命名（`spy_*` / `qqq_*` / `tech_*` / `fin_*` / `consumer_*` / `luxury_*`）。
 

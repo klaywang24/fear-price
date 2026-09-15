@@ -293,6 +293,110 @@
     }
    }
   },
+  "/data/cot_equity.json": {
+   "get": {
+    "operationId": "get_cot_equity",
+    "summary": "股指期货 COT 站位",
+    "description": "CFTC TFF：标普 500 与纳斯达克 100 期货的杠杆基金与资管四条腿原值、净额与历史分位（周频，2010→）。",
+    "tags": [
+     "data"
+    ],
+    "x-license": {
+     "name": "PolyForm Noncommercial 1.0.0",
+     "url": "https://polyformproject.org/licenses/noncommercial/1.0.0"
+    },
+    "responses": {
+     "200": {
+      "description": "股指期货 COT 站位",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/data/margin_debt.json": {
+   "get": {
+    "operationId": "get_margin_debt",
+    "summary": "FINRA 融资余额",
+    "description": "客户保证金账户融资余额、闲置资金与净融资，含同比与全史分位（月频，1997→）。",
+    "tags": [
+     "data"
+    ],
+    "x-license": {
+     "name": "PolyForm Noncommercial 1.0.0",
+     "url": "https://polyformproject.org/licenses/noncommercial/1.0.0"
+    },
+    "responses": {
+     "200": {
+      "description": "FINRA 融资余额",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/data/ofr_hedge_funds.json": {
+   "get": {
+    "operationId": "get_ofr_hedge_funds",
+    "summary": "OFR 对冲基金杠杆",
+    "description": "SEC Form PF 汇总：股票策略杠杆率、最大十家杠杆率、主经纪商借款、总资产与净资产（季频，2013→）。",
+    "tags": [
+     "data"
+    ],
+    "x-license": {
+     "name": "PolyForm Noncommercial 1.0.0",
+     "url": "https://polyformproject.org/licenses/noncommercial/1.0.0"
+    },
+    "responses": {
+     "200": {
+      "description": "OFR 对冲基金杠杆",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/data/vol_indices.json": {
+   "get": {
+    "operationId": "get_vol_indices",
+    "summary": "指数波动率家族",
+    "description": "Cboe VIX/VXN/RVX/VXD/VXTLT/VVIX 现值与三年、全史分位，另带 VXN÷VIX、RVX÷VIX 比值（日频）。",
+    "tags": [
+     "data"
+    ],
+    "x-license": {
+     "name": "PolyForm Noncommercial 1.0.0",
+     "url": "https://polyformproject.org/licenses/noncommercial/1.0.0"
+    },
+    "responses": {
+     "200": {
+      "description": "指数波动率家族",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/data/vx_curve.json": {
    "get": {
     "operationId": "get_vx_curve",
