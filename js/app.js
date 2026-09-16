@@ -3350,7 +3350,7 @@
       xAxis: Object.assign({ type: "value", min: 0, max: 100,
         name: isEN ? "percentile" : "百分位" }, baseAxis(p)),
       yAxis: Object.assign({ type: "category", data: rows.map((r) => r.tk) },
-        baseAxis(p), { axisLabel: logoAxisLabel(p, rows) }),
+        baseAxis(p), { axisLabel: logoAxisLabel(p, rows, true) }),
       series: [{
         type: "bar", data: rows.map((r) => r.v), barMaxWidth: 18,
         // 单色由浅到深，不设红绿语义：「拥挤」本身没有好坏，绿色会被读成「安全」
