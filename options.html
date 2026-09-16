@@ -902,11 +902,16 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       const rows = GTABS[gtab][1]().slice().sort((a, b) => (b.chg || 0) - (a.chg || 0));
       gel.style.height = Math.max(220, rows.length * 38 + 96) + "px";
       const rev = [...rows].reverse();
+      /* 2026-09-16：票代格定宽靠右（与做空三图同一修法，Klay 点名 logo 列锯齿）。
+         标签整体右对齐、票代长短不一，logo 左缘就参差；票代格取本组最长「票代+箭头」的宽度、
+         格内靠右贴轴，每行总宽相同 ⇒ logo 左缘对齐。12.5px 字号按每字 8.5px 留。 */
       const rich = {};
       rows.forEach(r => { rich["L" + r.ticker] = {
         backgroundColor: { image: "logos/" + r.ticker.toLowerCase() + ".png" },
-        width: 16, height: 16 }; });
+        width: 16, height: 16, verticalAlign: "middle" }; });
       const byt = {}; rows.forEach(r => byt[r.ticker] = r);
+      const tkW = Math.max(...rows.map(r => (r.ticker + tg(r)).length)) * 8.5 + 4;
+      rich.t = { color: INK, fontSize: 12.5, width: tkW, align: "right", padding: [0, 0, 0, 6], verticalAlign: "middle" };
       gapsC.setOption({
         grid: { left: 124, right: 84, top: 40, bottom: 30 },
         legend: { data: [tr("跳空", "Gap"), tr("盘中", "Intraday")], textStyle: { color: MUTED, fontSize: 12.5 }, top: 4 },
@@ -914,7 +919,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
                    valueFormatter: v => (v > 0 ? "+" : "") + (v == null ? "—" : v.toFixed(2)) + "%" },
         yAxis: { type: "category", data: rev.map(r => r.ticker), ...axisBase, splitLine: { show: false },
                  axisLabel: { color: INK, fontSize: 12.5,
-                              formatter: tk => "{L" + tk + "|} " + tk + tg(byt[tk]), rich } },
+                              formatter: tk => "{L" + tk + "|}{t|" + tk + tg(byt[tk]) + "}", rich } },
         xAxis: { type: "value", name: "%", nameTextStyle: { color: MUTED }, ...axisBase },
         series: [
           { name: tr("跳空", "Gap"), type: "bar", stack: "d", data: rev.map(r => r.gap),
