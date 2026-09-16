@@ -3501,7 +3501,7 @@
       xAxis: Object.assign({ type: "value", scale: true,
         name: isEN ? "Spearman ρ" : "Spearman ρ" }, baseAxis(p)),
       yAxis: Object.assign({ type: "category", data: rows.map((r) => r.tk) },
-        baseAxis(p), { axisLabel: logoAxisLabel(p, rows) }),
+        baseAxis(p), { axisLabel: logoAxisLabel(p, rows, true) }),
       series: [{
         type: "bar", data: rows.map((r) => r.chg), barMaxWidth: 16,
         // 标红＝p<0.05；ETF 用蓝，呼应散点图里那两只精确为零的点
