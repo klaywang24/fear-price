@@ -3250,11 +3250,15 @@
   //    （本页 13 只票的 logo 已于 2026-08-07 逐个核实存在，含 SPY/QQQ 两只 ETF。）
   // 🚨 只给「类目就是票代」的轴用。同文件 ch-vol-family 的类目是 r.label 不是票代，
   //    照抄会给非票代标签配图 —— 2026-08-07 改这处时正是靠断言数量对不上才发现。
-  const logoAxisLabel = (p, rows) => ({
+  // 2026-09-16 加 fixed：类目轴标签整体右对齐，票代长短不一（MU 两个字母、GOOGL 五个），
+  //   logo 那一列就参差成锯齿（Klay 截图点名）。fixed=true 时票代格取该图最长票代的宽度、
+  //   格内左对齐 ⇒ 每行标签总宽相同 ⇒ logo 左缘对齐。三张图逐张接入，默认 false 不动旧行为。
+  const logoAxisLabel = (p, rows, fixed = false) => ({
     color: p.muted, fontSize: 11,
     formatter: (tk) => `{i${tk}|}{t|${tk}}`,
     rich: Object.assign(
-      { t: { color: p.muted, fontSize: 11, padding: [0, 0, 0, 6], verticalAlign: "middle" } },
+      { t: Object.assign({ color: p.muted, fontSize: 11, padding: [0, 0, 0, 6], verticalAlign: "middle" },
+          fixed ? { width: Math.max(...rows.map((r) => r.tk.length)) * 7 + 2, align: "left" } : {}) },
       Object.fromEntries(rows.map((r) => [`i${r.tk}`, {
         backgroundColor: { image: `logos/${r.tk.toLowerCase()}.png` },
         width: 14, height: 14, verticalAlign: "middle",
@@ -3283,7 +3287,7 @@
       grid: { left: 98, right: 44, top: 22, bottom: 34 },
       xAxis: Object.assign({ type: "value", min: 0, max: 100, name: "三年百分位" }, baseAxis(p)),
       yAxis: Object.assign({ type: "category", data: rows.map((r) => r.tk) },
-        baseAxis(p), { axisLabel: logoAxisLabel(p, rows) }),
+        baseAxis(p), { axisLabel: logoAxisLabel(p, rows, true) }),
       series: [{
         type: "bar", data: rows.map((r) => r.pctile), barMaxWidth: 18,
         // 同 VRP 定案：由浅到深猩红，纯视觉层级；此处不设红绿语义：
