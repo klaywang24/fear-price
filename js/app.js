@@ -3258,7 +3258,9 @@
     formatter: (tk) => `{i${tk}|}{t|${tk}}`,
     rich: Object.assign(
       { t: Object.assign({ color: p.muted, fontSize: 11, padding: [0, 0, 0, 6], verticalAlign: "middle" },
-          fixed ? { width: Math.max(...rows.map((r) => r.tk.length)) * 7 + 2, align: "left" } : {}) },
+          // 2026-09-16 二改：格内改靠右贴轴（首版靠左，票代离轴远近不一，Klay 线上截图点名）；
+          //   每字 8px 留足（11px 字号大写字母实测约 7.3px，7px 会让 GOOGL 顶格）。
+          fixed ? { width: Math.max(...rows.map((r) => r.tk.length)) * 8 + 4, align: "right" } : {}) },
       Object.fromEntries(rows.map((r) => [`i${r.tk}`, {
         backgroundColor: { image: `logos/${r.tk.toLowerCase()}.png` },
         width: 14, height: 14, verticalAlign: "middle",
