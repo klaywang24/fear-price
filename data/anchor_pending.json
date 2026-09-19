@@ -6,14 +6,19 @@
  "queue_len": 1,
  "pending": [
   {
-   "url": "https://github.com/klaywang24/fear-price/commit/327fc2716ef5745c2861f0abd8234f772852fcaf",
+   "url": "https://chronicle.klay-wang.com/kapx",
    "since": "2026-09-18",
    "attempts": 0,
    "last_try": null,
-   "why": "确实无快照"
+   "why": "超期 4 天"
   }
  ],
  "resolved_recent": [
+  {
+   "url": "https://github.com/klaywang24/fear-price/commit/327fc2716ef5745c2861f0abd8234f772852fcaf",
+   "on": "2026-09-18",
+   "timestamp": "20260918221447"
+  },
   {
    "url": "https://github.com/klaywang24/fear-price/commit/84691b7eb30c679931b5fb688b5acad889ef5fb5",
    "on": "2026-09-15",
