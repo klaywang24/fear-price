@@ -1575,6 +1575,8 @@ html:not([lang^="zh"]) .brand { font-size: 17.5px; }
   font-size: 15.5px;
   line-height: 1.75;
   color: var(--ink-soft);
+  /* 2026-09-19 Klay：leaps 页金句末行只剩一两个字（单行换字）；各行均分（text-wrap: balance），不支持的浏览器照旧 */
+  text-wrap: balance;
 }
 
 /* ================= B · 材质与深度（Apple materials） ================= */
