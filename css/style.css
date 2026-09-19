@@ -1572,10 +1572,11 @@ html:not([lang^="zh"]) .brand { font-size: 17.5px; }
   background: transparent;
   border-left: 2px solid var(--accent);
   padding: 4px 0 4px 20px;
-  font-size: 15.5px;
+  /* 2026-09-19 Klay：leaps 页 73 字的金句要一行放下。容器 1029px 时可用 1009px，15.5px 排出来 1059px 要折行，
+     14.5px 排出来 991px 刚好一行；再窄的屏折成两行时各行均分（text-wrap: balance），不留一两个字的孤行 */
+  font-size: 14.5px;
   line-height: 1.75;
   color: var(--ink-soft);
-  /* 2026-09-19 Klay：leaps 页金句末行只剩一两个字（单行换字）；各行均分（text-wrap: balance），不支持的浏览器照旧 */
   text-wrap: balance;
 }
 
