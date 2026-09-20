@@ -1,14 +1,10 @@
 {
- "date": "2026-09-18",
- "prev": "e43fb5de70fad58ad2976e1270e3c4b3c7869a7a697a4229dc99d968685058cb",
+ "date": "2026-09-19",
+ "prev": "f4e8d756d64dfd97b6772dba20297a20ccb10584b8e955fdf94361d37349b1ea",
  "files": {
   "每日恒定期限IV.csv": "19aebde321d17f105d38c67dca50971025ee19e0e3456e42da5a5789d245ce9c",
-  "2026-09-18_HYG.csv.gz": "fecfcf9a45c52b2cea529e0d96cd0641169b4e30ead2f02889955e0c8f376c4c",
-  "2026-09-18_LQD.csv.gz": "48a61e03b7812d1c57eaa7d6cf3b420164ed60545ac464429513bf167dd232f8",
-  "全链/2026-09-18_HYG.csv.gz": "4dc9f40eb223b118bcf8276e1365f808b0d9336268ccfad9c64f1312bcc2e7a3",
-  "全链/2026-09-18_LQD.csv.gz": "410cd953efa0a44926cdf72e35bab7488648c6561db3d236dc6ad2b803cabb37",
-  "数据快照/VIXHY.csv": "94ff50815ff6ba2f95a3a2785c3f06344c390620b85d9d2efcf5dbf0516537d6",
-  "数据快照/VIXIG.csv": "657cb22c935f8cbad3a2ebfa4e9d3b55fba42ebdcd46cec00235f7f723fc6d8a"
+  "数据快照/VIXHY.csv": "22bb2b5593bd8e976c260bbae6e0b22189ffca6b8276a4b4fad5a29ddc9b7be6",
+  "数据快照/VIXIG.csv": "d6993f5401bdbafc187f6f425661b8fb39a211619b1dc15d838e1d1d2df1d10f"
  },
- "chain": "f4e8d756d64dfd97b6772dba20297a20ccb10584b8e955fdf94361d37349b1ea"
+ "chain": "d6cd111fad5ec8d4929a6472122b53a30c1b9937b4778c502c7bedac6a3ecb4f"
 }
