@@ -710,6 +710,12 @@ def build_macro():
         # 信用 / 利率
         "dgs2": ("DGS2", lambda s: _weekly(s)),
         "dgs10": ("DGS10", lambda s: _weekly(s)),
+        # 🆕 2026-09-22（Klay 拍板「接」）：10 年期**日频**。起因＝「快速加息」判据要 10 年期
+        #    一个月 +50bp 或两周 +30bp，周频桶算不出两周差。与 dgs10 同一序列不同采样：
+        #    周频那条留给传导链管道层，本条日频留给本机 每日十年期.csv 镜像。
+        #    🚫 两条不互替；差值不在这里算（存原始日频，两周/一月差由读的人算＝不立第二把尺子）。
+        #    ⚠️ FRED 日频滞后一个交易日（H.15 次日 16:15 ET 发），当天读到的是前一交易日。
+        "dgs10_daily": ("DGS10", lambda s: {"dates": dates(s.index), "values": rnd(s, 2)}),
         "dgs20": ("DGS20", lambda s: _weekly(s)),
         "dgs30": ("DGS30", lambda s: _weekly(s)),
         "t10y2y": ("T10Y2Y", lambda s: _weekly(s)),
