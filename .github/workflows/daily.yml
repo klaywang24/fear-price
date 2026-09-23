@@ -122,6 +122,14 @@ jobs:
       #    所以它**自己提交自己的日志**，不再指望别人的 commit 带上它。
       - name: anchor to Wayback
         continue-on-error: true
+        # 🔴 2026-09-23 加凭据（Klay 令）：匿名 Save Page Now 已失效——
+        #    实测对每个 URL 都返回 500，我们发出去的存档提交**一个都没成功过**，
+        #    而快照仍在更新（IA 自家爬虫顺手抓的）掩盖了这件事整整很久。
+        #    两个 Secret 在仓库 Settings → Secrets and variables → Actions 里配；
+        #    没配时脚本自动退回匿名 GET，行为与从前一致，不会把 CI 弄挂。
+        env:
+          IA_ACCESS_KEY: ${{ secrets.IA_ACCESS_KEY }}
+          IA_SECRET_KEY: ${{ secrets.IA_SECRET_KEY }}
         run: |
           python scripts/anchor_wayback.py --sha "$(git rev-parse HEAD)"
           # 🔴 2026-09-03 加 anchor_pending.json（Klay 令·补探队列）：

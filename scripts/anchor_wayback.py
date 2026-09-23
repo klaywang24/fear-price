@@ -35,7 +35,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
+import pathlib
+import configparser
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -84,10 +87,72 @@ def _get(url: str, timeout: int = 60) -> tuple[int, str]:
         return -1, str(e)[:120]
 
 
+# ══════════════════════════════════════════════════════════════════════
+# 存档凭据（2026-09-23 建 · Klay 令「去修啊」后查出的真根因）
+# ══════════════════════════════════════════════════════════════════════
+# 🔴 **匿名存档已经不工作了，而我们一直没发现。**
+#    2026-09-23 实测：`GET https://web.archive.org/save/<url>` 对**每一个** URL
+#    都返回 500（直接 curl 也一样）⇒ 本脚本发出去的存档请求**没有一个成功过**。
+#    那为什么快照还在更新？——靠 IA 自家爬虫碰巧路过。运气好就有，运气差就断：
+#    `chronicle.klay-wang.com/kapx` 就这么停在 09-19 连续 4 天。
+# 🔑 更要命的是它**不报错**：save_http 记了 500，却没有任何闸读这个字段，
+#    而「快照还在更新」掩盖了「我们的提交全失败」。⇒ 靠运气的见证链不叫见证链。
+#
+# 解法＝用 Save Page Now v2 的**带凭据接口**（POST + Authorization: LOW key:secret）。
+# 凭据取处，按优先级（**一个都没有就退回匿名 GET，行为与从前完全一致，不破坏 CI**）：
+#   ① 环境变量 IA_ACCESS_KEY / IA_SECRET_KEY   ← GitHub Actions 走这条（仓库 Secrets）
+#   ② ~/.config/internetarchive/ia.ini 的 [s3] access/secret ← 本机走这条
+#      （这是 `ia` 官方 CLI 的标准位置，将来装了它也能直接用同一份）
+# 🚫 **凭据永不进仓**：本仓是公开仓。两处都在仓外。
+def _ia_keys():
+    """返回 (access, secret, 来源标签)；没有就 (None, None, 'anon')。"""
+    a, sec = os.environ.get("IA_ACCESS_KEY"), os.environ.get("IA_SECRET_KEY")
+    if a and sec:
+        return a.strip(), sec.strip(), "env"
+    ini = pathlib.Path.home() / ".config" / "internetarchive" / "ia.ini"
+    if ini.exists():
+        try:
+            cp = configparser.ConfigParser()
+            cp.read(ini)
+            a = cp.get("s3", "access", fallback="").strip()
+            sec = cp.get("s3", "secret", fallback="").strip()
+            if a and sec:
+                return a, sec, "ia.ini"
+        except Exception:                        # 配置坏了当没有，不让它炸整轮
+            pass
+    return None, None, "anon"
+
+
+SAVE_MODE = "anon"          # 本轮实际用的模式，入 anchor_log 供闸读
+
+
 def save(url: str, retries: int = 3) -> int:
-    """发起存档。返回 HTTP 状态码；429 退避重试。"""
+    """发起存档。返回 HTTP 状态码；429 退避重试。
+
+    有凭据 ⇒ POST + Authorization 头（v2 接口，返回 job_id）；没有 ⇒ 老的匿名 GET。
+    """
+    global SAVE_MODE
+    access, secret, how = _ia_keys()
+    SAVE_MODE = how
     for i in range(retries):
-        code, _ = _get("https://web.archive.org/save/" + url, timeout=90)
+        if access:
+            data = urllib.parse.urlencode({"url": url, "skip_first_archive": "1"}).encode()
+            req = urllib.request.Request(
+                "https://web.archive.org/save",
+                data=data,
+                headers={"User-Agent": UA,
+                         "Accept": "application/json",
+                         "Content-Type": "application/x-www-form-urlencoded",
+                         "Authorization": f"LOW {access}:{secret}"})
+            try:
+                with urllib.request.urlopen(req, timeout=90) as r:
+                    code = r.status
+            except urllib.error.HTTPError as e:
+                code = e.code
+            except Exception:
+                code = -1
+        else:
+            code, _ = _get("https://web.archive.org/save/" + url, timeout=90)
         if code != 429:
             return code
         time.sleep(20 * (i + 1))                # 20s / 40s / 60s
@@ -365,6 +430,14 @@ def main() -> int:
               + "\n     —— 要么真存不上、要么判据错了，去看一眼；别让它在队列里挂成常态。")
 
     rec = {"date": today, "sha": args.sha, "stale_days_sla": STALE_DAYS,
+           # 🆕 2026-09-23：把「这一轮是怎么存的、存成功了几个」记进来。
+           #    起因＝匿名 save 全线 500 却整整没人发现：save_http 一直在记，
+           #    **但没有任何闸读它**，而「快照还在更新」（靠 IA 爬虫）掩盖了提交全失败。
+           #    ⇒ 光记不够，得让下游闸读得到：save_mode=anon 且 save_ok=0 ＝ 见证靠运气。
+           "save_mode": SAVE_MODE,
+           "save_ok": sum(1 for r in results if isinstance(r.get("save_http"), int)
+                          and 200 <= r["save_http"] < 300),
+           "save_tried": sum(1 for r in results if r.get("save_http") is not None),
            "within_sla": fresh, "out_of_sla": stale, "not_probed": unknown,
            # 🔑 2026-09-03 首跑当晚补：原来只记 len/resolved/zombies，
            #    **分不出「探了 3 条全没测到」和「压根没探」** —— 而首跑正好全是 skip，

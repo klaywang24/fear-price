@@ -200,6 +200,22 @@ def check_anchor_log() -> dict:
     def _is_stale(r):
         return r.get("probe") != "unknown" and not r.get("within_sla")
 
+    def _save_note(rec):
+        """🆕 2026-09-23：把「我们自己的提交成功了几个」缀在结论后面。
+
+        🔴 这一条是本次事故的核心：匿名 save 对每个 URL 都返回 500，**一个都没成功**，
+           而快照仍在更新（IA 自家爬虫顺手抓的）⇒ 从产物上完全看不出提交已经全废。
+           `save_http` 字段一直忠实记着 500，**只是没有任何闸读它**。
+           ⇒ 绿灯旁边必须带上这句，否则「见证靠运气」会继续隐形。
+        """
+        mode, ok, tried = (rec.get("save_mode"), rec.get("save_ok"), rec.get("save_tried"))
+        if mode is None:
+            return ""          # 建字段之前的旧记录，不替它断定
+        if ok == 0 and tried:
+            return (f"（⚠️ 但本轮 {tried} 次存档提交**一个都没成功**·模式 {mode}"
+                    f"{'：匿名提交已失效，快照全靠 IA 爬虫运气，去配 IA 密钥' if mode == 'anon' else ''}）")
+        return f"（本轮提交 {ok}/{tried} 成功·模式 {mode}）"
+
     def _names(pred):
         return "、".join(r.get("url", "?").replace("https://", "")[:52]
                          for r in res if pred(r)) or "（记录里没有逐条明细）"
@@ -214,7 +230,8 @@ def check_anchor_log() -> dict:
                            f"· SLA 内 {n_ok} —— 未测到的是："
                            + _names(lambda r: r.get("probe") == "unknown"))}
     return {"status": "ok", "age": age,
-            "detail": f"{rec['date']} 锚定正常，{n_ok} 个存档全部在 SLA 内"}
+            "detail": (f"{rec['date']} 锚定正常，{n_ok} 个存档全部在 SLA 内"
+                       + _save_note(rec))}
 
 
 def check_snapshot_live() -> dict:
