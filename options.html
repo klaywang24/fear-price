@@ -511,8 +511,8 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       fr6: daily,
       fr7: grow(cm),
       fr8: (D.gaps && D.gaps.date)
-        ? tr("每个交易日收盘后加一天，已记 <b>" + D.gaps.days + "</b> 个交易日（本栏 " + dot(D.gaps.date) + " 起步）。跳空宇宙比期权宇宙宽：多了一批高波票与三只点名票，金融五只只当参照系、不参与排行。",
-             "One more day per session; <b>" + D.gaps.days + "</b> session(s) recorded (this section starts " + dot(D.gaps.date) + "). The gap universe is wider than the options universe: extra high-beta names plus three watchlist names; the five financials serve as reference only and are excluded from the ranking.")
+        ? tr("每个交易日收盘后加一天，已记 <b>" + D.gaps.days + "</b> 个交易日（本栏 " + dot(D.gaps.date) + " 起步）。跳空宇宙比期权宇宙宽：多了一批高波票与四只点名票，金融五只只当参照系、不参与排行。",
+             "One more day per session; <b>" + D.gaps.days + "</b> session(s) recorded (this section starts " + dot(D.gaps.date) + "). The gap universe is wider than the options universe: extra high-beta names plus four watchlist names; the five financials serve as reference only and are excluded from the ranking.")
         : "",
     };
     Object.entries(txt).forEach(([id, v]) => { const el = $(id); if (el) el.innerHTML = v; });
