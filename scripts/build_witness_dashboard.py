@@ -115,6 +115,7 @@ a{color:var(--bad)}
 三样通知一个都没有、本页又是绿的，才叫真的正常。</p>
 
 <script>
+/*WITNESS_VERDICT_JS*/
 const RAW="RAW_URL";   // REPO 常量 2026-09-03 删：声明了从没用过
 const ICON={ok:"✓",bad:"!",unknown:"?"}, COLOR={ok:"var(--ok)",bad:"var(--bad)",unknown:"var(--unk)"};
 const SLA={chain:4, anchor:4, daily:4, opt:4};   // opt=期权页，与 check_witness_health 同值（snap 是 manual 卡，无判据键）
@@ -168,18 +169,14 @@ function card(name,st,detail,why){
   //        和 08-18 期权卡那次是同一个病的第二个发病部位，隔了半个月没人发现。
   //    🔑 第一性：**结论的覆盖面不许大于判据的覆盖面。** 量了 1 个探针就只能说这 1 个。
   //        推论：**绿灯的文案必须逐字等于判据** —— 人只会读那句话，不会去读代码。
+  //    🔴 2026-09-23 再修（Klay 令「看板也接上」）：判据不再内联在这里，
+  //        改调 scripts/witness_verdict.js（生成器内联进本页），与 CI 的 python 版共读
+  //        scripts/witness_fixtures.json —— 两个实现、一份样本、改判据先改样本。
+  //        同时带了矛盾检测：明细重算 vs 顶层聚合，不一致本身就是红。
   try{const {last,all}=await lastJsonl(RAW+"/data/anchor_log.jsonl");const a=days(last.date);
-    const h=(last.results||[])[0]||{};
-    const nOk=last.within_sla??null, nOut=last.out_of_sla??null, nUnk=last.not_probed??null;
-    let s="ok",d=`${last.date}（${ago(a)}）`;
-    if(a===null){s="unknown";d+=" · 记录里的日期解析不出来"}
-    else if(a>SLA.anchor){s="bad";d+=" · 超过 "+SLA.anchor+" 天没有新记录"}
-    // 聚合字段缺失 = 没测到，不是没问题（旧格式记录会走到这里）
-    else if(nOut===null&&nUnk===null){s="unknown";d+=" · 这条记录没有聚合字段，无法判定全部探针"}
-    else if(nOut>0){s="bad";d+=` · <b>${nOut} 个存档超期</b>（SLA 内 ${nOk} · 未测到 ${nUnk}）`}
-    else if(nUnk>0){s="unknown";d+=` · ${nUnk} 个未能查证（IA 限流）· SLA 内 ${nOk}`}
-    else{d+=` · ${nOk} 个存档全部在 SLA 内 · 链头快照 <code>${h.timestamp||"?"}</code>`}
-    out.push({n:"锚定日志",s,d,w:"存档结果有没有被留档 —— 判据＝该条记录的**全部**探针，不是第一个"});
+    const v=witnessVerdict.anchorVerdict(last,a,SLA.anchor);
+    out.push({n:"锚定日志",s:v.status,d:`${ago(a)} · ${v.detail}`,
+      w:"存档结果有没有被留档 —— 判据＝该条记录的**全部**探针（与 CI 同源同样本，含明细/聚合矛盾检测）"});
     window.__hist=all;
   }catch(e){out.push({n:"锚定日志",s:"unknown",
       d:"anchor_log.jsonl 取不到",
@@ -301,7 +298,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", help="输出路径（默认写到项目文件夹）")
     out = Path(ap.parse_args().out) if ap.parse_args().out else OUT
-    html = HTML.replace("RAW_URL", RAW).replace("REPO_URL", REPO)
+    js = (ROOT / "scripts" / "witness_verdict.js").read_text(encoding="utf-8")
+    assert "</script>" not in js, "witness_verdict.js 不许含 </script>（要内联进 HTML）"
+    html = (HTML.replace("/*WITNESS_VERDICT_JS*/", js)
+                .replace("RAW_URL", RAW).replace("REPO_URL", REPO))
     out.write_text(html, encoding="utf-8")
     globals()["OUT"] = out
     print(f"✅ 已生成 {OUT}")

@@ -6,6 +6,7 @@
 chronicle.klay-wang.com 的静态站与它的每日数据：温度计、K 指数、期权判断层 `data/options_page.json`、传导链四张 JSON、见证链哈希 `data/ledger_hashes.jsonl` 与锚定日志。
 
 ## 先读
+- `HANDOFF.md` 第一节＝**见证链**（部件/班次/七项体检怎么判红/凭据在哪/索引滞后/两实现一样本）。动 `scripts/anchor_*` `check_witness_health.py` `witness_verdict.js` 前必读。
 `README.md`。维护者手册不在本仓（09-12 起移出），在私有工作区。
 
 ## 硬规矩

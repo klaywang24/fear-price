@@ -156,7 +156,9 @@ jobs:
       #    样本 scripts/witness_fixtures.json；这一步**不** continue-on-error——判据回归就该让 daily 红，
       #    它零网络、只测代码，红了只有一个意思：闸坏了。
       - name: witness health selftest
-        run: python scripts/check_witness_health.py --selftest
+        run: |
+          python scripts/check_witness_health.py --selftest
+          node scripts/test_witness_fixtures.js      # 看板判据同一份样本（runner 自带 node）
       - name: witness health
         continue-on-error: true
         run: |
