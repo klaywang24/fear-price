@@ -600,24 +600,38 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   const _axMc = document.createElement("canvas").getContext("2d");
   const axTextW = s => { _axMc.font = "12px 'JetBrains Mono',monospace";
     return Math.max(...String(s).split("\n").map(l => _axMc.measureText(l).width)) + 6; };
-  function axisLayout(P, W) {             // P: [{x, head, w}] 像素；返回每项 dx（标签中心相对针的偏移）
-    const LH = 32, GAP = 9, PAD = 3;
-    const box = (p, dx) => ({ l: p.x + dx - p.w / 2, r: p.x + dx + p.w / 2, t: p.head - GAP - LH, b: p.head - GAP + 2 });
-    const placed = [];
-    const hit = (p, b) => {
+  function axisLayout(P, W, base) {       // P: [{x, w}] 像素（按价位升序）；返回每项 {dx, k, hh}：标签偏移、第几层、针头离轴高
+    const LH = 32, GAP = 9, PAD = 3, STEP = 46, KMAX = P.length + 2;
+    const box = (p, dx, hh) => ({ l: p.x + dx - p.w / 2, r: p.x + dx + p.w / 2, t: -(hh + GAP + LH), b: -(hh + GAP - 2) });
+    // 与已放的每一根针互查三件事：我的标签碰它的竖线/圆点、两标签相交、我的竖线/圆点碰它的标签
+    const hit = (p, b, hh, placed) => {
       if (b.l < 1 || b.r > W - 1) return true;
-      return P.some(q => q !== p && q.x > b.l - PAD && q.x < b.r + PAD && q.head - 6 < b.b)        // 别的针（竖线+圆点）穿过本标签
-          || placed.some(o => b.l < o.b_.r + PAD && o.b_.l < b.r + PAD && b.t < o.b_.b && o.b_.t < b.b); // 与已放标签相交
+      return placed.some(o =>
+           (o.x > b.l - PAD && o.x < b.r + PAD && -(o.hh + 6) < b.b)
+        || (b.l < o.b.r + PAD && o.b.l < b.r + PAD && b.t < o.b.b && o.b.t < b.b)
+        || (p.x > o.b.l - PAD && p.x < o.b.r + PAD && -(hh + 6) < o.b.b));
     };
-    return P.map(p => {
-      const a = p.w / 2 - 8, c = p.w / 2 + 8;
-      const cand = [0, -a, a, -c, c];
-      let dx = cand.find(d => !hit(p, box(p, d)));
-      if (dx === undefined) dx = 0;
-      p.b_ = box(p, dx); placed.push(p);
-      return dx;
-    });
+    const opts = P.map(p => { const a = p.w / 2 - 8, c = p.w / 2 + 8, o = [];
+      for (let k = 0; k < KMAX; k++) for (const dx of [0, -a, a, -c, c]) o.push({ dx, k, hh: base + k * STEP });
+      return o; });
+    // 回溯：贪心排不出来的情况（两针相距 3px：高的那根竖线必穿过矮的标签，除非矮的那个先让开）要能回头改前面的
+    let budget = 60000;
+    const dfs = (i, placed) => {
+      if (i === P.length) return [];
+      for (const o of opts[i]) {
+        if (--budget < 0) return null;
+        const b = box(P[i], o.dx, o.hh);
+        if (hit(P[i], b, o.hh, placed)) continue;
+        placed.push({ x: P[i].x, hh: o.hh, b });
+        const rest = dfs(i + 1, placed);
+        if (rest) return [o, ...rest];
+        placed.pop();
+      }
+      return null;
+    };
+    return dfs(0, []) || P.map((p, i) => ({ dx: 0, k: i % 3, hh: base + (i % 3) * STEP }));
   }
+
 
   /* 一根轴 v2（Klay 三轮反馈后重画）：
      · 每个价位 = 一根钉在轴上的针：箭头脚踩在精确位置，竖线拉到标签 —— 位置一眼可读
@@ -646,9 +660,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       if (m && Math.abs(p.v - m.v) < span * .004) m.n += " · " + p.n;
       else pts.push({ ...p });
     });
-    const H = [.40, .62, .84];               // 针高三档：脚全在轴上，头错落 ⇒ 标签永不互压
-    let lastV = -Infinity, hi_i = 0;
-    pts.forEach(p => { hi_i = (p.v - lastV) < span * .085 ? (hi_i + 1) % 3 : 0; p.h = H[hi_i]; lastV = p.v; });
+    pts.forEach(p => { p.h = 0; });           // 针高不再按价差分三档（价差近≠像素近，手机上全撞），改由 axisLayout 按像素逐层挑
     const step = niceStep(span * 1.26),
           min = Math.floor((lo0 - span * .13) / step) * step,
           max = Math.ceil((hi0 + span * .13) / step) * step;
@@ -671,13 +683,14 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
           data: pts.map(p => [p.v, p.h, p.n, p.c]),
           renderItem: (params, api) => {
             const v = api.value(0), h = api.value(1), n = api.value(2), c = api.value(3);
-            const [x, y0] = api.coord([v, 0]), y1 = api.coord([v, h])[1];
+            const [x, y0] = api.coord([v, 0]);
             const W = params.coordSys.x * 2 + params.coordSys.width;
             if (!LAY || LAY.W !== W) {
-              const P = pts.map(p => ({ x: api.coord([p.v, 0])[0], head: api.coord([p.v, p.h])[1], w: axTextW(p.n + "\n" + lbl(p.v)) }));
-              LAY = { W, dx: axisLayout(P, W) };
+              const P = pts.map(p => ({ x: api.coord([p.v, 0])[0], w: axTextW(p.n + "\n" + lbl(p.v)) }));
+              LAY = { W, L: axisLayout(P, W, Math.max(56, params.coordSys.height * .3)) };
             }
-            const dx = LAY.dx[params.dataIndex] || 0;
+            const { dx, hh } = LAY.L[params.dataIndex] || { dx: 0, hh: 56 };
+            const y1 = y0 - hh;
             return { type: "group", children: [
               { type: "line", shape: { x1: x, y1: y0 - 7, x2: x, y2: y1 },
                 style: { stroke: c, lineWidth: 1.5, opacity: .5 } },
