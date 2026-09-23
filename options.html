@@ -598,6 +598,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
      再在「居中 / 左偏 / 右偏 / 整块挪到左 / 整块挪到右」里挑第一个不碰任何东西的位置。
      碰＝别的针的竖线或圆点穿过标签框、两个标签框相交、标签出画布。 */
   const _axMc = document.createElement("canvas").getContext("2d");
+  let AXIS_GEN = 0;                        // 每次换票 +1；拉高图的定时器只认自己那一代，旧票的迟到定时器作废
   const axTextW = s => { _axMc.font = "12px 'JetBrains Mono',monospace";
     return Math.max(...String(s).split("\n").map(l => _axMc.measureText(l).width)) + 6; };
   function axisLayout(P, W, base) {       // P: [{x, w}] 像素（按价位升序）；返回每项 {dx, k, hh}：标签偏移、第几层、针头离轴高
@@ -666,6 +667,9 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
           max = Math.ceil((hi0 + span * .13) / step) * step;
     const fmtTick = v => step % 1 === 0 ? Math.round(v).toString() : (+v.toFixed(1)).toString();
     let LAY = null;                           // 标签布局按画布宽缓存；换票或宽度变了就重排
+    const gen = ++AXIS_GEN;
+    $("ch-axis").style.height = "";          // 换票先回默认高度，装不下再由下面拉高
+    axisC.resize();                           // 同步告诉 ECharts 真实高度：否则它按上一只票拉高后的旧尺寸排，判「装得下」后就不再查
     axisC.setOption({
       grid: { left: 44, right: 44, top: 20, bottom: 34 },
       tooltip: { trigger: "item", formatter: p => Array.isArray(p.value) ? p.value[2] + "：" + lbl(p.value[0]) : "" },
@@ -687,7 +691,14 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
             const W = params.coordSys.x * 2 + params.coordSys.width;
             if (!LAY || LAY.W !== W) {
               const P = pts.map(p => ({ x: api.coord([p.v, 0])[0], w: axTextW(p.n + "\n" + lbl(p.v)) }));
-              LAY = { W, L: axisLayout(P, W, Math.max(56, params.coordSys.height * .3)) };
+              LAY = { W, L: axisLayout(P, W, 64) };   // 底层针高固定 64px：按实时高度算会让拉高前后两次渲染排出不同结果
+            }
+            // 层数多到画布装不下时把图拉高，而不是让最上面的标签被画布顶边切掉（窄屏 + 价位扎堆时会发生）。
+            // 每次渲染都查（不只在排版时）：高度变了布局不重排，但装不装得下要按当下高度重判。
+            if (params.dataIndex === 0) {
+              const topY = y0 - Math.max(...LAY.L.map(o => o.hh)) - 9 - 32;
+              if (topY < 4) { const el = $("ch-axis"), need = el.clientHeight + Math.ceil(4 - topY), g = gen;
+                setTimeout(() => { if (g === AXIS_GEN) el.style.height = need + "px"; }, 0); }
             }
             const { dx, hh } = LAY.L[params.dataIndex] || { dx: 0, hh: 56 };
             const y1 = y0 - hh;
