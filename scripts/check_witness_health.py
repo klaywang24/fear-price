@@ -167,14 +167,54 @@ def check_anchor_log() -> dict:
         return {"status": "unknown", "detail": "anchor_log 最后一条无法解析日期"}
     if age > SLA["anchor_log"]:
         return {"status": "bad", "detail": f"锚定日志最后一条 {rec['date']}（{age} 天前）", "age": age}
-    head = (rec.get("results") or [{}])[0]
-    if head.get("probe") == "unknown":
-        return {"status": "unknown", "detail": f"{rec['date']} 那次未能查证链头快照（IA 限流）"}
-    if not head.get("within_sla"):
-        return {"status": "bad",
-                "detail": f"链头快照已 {head.get('confirmed_age_days')} 天前，超 SLA"}
-    return {"status": "ok",
-            "detail": f"{rec['date']} 锚定正常，链头快照 {head.get('timestamp')}"}
+    # 🔴 2026-09-23 修（Klay 令「去修啊」）：判据从**抽样**改成**聚合**。
+    #    病：原来只读 `results[0]`（一条记录里 9 个探针的第 1 个），结论却挂在整项上。
+    #    🔬 实测代价：`https://chronicle.klay-wang.com/kapx` 的存档停在 2026-09-15，
+    #        到 09-23 已 8 天、SLA 4 天、记录里 within_sla=false、顶层 out_of_sla=1 ——
+    #        而 results[0] 是 ledger_hashes.jsonl（1 天前，正常）⇒ **本项连报 8 天绿**。
+    #    🔑 看板 JS 早在 2026-09-03 就改成读聚合字段了，**这一侧没跟着改** ——
+    #        同一处判据两个实现，松的那把装在 CI 上，于是 CI 天天说没事。
+    #        家规「一处判据只能有一个实现」，本次是它的第 N 次实证。
+    #    🔑 第一性：**结论的覆盖面不许大于判据的覆盖面。** 量了 1 个探针就只能说这 1 个。
+    #        推论：**绿灯的文案必须逐字等于判据** —— 所以下面把超期的 URL 逐个点名，
+    #        不再只说一句「锚定正常」。
+    # ⚠️ 点名的判据必须与聚合的算法逐字一致，否则「说 1 个、列 2 个」——
+    #    本次修闸时当场犯了一次：起初写 `within_sla is False`，而 github commit 那条
+    #    是 probe=unknown **且** within_sla=False（它计进 not_probed 不计进 out_of_sla），
+    #    于是文案报「1 个超期」却列出 2 个 URL。⇒ 超期＝`probe=="ok" and within_sla is False`。
+    #    📌 修一个「结论大于判据」的 bug 时，顺手又造了一个同族的 —— 说明这个错很好犯。
+    res = rec.get("results") or []
+    n_ok, n_out, n_unk = (rec.get("within_sla"), rec.get("out_of_sla"),
+                          rec.get("not_probed"))
+    if n_out is None and n_unk is None:
+        # 旧格式记录没有聚合字段 ⇒ 没测到，不是没问题（家规：没查到 ≠ 没问题）
+        return {"status": "unknown",
+                "detail": f"{rec['date']} 这条记录没有聚合字段，无法判定全部探针"}
+    # 🔑 点名的判据**逐字照抄** anchor_wayback.py:295-300 的分类三分支，不另写一遍：
+    #       probe=="unknown" ⇒ not_probed；否则 within_sla 真 ⇒ within；假 ⇒ out_of_sla。
+    #    ⚠️ 探针有三态 ok / none（确实无快照）/ unknown（没测到），**none 计进超期**。
+    #       本次修闸连犯两回才对上：先写 `within_sla is False`（把 unknown 也算成超期，
+    #       报 1 列 2），改成 `probe=="ok"` 又漏掉 none（报 2 列 1）。
+    #       📌 可带走的：**要点名，就去读聚合是怎么数的，别照着样本猜**——
+    #          猜出来的谓词在每一种没见过的状态上都会错，而错的方向是静默。
+    def _is_stale(r):
+        return r.get("probe") != "unknown" and not r.get("within_sla")
+
+    def _names(pred):
+        return "、".join(r.get("url", "?").replace("https://", "")[:52]
+                         for r in res if pred(r)) or "（记录里没有逐条明细）"
+    if (n_out or 0) > 0:
+        return {"status": "bad", "age": age,
+                "detail": (f"{rec['date']} 锚定：{n_out} 个存档超期"
+                           f"（SLA 内 {n_ok} · 未测到 {n_unk}）—— 超期的是："
+                           + _names(_is_stale))}
+    if (n_unk or 0) > 0:
+        return {"status": "unknown", "age": age,
+                "detail": (f"{rec['date']} 锚定：{n_unk} 个未能查证（IA 限流）"
+                           f"· SLA 内 {n_ok} —— 未测到的是："
+                           + _names(lambda r: r.get("probe") == "unknown"))}
+    return {"status": "ok", "age": age,
+            "detail": f"{rec['date']} 锚定正常，{n_ok} 个存档全部在 SLA 内"}
 
 
 def check_snapshot_live() -> dict:
