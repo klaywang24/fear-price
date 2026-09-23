@@ -6,14 +6,19 @@
  "queue_len": 1,
  "pending": [
   {
-   "url": "https://chronicle.klay-wang.com/data/credit_witness.json",
-   "since": "2026-09-21",
+   "url": "https://chronicle.klay-wang.com/kapx",
+   "since": "2026-09-22",
    "attempts": 0,
    "last_try": null,
-   "why": "超期 4 天"
+   "why": "超期 8 天"
   }
  ],
  "resolved_recent": [
+  {
+   "url": "https://chronicle.klay-wang.com/data/credit_witness.json",
+   "on": "2026-09-22",
+   "timestamp": "20260923002138"
+  },
   {
    "url": "https://github.com/klaywang24/fear-price/commit/80bbeecd3c3b766d0f6871eded182e71885da200",
    "on": "2026-09-22",
