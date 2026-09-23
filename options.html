@@ -879,7 +879,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       "Each day's move splits in two: the <b>gap</b> (open vs prior close — overnight repricing) and the <b>intraday</b> leg (close vs open — money actually traded after the bell). The same daily gain can meet three different fates: <b>gap swallowed</b> (opened high, sold all day), <b>gap extended</b> (new money kept coming), or <b>no gap at all</b> (the whole move built intraday). ▲/▼ marks a <b>true gap</b> — today's low above yesterday's high (or the reverse) — a far stricter test than the opening print.");
     const tg = r => r.true_gap === "向上" ? " ▲" : (r.true_gap === "向下" ? " ▼" : "");
     /* 横向排行 + 胶囊分组切换（Klay 08-13 定：照做空页那套 UI —— 横条·logo·条尾数值·分组 tab）。
-       分组沿用第Ⅶ章 GROUPS 的措辞并扩到 35 只宇宙；🔑 不在任何组里的票自动落「其他」——
+       分组沿用第Ⅶ章 GROUPS 的措辞并扩到 47 只宇宙；🔑 不在任何组里的票自动落「其他」——
        管线以后加票不会静默消失（清单不会自己长大的老坑）。金融五只只在 Fintech tab 出现，
        不进「全部」排行（参照系不参与排行·方案 §四）。 */
     const ALLG = G.concat(D.gaps.finref.map(r => ({ ...r, group: "finref" })));
