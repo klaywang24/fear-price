@@ -551,9 +551,10 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   // 票签三行分组（2026-08-05 Klay 定）。AMD 归半导体行；
   // 🔑 不在任何组里的票自动落到末行 —— 管线以后加票不会静默消失（空集假阴性同族教训）
   const GROUPS = [
-    [tr("指数", "Index"), ["SPY", "QQQ"]],
+    [tr("指数 · ETF", "Index · ETF"), ["SPY", "QQQ", "IWM", "TLT", "SMH", "XLF"]],
     [tr("七巨头 · SPCX", "Mag 7 · SPCX"), ["AAPL", "AMZN", "GOOG", "GOOGL", "META", "MSFT", "NVDA", "TSLA", "SPCX"]],
-    [tr("半导体 · 存储", "Semis · Memory"), ["AVGO", "TSM", "AMD", "INTC", "MU", "SNDK"]],
+    [tr("半导体 · 存储", "Semis · Memory"), ["AVGO", "TSM", "AMD", "INTC", "MU", "SNDK", "MRVL", "QCOM", "SKHY", "SMCI", "DELL"]],
+    [tr("其他", "Others"), []],   // 末行承接不在任何组里的票（自动落入，见上一行注释）；此前末行是半导体，新票全被挂到那一行
   ];
   const have = new Set(D.structure.map(t => t.ticker));
   const grouped = new Set(GROUPS.flatMap(g => g[1]));
