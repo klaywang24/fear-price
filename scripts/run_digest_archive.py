@@ -81,16 +81,32 @@ def main():
         say(f"❌ 路由生成器退出码 {g.returncode} —— sitemap 本轮没入账，会在 nightly 撞红")
         return g.returncode
     drift = False
+    extra_add = []     # 2026-09-23：纯缓存版本号漂移的路由页，随本轮提交（见下）
     produced = [ln.split("生成 ", 1)[1].split("（")[0].strip()
                 for ln in g.stdout.splitlines() if ln.startswith("生成 ") and ".html" in ln]
     if produced:
         dirty_pages = [l[3:].strip() for l in
                        git("status", "--porcelain", "--", *produced).stdout.splitlines() if l.strip()]
         if dirty_pages:
-            git("checkout", "--", *dirty_pages)      # 只还原路由页产物，别的一概不碰
-            say("🔴 路由页产物被生成器改写（index 源疑似又与产物漂移，有人只改产物没改源）。"
-                "已仅还原这些页、不提交，sitemap 照常入账：" + " ".join(dirty_pages[:6]))
-            drift = True   # 红要落到退出码上（launchd 才看得见），但 sitemap 记账照走
+            # 🔴 2026-09-23 先分方向再决定还原还是提交（Klay 令「去修一下」）。
+            #    实况：09-19 `983aba67` 把源 index.html 的 style.css ?v= 升到 20260919b，路由页产物没重生成提交。
+            #    此后每晚生成器都正确地产出新版本号 ⇒ 与 committed 不同 ⇒ 本闸把它当「有人手改产物」
+            #    **还原回旧版**，连续四晚红，而线上 15 个路由页一直挂着旧 CSS 缓存号。
+            #    ⇒ 原闸只认一个方向（产物被手改）；「源比产物新」这个方向它会把对的一侧回滚掉。
+            #    判据：这些页的全部 diff 行都只含 `?v=YYYYMMDDx` 变化 ⇒ 源更新、产物滞后 ⇒ 随本轮一并提交。
+            #    其它任何内容差异仍按原逻辑还原并报红（那才是「只改产物没改源」）。
+            body = [l for l in git("diff", "--", *dirty_pages).stdout.splitlines()
+                    if l[:1] in "+-" and not l.startswith(("+++", "---"))]
+            only_ver = bool(body) and all(re.search(r"\?v=\d{8}[a-z]?", l) for l in body)
+            if only_ver:
+                extra_add = list(dirty_pages)
+                say("🟡 路由页只有缓存版本号随源 index.html 更新（源升了 ?v= 而产物没重生成提交）"
+                    "—— 源比产物新，生成器输出是对的，随本轮一并提交：" + " ".join(dirty_pages[:6]))
+            else:
+                git("checkout", "--", *dirty_pages)      # 只还原路由页产物，别的一概不碰
+                say("🔴 路由页产物被生成器改写（index 源疑似又与产物漂移，有人只改产物没改源）。"
+                    "已仅还原这些页、不提交，sitemap 照常入账：" + " ".join(dirty_pages[:6]))
+                drift = True   # 红要落到退出码上（launchd 才看得见），但 sitemap 记账照走
 
     # 变化判定必须**排除纯时间戳漂移**：digest_archive.json 的 generated_at 每跑一次就变，
     # 不排掉就天天产生一笔「什么都没变」的提交——既是噪声，也会把 GitHub contributions
@@ -100,13 +116,13 @@ def main():
             if l[:1] in "+-" and not l.startswith(("+++", "---")) and "generated_at" not in l]
     untracked = [l for l in git("ls-files", "--others", "--exclude-standard", "digest")
                  .stdout.splitlines() if l.strip()]
-    if not real and not untracked:
+    if not real and not untracked and not extra_add:
         say("✅ 跑通，无实质变化（只有 generated_at 时间戳漂移），不提交")
         git("checkout", "--", "data/digest_archive.json")
         return 1 if drift else 0
 
-    n = len([l for l in git("status", "--porcelain", "--", *WATCH).stdout.splitlines() if l.strip()])
-    git("add", "-A", *WATCH)
+    n = len([l for l in git("status", "--porcelain", "--", *WATCH, *extra_add).stdout.splitlines() if l.strip()])
+    git("add", "-A", *WATCH, *extra_add)
     stamp = datetime.date.today().isoformat()
     c = git("-c", "user.name=Klay", "-c", "user.email=klaywang24@gmail.com",
             "commit", "-q", "-m", f"digest 档案自动同步（{stamp}）：{n} 处变化")
