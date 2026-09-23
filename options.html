@@ -218,7 +218,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
 <div class="hero">
   <div class="kicker">OPTIONS · 期权异动 &amp; 分析</div>
   <h1>期权异动 &amp; 分析</h1>
-  <p class="dek" id="op-dek">期权是付了钱的观点：做保护要付保费，赌上涨要付定金，付出去就不退。喊话不用花钱，下注要。这一页不数几涨几跌，只看三件事：真金白银今天落在哪些价位，那些价位离现价还有多远，以及我们昨天立案的判断今天开奖了没有。每个交易日收盘后更新，数据延迟、绝不实时。</p>
+  <p class="dek" id="op-dek">期权是付了钱的观点：做保护要付保费，赌上涨要付定金，付出去就不退。喊话不用花钱，下注要。这一页不数几涨几跌，只看三件事：真金白银今天落在哪些价位，那些价位离现价还有多远，以及我们昨天立案的判断今天开奖了没有。每个交易日收盘后更新。</p>
   <p class="op-note" id="op-updated">读取中…</p>
 </div>
 
@@ -385,7 +385,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     opWalk(document.body);
     new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && opWalk(n))))
       .observe(document.body, { childList: true, subtree: true });
-    $("op-dek").textContent = "An option is an opinion with money behind it: protection costs premium, upside costs a deposit, and neither is refundable. Talk is free; positions are not. This page never counts how many names rose or fell. It watches three things: where real money landed today, how far those strikes sit from spot, and whether the judgments we filed yesterday have been settled. Updated after each trading day's close. Delayed data, never real-time.";
+    $("op-dek").textContent = "An option is an opinion with money behind it: protection costs premium, upside costs a deposit, and neither is refundable. Talk is free; positions are not. This page never counts how many names rose or fell. It watches three things: where real money landed today, how far those strikes sit from spot, and whether the judgments we filed yesterday have been settled. Updated after each trading day's close.";
     $("op-n3").innerHTML = "This is the page's source of credit: why believe Chapter IV's attributions? Because every judgment we make is <b>filed first, settled by pre-agreed conditions, and left standing when wrong</b>. The ledger only grows thicker; it is never rewritten. Click any row for the settlement and the original filing; filings and verification terms are archived verbatim in Chinese.";
     $("op-cal").innerHTML = "<b>How to read this page (calibration first)</b><br>" +
       "· One row = one contract's <b>full-day total</b>, not a single trade. We have no per-trade timestamps and no aggressor side, so premium is stated as <b>traded</b>, never as bought or sold: who bought and who sold, we cannot see and do not guess.<br>" +
