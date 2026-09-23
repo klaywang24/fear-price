@@ -1735,6 +1735,9 @@ COT_EQUITY_MARKETS = {
     # TFF 的市场名逐字匹配。Consolidated＝大合约+E-mini 合并，2010→，是最长的连续序列。
     "spx": ("S&P 500 Consolidated - CHICAGO MERCANTILE EXCHANGE", "标普 500 期货（合并）"),
     "ndx": ("NASDAQ-100 Consolidated - CHICAGO MERCANTILE EXCHANGE", "纳斯达克 100 期货（合并）"),
+    # 2026-09-23 加罗素 2000（Klay 令「视频里提到的数据能接的全接」）：TFF 没有 Consolidated 名，只有 E-mini，
+    # 逐字匹配 CFTC 现名；本机镜像 fetch_futures.do_cot_equity 按 markets 键自动多出一个市场，不用改。
+    "rty": ("RUSSELL E-MINI - CHICAGO MERCANTILE EXCHANGE", "罗素 2000 期货（E-mini）"),
 }
 
 
@@ -1935,7 +1938,10 @@ def build_vol_indices():
 #    ——同「恐惧的标价」的逻辑：报位置，不报判断。
 FINRA_SHVOL = "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
 SHORT_FLOW_TICKERS = ["SPY", "QQQ", "AAPL", "AMZN", "GOOGL", "META", "MSFT",
-                      "NVDA", "TSLA", "AVGO", "MU", "SNDK", "SPCX"]
+                      "NVDA", "TSLA", "AVGO", "MU", "SNDK", "SPCX",
+                      # 2026-09-23 加 7 只 ETF（Klay 令）：板块/风格做空占比，与本机 cm-iv 板块腿 XLV/XLK/XLC 同批。
+                      # 新票只从加入日起有数（FINRA 日文件永不重取），百分位要等满 250 日；短仓表同批照加。
+                      "IWM", "TLT", "XLF", "XLK", "XLV", "XLC", "SMH"]
 SHORT_FLOW_WINDOW = 756     # 3 年，与站上其余百分位同口径
 SHORT_FLOW_MIN = 250        # 不足则不给百分位，绝不用短窗口冒充
 
