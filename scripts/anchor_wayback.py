@@ -126,12 +126,44 @@ def _ia_keys():
 SAVE_MODE = "anon"          # 本轮实际用的模式，入 anchor_log 供闸读
 
 
+LAST_SPN: dict = {}     # 本轮最后一次带凭据提交的回执：{job_id, status, timestamp, message}
+
+
+def _spn_status(job: str, access: str, secret: str, waits: int = 3) -> dict:
+    """问一下这单存档到底成了没。
+
+    🔑 **它解决的是一种「看不出来」**：IA 的公开索引（CDX / availability / sparkline）
+       落后于真实抓取——2026-09-23 实证：SPN 回执说 20260923053538 抓取成功，
+       而同一时刻 CDX 与 availability 给出的最新快照仍是 4 天前的 20260919001549。
+       ⇒ **「存进去了但还没被索引」与「压根没存进去」在产物上长得一模一样**，
+          而这两件事的处置完全相反（前者等，后者查）。回执是唯一能把它们分开的东西。
+    🚫 但**不拿它改判定**：见证链的价值在于第三方**可公开查证**，没进索引就还查不到，
+       该红就红。回执只进记录，供人判断「这红是等索引，还是真没存」。
+    """
+    H = {"User-Agent": UA, "Accept": "application/json",
+         "Authorization": f"LOW {access}:{secret}"}
+    for _ in range(waits):
+        time.sleep(8)
+        try:
+            req = urllib.request.Request(
+                f"https://web.archive.org/save/status/{job}", headers=H)
+            with urllib.request.urlopen(req, timeout=45) as r:
+                st = json.loads(r.read().decode())
+            if st.get("status") != "pending":
+                return st
+        except Exception:
+            return {}
+    return {"status": "pending"}
+
+
 def save(url: str, retries: int = 3) -> int:
     """发起存档。返回 HTTP 状态码；429 退避重试。
 
-    有凭据 ⇒ POST + Authorization 头（v2 接口，返回 job_id）；没有 ⇒ 老的匿名 GET。
+    有凭据 ⇒ POST + Authorization 头（v2 接口，返回 job_id，并回读一次任务状态）；
+    没有 ⇒ 老的匿名 GET。
     """
     global SAVE_MODE
+    LAST_SPN.clear()
     access, secret, how = _ia_keys()
     SAVE_MODE = how
     for i in range(retries):
@@ -147,6 +179,18 @@ def save(url: str, retries: int = 3) -> int:
             try:
                 with urllib.request.urlopen(req, timeout=90) as r:
                     code = r.status
+                    try:
+                        j = json.loads(r.read().decode())
+                    except Exception:
+                        j = {}
+                if j.get("job_id"):
+                    st = _spn_status(j["job_id"], access, secret)
+                    # 🚫 不记 job_id：跨轮用不上，而那串十六进制会被公开仓的个人信息闸
+                    #    误判成证件类数字串，实撞过一次、提交被拒。留状态与时间戳足够。
+                    LAST_SPN.update({"spn_status": st.get("status"),
+                                     "spn_timestamp": st.get("timestamp"),
+                                     "spn_message": (j.get("message") or
+                                                     st.get("message") or "")[:120]})
             except urllib.error.HTTPError as e:
                 code = e.code
             except Exception:
@@ -364,7 +408,8 @@ def main() -> int:
         else:
             stale += 1
         results.append({"url": u, "save_http": code, "probe": probe,
-                        "confirmed_age_days": age, "within_sla": ok, **(snap or {})})
+                        "confirmed_age_days": age, "within_sla": ok,
+                        **dict(LAST_SPN), **(snap or {})})
         mark = {"unknown": "❔", "none": "🔴"}.get(probe, "✅" if ok else "🟡")
         ts = (f"{snap['timestamp']}（{age} 天前）" if snap
               else ("这次没测到" if probe == "unknown" else "确实无快照"))

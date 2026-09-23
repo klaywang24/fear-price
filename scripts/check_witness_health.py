@@ -217,8 +217,20 @@ def check_anchor_log() -> dict:
         return f"（本轮提交 {ok}/{tried} 成功·模式 {mode}）"
 
     def _names(pred):
-        return "、".join(r.get("url", "?").replace("https://", "")[:52]
-                         for r in res if pred(r)) or "（记录里没有逐条明细）"
+        # 🔑 2026-09-23：超期的 URL 后面缀上**当轮存档回执**。
+        #    实证：kapx 索引说 20260919（4 天前）判超期，而同一轮 SPN 回执是
+        #    `success 20260923053538`——**存档成功了，只是 IA 的公开索引还没收录**。
+        #    这两件事在产物上长得一样，处置却相反（等 vs 查）。红照报（没进索引就还不可
+        #    公开查证，见证价值尚未成立），但必须让人一眼看出该等还是该查。
+        out = []
+        for r in res:
+            if not pred(r):
+                continue
+            nm = r.get("url", "?").replace("https://", "")[:52]
+            if r.get("spn_status") == "success" and r.get("spn_timestamp"):
+                nm += f"（当轮已存 {r['spn_timestamp']}·等 IA 索引，非漏存）"
+            out.append(nm)
+        return "、".join(out) or "（记录里没有逐条明细）"
     if (n_out or 0) > 0:
         return {"status": "bad", "age": age,
                 "detail": (f"{rec['date']} 锚定：{n_out} 个存档超期"
