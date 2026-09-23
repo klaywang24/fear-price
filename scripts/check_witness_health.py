@@ -157,71 +157,53 @@ def check_chain_row() -> dict:
             "detail": f"链最后一行 {row['date']}（{age} 天前）", "age": age}
 
 
-def check_anchor_log() -> dict:
-    if not ANCHOR_LOG.exists():
-        # 🔴 这正是 08-04 之前的状态：文件从未存在过，而没有任何人发现
-        return {"status": "bad", "detail": "anchor_log.jsonl 不存在 —— 锚定结果从未被留档"}
-    rec = last_line_json(ANCHOR_LOG)
-    age = days_since(rec.get("date", ""), et=True) if rec else None   # 同链，交易日
+def anchor_verdict(rec: dict, age: int | None) -> dict:
+    """锚定日志一条记录 ⇒ 结论。**纯函数**，样本能直接喂（`--selftest`）。
+
+    🔴 2026-09-23 改（Klay 令「去修啊」→「之后如何避免静默」）。这道闸的病史：
+      · 建成时只读 `results[0]`（9 个探针的第 1 个），结论却挂在整项上。第 1 个是账本哈希链，
+        一直正常 ⇒ kapx 存档超期 8 天，本项**连报 8 天绿**，而同一条记录顶层就写着 out_of_sla=1。
+      · 看板 JS 2026-09-03 已改读聚合，**这一侧没跟着改**——同一处判据两个实现，松的那把装在
+        每天自动跑的 CI 上，于是机器天天说没事。
+      · 它建成时**没有负向样本** ⇒ 「它在看正确的字段」这件事从未被证明过（家规：没负向样本的闸不存在）。
+
+    三道保护，对应三个第一性：
+      ① **矛盾检测**：一条记录同时带原始明细（results[]）和聚合计数（within/out/not_probed），
+         两者必须机械一致；不一致本身就是红，**不需要知道谁对**。这条对生产端漂移也有效。
+      ② **负向样本**：`scripts/witness_fixtures.json` 里固定一批「results[0] 正常但聚合超期」之类的
+         记录，本函数必须给出指定结论。改判据＝改样本；哪一侧实现没跟上，当场红。
+      ③ **结论覆盖面 = 判据覆盖面**：文案里点名的 URL 数必须等于计数，判据逐字照抄
+         anchor_wayback.py 的三分支（probe unknown⇒未测到；否则 within_sla 假⇒超期，含 none）。
+    """
     if age is None:
         return {"status": "unknown", "detail": "anchor_log 最后一条无法解析日期"}
     if age > SLA["anchor_log"]:
-        return {"status": "bad", "detail": f"锚定日志最后一条 {rec['date']}（{age} 天前）", "age": age}
-    # 🔴 2026-09-23 修（Klay 令「去修啊」）：判据从**抽样**改成**聚合**。
-    #    病：原来只读 `results[0]`（一条记录里 9 个探针的第 1 个），结论却挂在整项上。
-    #    🔬 实测代价：`https://chronicle.klay-wang.com/kapx` 的存档停在 2026-09-15，
-    #        到 09-23 已 8 天、SLA 4 天、记录里 within_sla=false、顶层 out_of_sla=1 ——
-    #        而 results[0] 是 ledger_hashes.jsonl（1 天前，正常）⇒ **本项连报 8 天绿**。
-    #    🔑 看板 JS 早在 2026-09-03 就改成读聚合字段了，**这一侧没跟着改** ——
-    #        同一处判据两个实现，松的那把装在 CI 上，于是 CI 天天说没事。
-    #        家规「一处判据只能有一个实现」，本次是它的第 N 次实证。
-    #    🔑 第一性：**结论的覆盖面不许大于判据的覆盖面。** 量了 1 个探针就只能说这 1 个。
-    #        推论：**绿灯的文案必须逐字等于判据** —— 所以下面把超期的 URL 逐个点名，
-    #        不再只说一句「锚定正常」。
-    # ⚠️ 点名的判据必须与聚合的算法逐字一致，否则「说 1 个、列 2 个」——
-    #    本次修闸时当场犯了一次：起初写 `within_sla is False`，而 github commit 那条
-    #    是 probe=unknown **且** within_sla=False（它计进 not_probed 不计进 out_of_sla），
-    #    于是文案报「1 个超期」却列出 2 个 URL。⇒ 超期＝`probe=="ok" and within_sla is False`。
-    #    📌 修一个「结论大于判据」的 bug 时，顺手又造了一个同族的 —— 说明这个错很好犯。
+        return {"status": "bad", "detail": f"锚定日志最后一条 {rec.get('date')}（{age} 天前）", "age": age}
     res = rec.get("results") or []
-    n_ok, n_out, n_unk = (rec.get("within_sla"), rec.get("out_of_sla"),
-                          rec.get("not_probed"))
+    n_ok, n_out, n_unk = (rec.get("within_sla"), rec.get("out_of_sla"), rec.get("not_probed"))
     if n_out is None and n_unk is None:
         # 旧格式记录没有聚合字段 ⇒ 没测到，不是没问题（家规：没查到 ≠ 没问题）
-        return {"status": "unknown",
-                "detail": f"{rec['date']} 这条记录没有聚合字段，无法判定全部探针"}
-    # 🔑 点名的判据**逐字照抄** anchor_wayback.py:295-300 的分类三分支，不另写一遍：
-    #       probe=="unknown" ⇒ not_probed；否则 within_sla 真 ⇒ within；假 ⇒ out_of_sla。
-    #    ⚠️ 探针有三态 ok / none（确实无快照）/ unknown（没测到），**none 计进超期**。
-    #       本次修闸连犯两回才对上：先写 `within_sla is False`（把 unknown 也算成超期，
-    #       报 1 列 2），改成 `probe=="ok"` 又漏掉 none（报 2 列 1）。
-    #       📌 可带走的：**要点名，就去读聚合是怎么数的，别照着样本猜**——
-    #          猜出来的谓词在每一种没见过的状态上都会错，而错的方向是静默。
+        return {"status": "unknown", "age": age,
+                "detail": f"{rec.get('date')} 这条记录没有聚合字段，无法判定全部探针"}
+
+    def _is_unk(r):
+        return r.get("probe") == "unknown"
+
     def _is_stale(r):
-        return r.get("probe") != "unknown" and not r.get("within_sla")
+        return not _is_unk(r) and not r.get("within_sla")
 
-    def _save_note(rec):
-        """🆕 2026-09-23：把「我们自己的提交成功了几个」缀在结论后面。
-
-        🔴 这一条是本次事故的核心：匿名 save 对每个 URL 都返回 500，**一个都没成功**，
-           而快照仍在更新（IA 自家爬虫顺手抓的）⇒ 从产物上完全看不出提交已经全废。
-           `save_http` 字段一直忠实记着 500，**只是没有任何闸读它**。
-           ⇒ 绿灯旁边必须带上这句，否则「见证靠运气」会继续隐形。
-        """
-        mode, ok, tried = (rec.get("save_mode"), rec.get("save_ok"), rec.get("save_tried"))
-        if mode is None:
-            return ""          # 建字段之前的旧记录，不替它断定
-        if ok == 0 and tried:
-            return (f"（⚠️ 但本轮 {tried} 次存档提交**一个都没成功**·模式 {mode}"
-                    f"{'：匿名提交已失效，快照全靠 IA 爬虫运气，去配 IA 密钥' if mode == 'anon' else ''}）")
-        return f"（本轮提交 {ok}/{tried} 成功·模式 {mode}）"
+    # ① 矛盾检测：从明细重算，和顶层聚合比。**不一致就是红，不管哪边对。**
+    #    这是本类静默的通用解药——绿灯错了没人看，但「同一份记录自相矛盾」机器能看。
+    if res:
+        r_unk = sum(1 for r in res if _is_unk(r))
+        r_out = sum(1 for r in res if _is_stale(r))
+        r_ok = len(res) - r_unk - r_out
+        if (r_ok, r_out, r_unk) != (n_ok or 0, n_out or 0, n_unk or 0):
+            return {"status": "bad", "age": age,
+                    "detail": (f"{rec.get('date')} 记录自相矛盾：顶层聚合 SLA内{n_ok}/超期{n_out}/未测{n_unk}，"
+                               f"按明细重算 {r_ok}/{r_out}/{r_unk} —— 生产端或判据漂移，先查谁改了")}
 
     def _names(pred):
-        # 🔑 2026-09-23：超期的 URL 后面缀上**当轮存档回执**。
-        #    实证：kapx 索引说 20260919（4 天前）判超期，而同一轮 SPN 回执是
-        #    `success 20260923053538`——**存档成功了，只是 IA 的公开索引还没收录**。
-        #    这两件事在产物上长得一样，处置却相反（等 vs 查）。红照报（没进索引就还不可
-        #    公开查证，见证价值尚未成立），但必须让人一眼看出该等还是该查。
         out = []
         for r in res:
             if not pred(r):
@@ -231,19 +213,35 @@ def check_anchor_log() -> dict:
                 nm += f"（当轮已存 {r['spn_timestamp']}·等 IA 索引，非漏存）"
             out.append(nm)
         return "、".join(out) or "（记录里没有逐条明细）"
+
+    def _save_note(rec):
+        mode, ok, tried = (rec.get("save_mode"), rec.get("save_ok"), rec.get("save_tried"))
+        if mode is None:
+            return ""
+        if ok == 0 and tried:
+            return (f"（⚠️ 但本轮 {tried} 次存档提交**一个都没成功**·模式 {mode}"
+                    f"{'：匿名提交已失效，快照全靠 IA 爬虫运气，去配 IA 密钥' if mode == 'anon' else ''}）")
+        return f"（本轮提交 {ok}/{tried} 成功·模式 {mode}）"
+
     if (n_out or 0) > 0:
         return {"status": "bad", "age": age,
-                "detail": (f"{rec['date']} 锚定：{n_out} 个存档超期"
-                           f"（SLA 内 {n_ok} · 未测到 {n_unk}）—— 超期的是："
-                           + _names(_is_stale))}
+                "detail": (f"{rec.get('date')} 锚定：{n_out} 个存档超期（SLA 内 {n_ok} · 未测到 {n_unk}）"
+                           f"—— 超期的是：" + _names(_is_stale))}
     if (n_unk or 0) > 0:
         return {"status": "unknown", "age": age,
-                "detail": (f"{rec['date']} 锚定：{n_unk} 个未能查证（IA 限流）"
-                           f"· SLA 内 {n_ok} —— 未测到的是："
-                           + _names(lambda r: r.get("probe") == "unknown"))}
+                "detail": (f"{rec.get('date')} 锚定：{n_unk} 个未能查证（IA 限流）· SLA 内 {n_ok} "
+                           f"—— 未测到的是：" + _names(_is_unk))}
     return {"status": "ok", "age": age,
-            "detail": (f"{rec['date']} 锚定正常，{n_ok} 个存档全部在 SLA 内"
-                       + _save_note(rec))}
+            "detail": f"{rec.get('date')} 锚定正常，{n_ok} 个存档全部在 SLA 内" + _save_note(rec)}
+
+
+def check_anchor_log() -> dict:
+    if not ANCHOR_LOG.exists():
+        # 🔴 这正是 08-04 之前的状态：文件从未存在过，而没有任何人发现
+        return {"status": "bad", "detail": "anchor_log.jsonl 不存在 —— 锚定结果从未被留档"}
+    rec = last_line_json(ANCHOR_LOG)
+    age = days_since(rec.get("date", ""), et=True) if rec else None   # 同链，交易日
+    return anchor_verdict(rec or {}, age)
 
 
 def check_snapshot_live() -> dict:
@@ -452,12 +450,34 @@ CHECKS = {
 }
 
 
+def selftest() -> int:
+    """负向样本自检（零网络）。🔑 新闸必须用负向样本证明它报红才算存在。
+    样本在 scripts/witness_fixtures.json —— 与看板 JS 共用同一份，改判据先改样本。"""
+    fx = json.loads((ROOT / "scripts" / "witness_fixtures.json").read_text(encoding="utf-8"))
+    bad = 0
+    for c in fx["cases"]:
+        r = anchor_verdict(c["rec"], c["age"])
+        ok = r["status"] == c["expect"]
+        if ok and c.get("expect_named") is not None:
+            named = r["detail"].split("超期的是：")[-1].count("、") + 1 if "超期的是：" in r["detail"] else 0
+            ok = named == c["expect_named"]
+            if not ok:
+                r = {**r, "detail": r["detail"] + f"  ⇐ 点名 {named} 个，计数 {c['expect_named']}"}
+        print(("  ✅ " if ok else "  ❌ ") + c["name"] + ("" if ok else f"\n       实得 {r['status']} · {r['detail'][:160]}"))
+        bad += 0 if ok else 1
+    print(f"\n见证链判据自检：{len(fx['cases']) - bad} 过 / {bad} 败")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--selftest", action="store_true", help="负向样本自检，零网络；CI 每天先跑它")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--record", action="store_true",
                     help="把本次各项状态追加进 data/health_log.jsonl（只在 daily 用，供「上次成功」判据）")
     args = ap.parse_args()
+    if args.selftest:
+        return selftest()
 
     results = {name: escalate_if_stale(name, fn()) for name, fn in CHECKS.items()}
     bad = [n for n, r in results.items() if r["status"] == "bad"]

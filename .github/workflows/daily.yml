@@ -151,6 +151,12 @@ jobs:
       #    就必须知道「上次成功是哪天」—— 那是跨运行的状态，只能落盘。
       #    自提交范式照抄上面 anchor to Wayback 那步（家规 §26 先用现成做法）；
       #    看门狗只读它不写（它的权限就是 contents: read）。
+      # 🔴 2026-09-23 加：体检自己先过负向样本，再去体检别人。
+      #    起因＝锚定判据只读 results[0]，连报 8 天绿；建成时没负向样本，从没被证明过在看对的字段。
+      #    样本 scripts/witness_fixtures.json；这一步**不** continue-on-error——判据回归就该让 daily 红，
+      #    它零网络、只测代码，红了只有一个意思：闸坏了。
+      - name: witness health selftest
+        run: python scripts/check_witness_health.py --selftest
       - name: witness health
         continue-on-error: true
         run: |

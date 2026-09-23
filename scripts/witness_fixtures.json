@@ -1,0 +1,154 @@
+{
+ "_what": "见证链体检「锚定日志」判据的固定样本（2026-09-23 建）。python 与看板 JS 两个实现都必须过同一份；改判据先改这里。每条 expect 是必须给出的 status。",
+ "_why": "这道闸 2026-09-23 前只读 results[0]、连报 8 天绿；建成时没有负向样本，「它在看正确的字段」从未被证明过。第一条样本就是那次事故的形状。",
+ "cases": [
+  {
+   "name": "负向·第 1 个探针正常但聚合超期 1（09-23 事故原形，必须红；⚠️本样本初版把 within_sla 写成 8 而明细只有 2 条，被矛盾检测当场抓出——样本自己也得自洽）",
+   "age": 1,
+   "expect": "bad",
+   "expect_named": 1,
+   "rec": {
+    "date": "2026-09-22",
+    "within_sla": 1,
+    "out_of_sla": 1,
+    "not_probed": 0,
+    "results": [
+     {
+      "url": "https://a/ledger_hashes.jsonl",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://a/kapx",
+      "probe": "ok",
+      "within_sla": false,
+      "confirmed_age_days": 8
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·probe=none（确实无快照）要计进超期，不是未测到",
+   "age": 0,
+   "expect": "bad",
+   "expect_named": 1,
+   "rec": {
+    "date": "2026-09-23",
+    "within_sla": 1,
+    "out_of_sla": 1,
+    "not_probed": 0,
+    "results": [
+     {
+      "url": "https://a/x",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://gh/commit/abc",
+      "probe": "none",
+      "within_sla": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·未测到（IA 限流）⇒ unknown，不是 ok",
+   "age": 0,
+   "expect": "unknown",
+   "rec": {
+    "date": "2026-09-23",
+    "within_sla": 1,
+    "out_of_sla": 0,
+    "not_probed": 1,
+    "results": [
+     {
+      "url": "https://a/x",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://a/y",
+      "probe": "unknown",
+      "within_sla": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·旧格式无聚合字段 ⇒ unknown（没查到≠没问题）",
+   "age": 0,
+   "expect": "unknown",
+   "rec": {
+    "date": "2026-09-23",
+    "results": [
+     {
+      "url": "https://a/x",
+      "probe": "ok",
+      "within_sla": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·聚合说全绿但明细里有超期 ⇒ 记录自相矛盾，必须红（不管谁对）",
+   "age": 0,
+   "expect": "bad",
+   "rec": {
+    "date": "2026-09-23",
+    "within_sla": 2,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "results": [
+     {
+      "url": "https://a/x",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://a/y",
+      "probe": "ok",
+      "within_sla": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·记录本身超过 SLA 天没新的 ⇒ 红",
+   "age": 9,
+   "expect": "bad",
+   "rec": {
+    "date": "2026-09-14",
+    "within_sla": 9,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "results": []
+   }
+  },
+  {
+   "name": "正向·全部在 SLA 内 ⇒ ok",
+   "age": 0,
+   "expect": "ok",
+   "rec": {
+    "date": "2026-09-23",
+    "within_sla": 2,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "save_mode": "ia.ini",
+    "save_ok": 2,
+    "save_tried": 2,
+    "results": [
+     {
+      "url": "https://a/x",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://a/y",
+      "probe": "ok",
+      "within_sla": true
+     }
+    ]
+   }
+  }
+ ]
+}
