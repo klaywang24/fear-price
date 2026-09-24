@@ -68,6 +68,23 @@ def series_from(rows, col):
     return {"dates": dates, "values": vals}
 
 
+_FX = {}
+
+
+def _fx_to_usd(cur: str):
+    """Units of USD per one unit of `cur`. 1.0 for USD; None when the rate cannot be fetched
+    (then the caller keeps the local figure and labels it with its currency instead of faking USD)."""
+    if cur == "USD":
+        return 1.0
+    if cur not in _FX:
+        try:
+            _FX[cur] = float(yf.Ticker(f"{cur}USD=X").fast_info["last_price"])
+        except Exception as e:  # noqa: BLE001
+            print(f"  fx {cur}USD=X unavailable: {e}")
+            _FX[cur] = None
+    return _FX[cur]
+
+
 def build_stock_fund(ticker: str):
     sym = MT_SYMBOL.get(ticker, ticker)
     fund = {"ticker": ticker, "mt_symbol": sym}
@@ -127,6 +144,12 @@ def build_stock_fund(ticker: str):
         if "." in ticker and not info.get("marketCap"):
             t = yf.Ticker(ticker.replace(".", "-"))
             info = t.info
+        # Currency (2026-09-24): Yahoo reports marketCap / freeCashflow in the listing currency
+        # (EUR for MC.PA, TWD for TSM). The site prints these with a $ sign, so convert to USD at the
+        # current FX rate and keep the local figures alongside; never mix currencies in a peers table.
+        cur = (info.get("currency") or "USD").upper()
+        fx = _fx_to_usd(cur)
+        mc_local, fcf_local = info.get("marketCap"), info.get("freeCashflow")
         fund["snapshot"] = {
             "pe": info.get("trailingPE"), "fwd_pe": info.get("forwardPE"),
             "ps": info.get("priceToSalesTrailing12Months"), "pb": info.get("priceToBook"),
@@ -134,8 +157,13 @@ def build_stock_fund(ticker: str):
             "gross_margin": round(info["grossMargins"] * 100, 1) if info.get("grossMargins") else None,
             "net_margin": round(info["profitMargins"] * 100, 1) if info.get("profitMargins") else None,
             "div_yield": info.get("dividendYield"),
-            "market_cap": info.get("marketCap"),
-            "fcf": info.get("freeCashflow"),
+            "market_cap": (round(mc_local * fx) if (mc_local and fx) else None),
+            "fcf": (round(fcf_local * fx) if (fcf_local and fx) else None),
+            "currency": "USD" if fx else cur,
+            "reported_currency": cur,
+            "fx_to_usd": fx,
+            "market_cap_local": mc_local,
+            "fcf_local": fcf_local,
             "beta": info.get("beta"),
             "payout": round(info["payoutRatio"] * 100, 1) if info.get("payoutRatio") else None,
         }
@@ -149,7 +177,7 @@ def build_stock_fund(ticker: str):
                 return [None if pd.isna(v) else round(float(v) / 1e9, 2)
                         for v in inc.loc[name]][::-1]
             return None
-        fund["income4"] = {"years": years,
+        fund["income4"] = {"years": years, "currency": cur,
                            "revenue": row("Total Revenue"),
                            "net_income": row("Net Income")}
     except Exception as e:

@@ -661,6 +661,9 @@
     });
   }
 
+  // 2026-09-24：市值/FCF 由 build_fundamentals 换算成美元后带 currency 字段；换不到汇率时保留本币并标代码，不再一律印 $
+  const _ccy = (snap) => (!snap.currency || snap.currency === "USD") ? "$" : (snap.currency + " ");
+
   async function renderFund(basket, safe, ticker) {
     let fund = null, peers = null;
     try { fund = await load("s_" + safe + "_fund"); } catch (e) {}
@@ -683,13 +686,13 @@
     const fmt = (v, d, suffix) => v == null ? "--" : v.toFixed(d) + (suffix || "");
     if (snap) {
       const cards = [
-        ["市值", snap.market_cap ? "$" + (snap.market_cap / 1e9).toFixed(0) + "B" : "--"],
+        ["市值", snap.market_cap ? _ccy(snap) + (snap.market_cap / 1e9).toFixed(0) + "B" : "--"],
         ["PE (TTM)", fmt(snap.pe, 1)], ["远期 PE", fmt(snap.fwd_pe, 1)],
         ["PS", fmt(snap.ps, 1)], ["PB", fmt(snap.pb, 1)],
         ["ROE", fmt(snap.roe, 1, "%")],
         ["毛利率", fmt(snap.gross_margin, 1, "%")], ["净利率", fmt(snap.net_margin, 1, "%")],
         ["股息率", fmt(snap.div_yield, 2, "%")], ["派息率", fmt(snap.payout, 0, "%")],
-        ["自由现金流", snap.fcf ? "$" + (snap.fcf / 1e9).toFixed(1) + "B" : "--"],
+        ["自由现金流", snap.fcf ? _ccy(snap) + (snap.fcf / 1e9).toFixed(1) + "B" : "--"],
         ["Beta", fmt(snap.beta, 2)],
       ];
       const el = document.getElementById(basket + "-fd-dash-cards");
