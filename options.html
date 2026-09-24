@@ -497,6 +497,13 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
         : tr("没有缺格，只会越攒越长。", " No gaps; append-only."));
     };
 
+    // 2026-09-24：信用线两票（HYG/LQD）方法学切换中暂撤，恢复日由数据给出
+    const _creditNote = () => {
+      const c = D.meta && D.meta.credit_paused;
+      if (!c) return "";
+      return tr(" <b>" + c.tickers.join("、") + " 暂不显示：" + c.note_zh + "。</b>",
+                " <b>" + c.tickers.join(", ") + " hidden for now: " + c.note_en + ".</b>");
+    };
     const txt = {
       fr1: daily,
       fr2: daily,
@@ -508,11 +515,11 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
               + (filed ? ", last filed " + dot(filed) : "") + ". Nothing already written is ever rewritten."),
       fr4: daily,
       fr5: grow(fl),
-      fr6: daily + ((D.two_lives_stale || []).length
+      fr6: daily + _creditNote() + ((D.two_lives_stale || []).length
         ? tr(" 图里只放当天两个读数都齐的票；当天测不出、未入图：" + D.two_lives_stale.map(r => r.ticker + "（最新 " + dot(r.date) + "）").join("、") + "。",
              " Only names with both readings for the day are charted; not measurable today and left out: " + D.two_lives_stale.map(r => r.ticker + " (latest " + dot(r.date) + ")").join(", ") + ".")
         : ""),
-      fr7: grow(cm),
+      fr7: grow(cm) + _creditNote(),
       fr8: (D.gaps && D.gaps.date)
         ? tr("每个交易日收盘后加一天，已记 <b>" + D.gaps.days + "</b> 个交易日（本栏 " + dot(D.gaps.date) + " 起步）。跳空宇宙比期权宇宙宽：多了一批高波票与四只点名票，金融五只只当参照系、不参与排行。",
              "One more day per session; <b>" + D.gaps.days + "</b> session(s) recorded (this section starts " + dot(D.gaps.date) + "). The gap universe is wider than the options universe: extra high-beta names plus four watchlist names; the five financials serve as reference only and are excluded from the ranking.")
