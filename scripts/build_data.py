@@ -83,6 +83,38 @@ _PRICE_FALLBACK = {
 }
 
 
+_GAPFILL: list = []
+
+
+def _fill_index_gaps(s: pd.Series, fred_id: str, label: str, lookback_days: int = 730) -> pd.Series:
+    """Fill trading days that Yahoo's index history silently omits, using FRED's official close.
+
+    2026-09-24: Yahoo's ^GSPC / ^IXIC / ^NDX histories all skipped 2026-09-22 (a normal session);
+    FRED SP500 had it. An append-only merge never revisits a hole, so the century charts carried
+    the gap forward. Only dates strictly inside Yahoo's own range are filled (never extend either
+    end); every fill is listed in meta.json.gap_filled with its source. If FRED is unreachable the
+    gap stays and the failure is listed, never hidden."""
+    try:
+        if s is None or s.empty:
+            return s
+        start = (s.index.max() - pd.Timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        f = _fred(fred_id, start=start)
+        inside = (f.index > s.index.min()) & (f.index < s.index.max()) & ~f.index.isin(s.index)
+        holes = f[inside]
+        if holes.empty:
+            return s
+        filled = pd.concat([s, holes.round(2)]).sort_index()
+        for d, v in holes.items():
+            _GAPFILL.append({"ticker": label, "date": d.strftime("%Y-%m-%d"), "value": round(float(v), 2), "source": f"FRED {fred_id}"})
+        print(f"  ↪ {label}: Yahoo history missing {len(holes)} session(s) inside its range, filled from FRED {fred_id}: "
+              + ", ".join(d.strftime("%Y-%m-%d") for d in holes.index[:5]))
+        return filled
+    except Exception as e:  # noqa: BLE001
+        _FAILURES.append({"section": f"index gap check ({label} vs FRED {fred_id})", "error": f"{type(e).__name__}: {str(e)[:160]}"})
+        print(f"  ⚠️ {label} gap check unavailable: {e}")
+        return s
+
+
 def fetch_close_or_own(ticker: str) -> pd.Series:
     """取全史收盘序列；上游（Yahoo）全挂时回退**自家已发布过的同一序列**。
 
@@ -2741,9 +2773,9 @@ def main():
     print("fetching prices …")
     # 四条都走「上游优先、自家已发布历史兜底」（见 fetch_close_or_own 头注）。
     # 此前是裸调 fetch_history：任一条抛错，整轮在第一步就死、后面 _guard 全都跑不到。
-    gspc = fetch_close_or_own("^GSPC")
-    ixic = fetch_close_or_own("^IXIC")
-    ndx = fetch_close_or_own("^NDX")
+    gspc = _fill_index_gaps(fetch_close_or_own("^GSPC"), "SP500", "^GSPC")
+    ixic = _fill_index_gaps(fetch_close_or_own("^IXIC"), "NASDAQCOM", "^IXIC")
+    ndx = _fill_index_gaps(fetch_close_or_own("^NDX"), "NASDAQ100", "^NDX")
     vix = fetch_close_or_own("^VIX")
     try:
         vxn = fetch_history("^VXN")["Close"]
@@ -2798,6 +2830,8 @@ def main():
         "sources": "Yahoo Finance · Cboe · FRED · FINRA · CFTC · CNN Fear & Greed · multpl.com",
         # 非致命小节的失败清单：空 = 本次全绿。notify_discord 读这个字段决定要不要吵。
         "failures": _FAILURES,
+        # Sessions Yahoo omitted and FRED supplied (2026-09-24). Empty = no fills this run.
+        "gap_filled": _GAPFILL,
     })
     if _FAILURES:
         print(f"\n⚠️ 本次有 {len(_FAILURES)} 个小节失败（已写入 meta.json，告警器会响）：")
