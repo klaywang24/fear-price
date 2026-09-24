@@ -166,7 +166,10 @@ def build_stock_fund(ticker: str):
             "div_yield": info.get("dividendYield"),
             "market_cap": mc_usd,
             "fcf": fcf_usd,
-            # currency of the two converted fields as shown; USD when both rates were available
+            # Each converted figure carries its own currency as shown (USD once converted, else the
+            # local code). `currency` is kept for older readers and equals USD only when both converted.
+            "market_cap_currency": "USD" if fx else cur,
+            "fcf_currency": "USD" if fin_fx else fin_cur,
             "currency": "USD" if (fx and fin_fx) else (cur if not fx else fin_cur),
             "quote_currency": cur,
             "financial_currency": fin_cur,
@@ -182,12 +185,15 @@ def build_stock_fund(ticker: str):
     try:
         inc = t.income_stmt
         years = [str(c)[:4] for c in inc.columns][::-1]
+        # Statements are reported in `financialCurrency`; convert to USD with that rate (2026-09-24),
+        # otherwise keep the local figures and say so in `currency` so the page can title them.
+        _inc_fx = fin_fx if fin_fx else 1.0
         def row(name):
             if name in inc.index:
-                return [None if pd.isna(v) else round(float(v) / 1e9, 2)
+                return [None if pd.isna(v) else round(float(v) * _inc_fx / 1e9, 2)
                         for v in inc.loc[name]][::-1]
             return None
-        fund["income4"] = {"years": years, "currency": fin_cur,
+        fund["income4"] = {"years": years, "currency": "USD" if fin_fx else fin_cur,
                            "revenue": row("Total Revenue"),
                            "net_income": row("Net Income")}
     except Exception as e:

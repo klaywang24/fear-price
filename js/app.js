@@ -662,7 +662,7 @@
   }
 
   // 2026-09-24：市值/FCF 由 build_fundamentals 换算成美元后带 currency 字段；换不到汇率时保留本币并标代码，不再一律印 $
-  const _ccy = (snap) => (!snap.currency || snap.currency === "USD") ? "$" : (snap.currency + " ");
+  const _ccy = (snap, field) => { const c = snap[field] || snap.currency; return (!c || c === "USD") ? "$" : (c + " "); };
 
   async function renderFund(basket, safe, ticker) {
     let fund = null, peers = null;
@@ -686,13 +686,13 @@
     const fmt = (v, d, suffix) => v == null ? "--" : v.toFixed(d) + (suffix || "");
     if (snap) {
       const cards = [
-        ["市值", snap.market_cap ? _ccy(snap) + (snap.market_cap / 1e9).toFixed(0) + "B" : "--"],
+        ["市值", snap.market_cap ? _ccy(snap, "market_cap_currency") + (snap.market_cap / 1e9).toFixed(0) + "B" : "--"],
         ["PE (TTM)", fmt(snap.pe, 1)], ["远期 PE", fmt(snap.fwd_pe, 1)],
         ["PS", fmt(snap.ps, 1)], ["PB", fmt(snap.pb, 1)],
         ["ROE", fmt(snap.roe, 1, "%")],
         ["毛利率", fmt(snap.gross_margin, 1, "%")], ["净利率", fmt(snap.net_margin, 1, "%")],
         ["股息率", fmt(snap.div_yield, 2, "%")], ["派息率", fmt(snap.payout, 0, "%")],
-        ["自由现金流", snap.fcf ? _ccy(snap) + (snap.fcf / 1e9).toFixed(1) + "B" : "--"],
+        ["自由现金流", snap.fcf ? _ccy(snap, "fcf_currency") + (snap.fcf / 1e9).toFixed(1) + "B" : "--"],
         ["Beta", fmt(snap.beta, 2)],
       ];
       const el = document.getElementById(basket + "-fd-dash-cards");
@@ -728,6 +728,13 @@
       if (fund.eps) await buildOne(basket + "-fd-eps", line(fund.eps, "EPS TTM", "moss"));
       else { const c = document.getElementById(basket + "-fd-eps"); if (c) c.closest(".card").remove(); }
       if (fund.income4 && fund.income4.revenue) {
+        // 2026-09-24：标题里的币种跟数据走——换算成美元就写美元，换不到汇率就写本币代码，不再写死「十亿美元」
+        const _icu = fund.income4.currency || "USD";
+        const _unit = _icu === "USD" ? "十亿美元" : ("十亿 " + _icu);
+        [["-fd-rev", "营业收入（近四财年 · " + _unit + "）"], ["-fd-ni", "净利润（近四财年 · " + _unit + "）"]].forEach(([sfx, title]) => {
+          const el = document.getElementById(basket + sfx); const h = el && el.closest(".card") && el.closest(".card").querySelector("h3");
+          if (h) h.textContent = title;
+        });
         await buildOne(basket + "-fd-rev", bars(fund.income4.years, fund.income4.revenue, "blue"));
         await buildOne(basket + "-fd-ni", bars(fund.income4.years, fund.income4.net_income, "moss", true));
       }
