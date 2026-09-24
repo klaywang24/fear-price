@@ -147,9 +147,16 @@ def build_stock_fund(ticker: str):
         # Currency (2026-09-24): Yahoo reports marketCap / freeCashflow in the listing currency
         # (EUR for MC.PA, TWD for TSM). The site prints these with a $ sign, so convert to USD at the
         # current FX rate and keep the local figures alongside; never mix currencies in a peers table.
+        # Two currencies, not one (2026-09-24 review caught TSM): the quote currency (`currency`, USD for
+        # the ADR) prices the market cap; the statements currency (`financialCurrency`, TWD) prices free
+        # cash flow and the income statement. Convert each with its own rate. When a rate cannot be
+        # fetched, keep the local figure and label it with its currency code rather than blanking it.
         cur = (info.get("currency") or "USD").upper()
-        fx = _fx_to_usd(cur)
+        fin_cur = (info.get("financialCurrency") or cur).upper()
+        fx, fin_fx = _fx_to_usd(cur), _fx_to_usd(fin_cur)
         mc_local, fcf_local = info.get("marketCap"), info.get("freeCashflow")
+        mc_usd = round(mc_local * fx) if (mc_local and fx) else mc_local
+        fcf_usd = round(fcf_local * fin_fx) if (fcf_local and fin_fx) else fcf_local
         fund["snapshot"] = {
             "pe": info.get("trailingPE"), "fwd_pe": info.get("forwardPE"),
             "ps": info.get("priceToSalesTrailing12Months"), "pb": info.get("priceToBook"),
@@ -157,11 +164,14 @@ def build_stock_fund(ticker: str):
             "gross_margin": round(info["grossMargins"] * 100, 1) if info.get("grossMargins") else None,
             "net_margin": round(info["profitMargins"] * 100, 1) if info.get("profitMargins") else None,
             "div_yield": info.get("dividendYield"),
-            "market_cap": (round(mc_local * fx) if (mc_local and fx) else None),
-            "fcf": (round(fcf_local * fx) if (fcf_local and fx) else None),
-            "currency": "USD" if fx else cur,
-            "reported_currency": cur,
+            "market_cap": mc_usd,
+            "fcf": fcf_usd,
+            # currency of the two converted fields as shown; USD when both rates were available
+            "currency": "USD" if (fx and fin_fx) else (cur if not fx else fin_cur),
+            "quote_currency": cur,
+            "financial_currency": fin_cur,
             "fx_to_usd": fx,
+            "fin_fx_to_usd": fin_fx,
             "market_cap_local": mc_local,
             "fcf_local": fcf_local,
             "beta": info.get("beta"),
@@ -177,7 +187,7 @@ def build_stock_fund(ticker: str):
                 return [None if pd.isna(v) else round(float(v) / 1e9, 2)
                         for v in inc.loc[name]][::-1]
             return None
-        fund["income4"] = {"years": years, "currency": cur,
+        fund["income4"] = {"years": years, "currency": fin_cur,
                            "revenue": row("Total Revenue"),
                            "net_income": row("Net Income")}
     except Exception as e:
