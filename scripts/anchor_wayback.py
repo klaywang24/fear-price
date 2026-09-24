@@ -193,14 +193,18 @@ def save(url: str, retries: int = 3) -> int:
                                                      st.get("message") or "")[:120]})
             except urllib.error.HTTPError as e:
                 code = e.code
-            except Exception:
+            except Exception as e:
+                # 2026-09-24：-1＝提交请求本身网络层失败（多为 90s 超时）。原来吞掉不记、也不重试 ⇒
+                #   /kapx、首页、kindex.json 连着几天 -1，查不出原因；/kapx 因此 5 天无新快照、超 SLA。
                 code = -1
+                LAST_SPN.update({"spn_message": f"{type(e).__name__}: {str(e)[:100]}"})
         else:
             code, _ = _get("https://web.archive.org/save/" + url, timeout=90)
-        if code != 429:
+        if code not in (429, -1):
             return code
-        time.sleep(20 * (i + 1))                # 20s / 40s / 60s
-    return 429
+        if i < retries - 1:
+            time.sleep(20 * (i + 1))            # 20s / 40s：429 限流与网络层失败都退避重试
+    return code
 
 
 def _probe_sparkline(url: str) -> tuple[str, dict | None]:
