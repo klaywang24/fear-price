@@ -2748,7 +2748,8 @@ def main():
     build_kindex(ndx, gspc, vix)
     build_leaps(gspc, ndx, vix)
     _guard("情绪仪表盘", build_sentiment, vix, vxn)
-    _guard("NAAIM", build_naaim)
+    # _guard("NAAIM", build_naaim)   # 🔴 2026-09-24 Klay 定停抓：NAAIM 08-01 起收费、公开页无当期数据，每天报错；
+    #   宏观页「仓位与杠杆」改由 CFTC 股指期货持仓（cot_equity，周频免费）承担，NAAIM 卡片已下线
     _guard("恐惧的标价指数", build_leaps_index, gspc, vix)   # ← 唯一在赚钱的读数，失败必须吵
     _guard("VX 期限结构", build_vx_curve, vix)
     _guard("COT 持仓", build_cot_vix)

@@ -2273,27 +2273,6 @@
     };
   }
 
-  // 宏观 · 仓位与杠杆：NAAIM 经理人敞口（周频，2006→）
-  chart("macro", "ch-naaim", async (p) => {
-    const d = await load("naaim");
-    return {
-      tooltip: tip(p, { valueFormatter: (v) => (+v).toFixed(1) }),
-      grid: { left: 52, right: 60, top: 24, bottom: 60 },
-      dataZoom: ledgerZoom(p),
-      xAxis: timeX(p),
-      yAxis: Object.assign({ type: "value", min: 0 }, baseAxis(p)),
-      series: [{
-        name: "NAAIM 经理人敞口", type: "line", data: zip(d.dates, d.values), showSymbol: false,
-        lineStyle: { color: p.teal, width: 1.6 }, itemStyle: { color: p.teal },
-        endLabel: { show: true, formatter: (o) => (+o.value[1]).toFixed(0),
-          fontFamily: "JetBrains Mono", fontSize: 11, color: p.teal },
-        markLine: { silent: true, symbol: "none",
-          lineStyle: { color: p.muted, type: "dashed", width: 1 },
-          label: { color: p.muted, fontFamily: "JetBrains Mono", fontSize: 10, formatter: "满仓 100" },
-          data: [{ yAxis: 100 }] },
-      }],
-    };
-  });
 
   // 宏观 · 仓位与杠杆：AIAE 全社会股票配置（季频，1945→）
   chart("macro", "ch-aiae", async (p) => {
@@ -2695,8 +2674,6 @@
       { asofFrom: "margin_debt", asofPick: (d) => d.latest.month, freq: "月频，参考月次月第三周发布" }],
     ["ch-ofr-lev", "OFR Hedge Fund Monitor (SEC Form PF)",
       { asofFrom: "ofr_hedge_funds", asofPick: (d) => d.series.equity_leverage.latest.date, freq: "季频，滞后约两个季度" }],
-    ["ch-naaim", "NAAIM Exposure Index",
-      { asofFrom: "naaim", asofPick: (d) => d.date, freq: "NAAIM 2026-08 起改订阅制，公开数据延迟三个月，本图停更" }],
     ["ch-short-flow", "FINRA RegSHO daily short volume"],
     // 2026-07-18 夜：这张卡不能吃「数据截至 <今天> · 每交易日更新」：它是双月结算且
     // 滞后约两周。一张主打「我滞后」的卡片若把日期写成今天，是自己打自己。
