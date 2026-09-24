@@ -314,7 +314,8 @@ record. The chain keeps them from being silently edited; it does not age them.
 Licensing follows the repository: the compilation, derived metrics and ledger structure are under
 PolyForm Noncommercial 1.0.0; the underlying values are facts transcribed from public sources and
 carry no ownership claim from us. The quarterly extracts on Kaggle / Hugging Face are separately
-released under CC BY 4.0.
+released under CC BY 4.0; that grant covers the KAPX readings and signal ledger, not the third-party
+input values, which have not been included in the extracts since the 2026-09-24 edition.
 """
     (DIST / f"RELEASE_NOTES-{month}.md").write_text(notes, encoding="utf-8")
     # 给 workflow 用：tag 必须打在这个 commit 上，不能打在 HEAD 上。
