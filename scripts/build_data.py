@@ -115,6 +115,37 @@ def _fill_index_gaps(s: pd.Series, fred_id: str, label: str, lookback_days: int 
         return s
 
 
+def _fill_vix_gaps(s: pd.Series, calendar: pd.Index, label: str = "^VIX") -> pd.Series:
+    """Same rule as _fill_index_gaps, for VIX, but the second source is Cboe's own VIX history CSV
+    (already used by build_vol_indices) rather than FRED VIXCLS, which FRED marks as Cboe-copyrighted.
+
+    2026-09-24: Yahoo's ^VIX daily history also skipped 2026-09-22. build_kindex and build_sentiment's
+    term structure drop any day where VIX is missing, so K index 09-22 and the term chart stayed short
+    even after the three price indices were filled. Only dates strictly inside Yahoo's own range are
+    filled; every fill goes to meta.json.gap_filled; if Cboe is unreachable the gap stays and is listed.
+
+    ⚠️ Cboe publishes VIX on US market holidays (global trading hours); Yahoo rightly omits them. A first
+    dry run filled 33 "gaps", nearly all holidays (Memorial Day, July 4, Thanksgiving, 2025-01-09 closure).
+    So only dates that are also S&P 500 sessions (``calendar`` = the gap-filled ^GSPC index) are filled."""
+    try:
+        if s is None or s.empty:
+            return s
+        c = _cboe_close("VIX")
+        inside = (c.index > s.index.min()) & (c.index < s.index.max()) & ~c.index.isin(s.index) & c.index.isin(calendar)
+        holes = c[inside]
+        if holes.empty:
+            return s
+        for d, v in holes.items():
+            _GAPFILL.append({"ticker": label, "date": d.strftime("%Y-%m-%d"), "value": round(float(v), 2), "source": "Cboe VIX_History.csv"})
+        print(f"  ↪ {label}: Yahoo history missing {len(holes)} session(s) inside its range, filled from Cboe: "
+              + ", ".join(d.strftime("%Y-%m-%d") for d in holes.index[:5]))
+        return pd.concat([s, holes.round(2)]).sort_index()
+    except Exception as e:  # noqa: BLE001
+        _FAILURES.append({"section": f"index gap check ({label} vs Cboe VIX)", "error": f"{type(e).__name__}: {str(e)[:160]}"})
+        print(f"  ⚠️ {label} gap check unavailable: {e}")
+        return s
+
+
 def fetch_close_or_own(ticker: str) -> pd.Series:
     """取全史收盘序列；上游（Yahoo）全挂时回退**自家已发布过的同一序列**。
 
@@ -936,6 +967,15 @@ def build_sentiment(vix_close: pd.Series, vxn_close: pd.Series = None):
         v = live.get(k) or {}
         if "score" in v:
             subs[k] = {"score": round(float(v["score"]), 1), "rating": v.get("rating", "")}
+    # 2026-09-24 修：七分项的日期＝CNN 官方逐日序列末点（与 K 指数同一来源，fetch_fng 同法 normalize），
+    #   不再借期限结构的末日——期限结构四条缺一条就停住，当轮现抓的分项会被标上旧日期（09-24 实例：标成 09-21）。
+    subs_date = None
+    try:
+        _h = (live.get("fear_and_greed_historical") or {}).get("data") or []
+        if _h:
+            subs_date = pd.Timestamp(max(p["x"] for p in _h), unit="ms").strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"  七分项日期取不到（{type(e).__name__}），留空")
 
     # --- Put/Call 比：CNN put_call_options.data 的 y 就是原始 5 日均值比率（滚动一年窗口）
     #     每日运行时与已有 sentiment.json 合并，历史随管线逐日累积（超出一年后仍保留）
@@ -1005,7 +1045,9 @@ def build_sentiment(vix_close: pd.Series, vxn_close: pd.Series = None):
             print(f"  VXN 比值失败（跳过该卡）: {e}")
 
     write_json("sentiment.json", {
-        "date": term.index[-1].strftime("%Y-%m-%d"),
+        # date＝七分项（CNN 快照）的日期；term_date＝期限结构末日。09-24 前 date 用的是期限结构末日（见上 subs_date 注）。
+        "date": subs_date or term.index[-1].strftime("%Y-%m-%d"),
+        "term_date": term.index[-1].strftime("%Y-%m-%d"),
         "subs": subs,
         "skew": skew_obj,
         "vxn": vxn_obj,
@@ -2829,7 +2871,7 @@ def main():
     gspc = _fill_index_gaps(fetch_close_or_own("^GSPC"), "SP500", "^GSPC")
     ixic = _fill_index_gaps(fetch_close_or_own("^IXIC"), "NASDAQCOM", "^IXIC")
     ndx = _fill_index_gaps(fetch_close_or_own("^NDX"), "NASDAQ100", "^NDX")
-    vix = fetch_close_or_own("^VIX")
+    vix = _fill_vix_gaps(fetch_close_or_own("^VIX"), gspc.index)
     try:
         vxn = fetch_history("^VXN")["Close"]
     except RuntimeError:
