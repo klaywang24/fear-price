@@ -20,7 +20,7 @@ import requests
 import yfinance as yf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_data import BASKETS, safe_ticker, write_json, UA
+from build_data import BASKETS, DATA, safe_ticker, write_json, UA
 
 # 欧股用美股 ADR 的 macrotrends 数据（美元计价，比率类指标不受币种影响）
 MT_SYMBOL = {"MC.PA": "LVMUY", "RMS.PA": "HESAY"}
@@ -85,6 +85,51 @@ def _fx_to_usd(cur: str):
     return _FX[cur]
 
 
+# Yahoo's quoteSummary answers GitHub runners only partially some weeks (2026-08-22 TSM/AVGO, 09-12 AVGO/AAPL:
+# only the quote fields came back; 09-19 TSM/AVGO: nothing at all). `info` does not raise in that case, so the
+# snapshot was written with blanks and the page showed empty cells. Now: retry with a fresh Ticker, and if the
+# modules still do not come back, keep the previously published snapshot and say so instead of publishing blanks.
+INFO_TRIES = 3
+INFO_BACKOFF = (5, 15)
+QUOTE_ONLY_KEYS = ("pe", "fwd_pe", "pb", "div_yield", "market_cap")   # what survives when only the quote endpoint answers
+MODULE_KEYS = ("ps", "roe", "gross_margin", "net_margin", "fcf", "beta", "payout")
+
+
+def snapshot_complete(snap: dict) -> bool:
+    """True when the quote endpoint and the statistics/financial modules both answered."""
+    return bool(snap.get("market_cap")) and any(snap.get(k) is not None for k in MODULE_KEYS)
+
+
+def fetch_info(ticker: str):
+    """(Ticker, info) — retried until the modules answer; the last attempt's info is returned either way."""
+    t, info = None, {}
+    for attempt in range(INFO_TRIES):
+        t = yf.Ticker(ticker)
+        info = t.info or {}
+        # 美股含点代码（BRK.B）Yahoo 用连字符；欧股（MC.PA）带点有效，靠 marketCap 判空回退
+        if "." in ticker and not info.get("marketCap"):
+            t = yf.Ticker(ticker.replace(".", "-"))
+            info = t.info or {}
+        if info.get("marketCap") and any(info.get(k) is not None for k in
+                                         ("priceToSalesTrailing12Months", "returnOnEquity", "grossMargins",
+                                          "profitMargins", "freeCashflow", "beta", "payoutRatio")):
+            return t, info
+        if attempt < INFO_TRIES - 1:
+            print(f"  {ticker} info: partial answer ({len(info)} keys), retry {attempt + 2}/{INFO_TRIES}")
+            time.sleep(INFO_BACKOFF[min(attempt, len(INFO_BACKOFF) - 1)])
+    return t, info
+
+
+def previous_snapshot(ticker: str):
+    """The snapshot last published for this ticker (the committed data file), or None."""
+    try:
+        prev = json.loads((DATA / f"s_{safe_ticker(ticker)}_fund.json").read_text(encoding="utf-8"))
+        snap = prev.get("snapshot") or {}
+        return snap if snapshot_complete(snap) else None
+    except Exception:  # noqa: BLE001  no previous file, or unreadable: nothing to fall back on
+        return None
+
+
 def build_stock_fund(ticker: str):
     sym = MT_SYMBOL.get(ticker, ticker)
     fund = {"ticker": ticker, "mt_symbol": sym}
@@ -145,10 +190,7 @@ def build_stock_fund(ticker: str):
     cur = fin_cur = None
     fx = fin_fx = None
     try:
-        info = t.info
-        if "." in ticker and not info.get("marketCap"):
-            t = yf.Ticker(ticker.replace(".", "-"))
-            info = t.info
+        t, info = fetch_info(ticker)
         # Currency (2026-09-24): Yahoo reports marketCap / freeCashflow in the listing currency
         # (EUR for MC.PA, TWD for TSM). The site prints these with a $ sign, so convert to USD at the
         # current FX rate and keep the local figures alongside; never mix currencies in a peers table.
@@ -184,7 +226,18 @@ def build_stock_fund(ticker: str):
             "fcf_local": fcf_local,
             "beta": info.get("beta"),
             "payout": round(info["payoutRatio"] * 100, 1) if info.get("payoutRatio") else None,
+            "snapshot_as_of": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         }
+        if not snapshot_complete(fund["snapshot"]):
+            got = sum(1 for k in QUOTE_ONLY_KEYS + MODULE_KEYS if fund["snapshot"].get(k) is not None)
+            prev = previous_snapshot(ticker)
+            if prev:
+                print(f"  {ticker} snapshot incomplete after {INFO_TRIES} tries ({got}/12 fields); "
+                      f"keeping the previously published snapshot (as of {prev.get('snapshot_as_of', 'earlier build')})")
+                fund["snapshot"] = dict(prev, snapshot_stale=True)
+            else:
+                print(f"  {ticker} snapshot incomplete after {INFO_TRIES} tries ({got}/12 fields); no previous snapshot to keep")
+                fund["snapshot"]["snapshot_stale"] = True
     except Exception as e:
         print(f"  {ticker} info: {e}")
     try:

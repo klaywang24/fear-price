@@ -7,7 +7,9 @@ Cases:
      raised a NameError on `fin_fx` and the income statement was silently dropped.
   2. A non-USD filer (financial currency TWD, quote currency USD): statements convert with the
      statements-currency rate, market cap with the quote-currency rate.
-  3. Nothing is written to data/ while testing.
+  3. Partial quoteSummary answers (the shapes seen in the 2026-08-22, 09-12 and 09-19 weekly builds): retried,
+     and when the modules never come back the previously published snapshot is kept and flagged stale.
+  4. Nothing is written to data/ while testing.
 
 Usage: python scripts/test_build_fundamentals.py   (exit 0 = pass, 1 = fail)
 """
@@ -68,7 +70,50 @@ def run(ticker_cls, fx):
     return written
 
 
+FULL = {"currency": "USD", "financialCurrency": "USD", "marketCap": 2_000_000_000, "freeCashflow": 50_000_000,
+        "trailingPE": 20.0, "forwardPE": 18.0, "priceToSalesTrailing12Months": 5.0, "priceToBook": 6.0,
+        "returnOnEquity": 0.3, "grossMargins": 0.5, "profitMargins": 0.2, "dividendYield": 1.0, "beta": 1.1, "payoutRatio": 0.2}
+QUOTE_ONLY = {k: FULL[k] for k in ("currency", "marketCap", "trailingPE", "forwardPE", "priceToBook", "dividendYield")}
+
+
+def make_ticker(answers):
+    """A Ticker class whose successive `info` reads return the given dicts (the last one repeats)."""
+    calls = []
+
+    class T(Down):
+        @property
+        def info(self):
+            calls.append(1)
+            return answers[min(len(calls) - 1, len(answers) - 1)]
+    T.calls = calls
+    return T
+
+
 def main():
+    # Partial quoteSummary answers (the 2026-08-22 / 09-12 / 09-19 weekly-build shapes)
+    T = make_ticker([QUOTE_ONLY, QUOTE_ONLY, FULL])
+    bf.previous_snapshot = lambda ticker: None
+    w = run(T, {"USD": 1.0})
+    snap = (w.get("s_test_fund.json") or {}).get("snapshot") or {}
+    check("partial answer twice then full: retried and the full snapshot was kept", len(T.calls) == 3 and snap.get("ps") == 5.0 and not snap.get("snapshot_stale"))
+
+    T = make_ticker([QUOTE_ONLY])
+    prev = {"pe": 19.0, "ps": 4.0, "market_cap": 1_900_000_000, "beta": 1.0, "snapshot_as_of": "2026-09-12"}
+    bf.previous_snapshot = lambda ticker: dict(prev)
+    w = run(T, {"USD": 1.0})
+    snap = (w.get("s_test_fund.json") or {}).get("snapshot") or {}
+    check("always partial: gave up after 3 tries", len(T.calls) == 3)
+    check("always partial: the previously published snapshot is kept and flagged stale",
+          snap.get("ps") == 4.0 and snap.get("snapshot_as_of") == "2026-09-12" and snap.get("snapshot_stale") is True)
+
+    T = make_ticker([{}])
+    bf.previous_snapshot = lambda ticker: None
+    w = run(T, {"USD": 1.0})
+    snap = (w.get("s_test_fund.json") or {}).get("snapshot") or {}
+    check("empty answer and no previous file: written blank but flagged stale, never silently", snap.get("snapshot_stale") is True and snap.get("market_cap") is None)
+    check("complete snapshot is recognised", bf.snapshot_complete({"market_cap": 1, "ps": 2}) and not bf.snapshot_complete({"market_cap": 1}) and not bf.snapshot_complete({"ps": 2}))
+
+    bf.previous_snapshot = lambda ticker: None
     w = run(Down, {"USD": 1.0, "TWD": 0.03125})
     inc = (w.get("s_test_fund.json") or {}).get("income4")
     check("endpoint down: income statement still produced", bool(inc) and inc.get("revenue") == [90.0, 100.0])
