@@ -38,7 +38,7 @@ def say(msg):
 def notify(title, body):
     """macOS 通知：launchd 那班的红只落在退出码里没人看（「失败时的出口是谁在看」）。失败只记不抛。"""
     try:
-        subprocess.run(["osascript", "-e", f'display notification "{body}" with title "{title}"'],
+        subprocess.run(["osascript"] + ["-e", "on run argv", "-e", 'display notification (item 1 of argv) with title (item 2 of argv)', "-e", "end run", str(body), str(title)],
                        capture_output=True, timeout=10)
     except Exception as e:
         print(f"（通知没发出去：{e}）")
