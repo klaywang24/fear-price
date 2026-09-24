@@ -13,6 +13,7 @@
     对应关系优先走 markdown alt 里的原文件名（精确）；
     `<img>` 形式无文件名，按卡号顺序推，并在 stdout 标 [推] 供人工核。
 """
+from zoneinfo import ZoneInfo
 import argparse, datetime, glob, html, os, re, shutil, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -420,7 +421,7 @@ def write_feed(done):
             raise RuntimeError(f"feed 正文抽取失败或过短：{slug}（{0 if not m else len(m.group(1))} 字节）")
         content = m.group(1)
         content = content.replace('src="img/', f'src="{SITE}/digest/img/')
-        pub = datetime.datetime.fromisoformat(date + "T09:30:00-04:00")
+        pub = datetime.datetime.fromisoformat(date + "T09:30:00").replace(tzinfo=ZoneInfo("America/New_York"))
         entries.append(f"""  <item>
     <title>{su.escape(title)}</title>
     <link>{SITE}/digest/{slug}</link>
