@@ -139,6 +139,11 @@ def build_stock_fund(ticker: str):
     # ---- yfinance：快照 / 近4年报表 / 分红史 ----
     # 美股含点代码（BRK.B）Yahoo 用连字符；欧股（MC.PA）带点有效，靠 marketCap 判空回退
     t = yf.Ticker(ticker)
+    # Initialised outside the try (2026-09-24): if the quote endpoint is down, `info` raises before these
+    # are set and the income statement below would be dropped with a NameError. Unknown currency stays
+    # unknown: the statements are then kept in their reported units and labelled 原币, never as USD.
+    cur = fin_cur = None
+    fx = fin_fx = None
     try:
         info = t.info
         if "." in ticker and not info.get("marketCap"):
@@ -193,7 +198,7 @@ def build_stock_fund(ticker: str):
                 return [None if pd.isna(v) else round(float(v) * _inc_fx / 1e9, 2)
                         for v in inc.loc[name]][::-1]
             return None
-        fund["income4"] = {"years": years, "currency": "USD" if fin_fx else fin_cur,
+        fund["income4"] = {"years": years, "currency": "USD" if fin_fx else (fin_cur or "原币"),
                            "revenue": row("Total Revenue"),
                            "net_income": row("Net Income")}
     except Exception as e:
