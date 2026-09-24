@@ -2575,6 +2575,14 @@ def _multpl_series(slug: str):
     return recs
 
 
+def _multpl_estimates(slug: str):
+    """multpl 标成 Estimate（带 <abbr title="Estimate">†</abbr>）的月份。2026-09-24：原正则认不出这个标记，
+    估计值被静默丢掉，站上 PE 末点停在 06-01。现在单独取出，只作「E」展示，不进历史序列、不进任何分位。"""
+    html = requests.get(f"https://www.multpl.com/{slug}/table/by-month", headers=UA, timeout=30).text
+    rows = re.findall(r'<td>([A-Z][a-z]{2} \d{1,2}, \d{4})</td>\s*<td>\s*<abbr title="Estimate">[^<]*</abbr>\s*\$?([\d.,]+)', html)
+    return sorted((datetime.strptime(d, "%b %d, %Y"), float(v.replace(",", ""))) for d, v in rows)
+
+
 def build_valuation_extras():
     """标普 PE(TTM) 与 EPS（multpl，格式脆弱，失败保留旧文件）。"""
     print("== 估值/盈利（multpl）")
@@ -2582,8 +2590,14 @@ def build_valuation_extras():
                       ("s-p-500-earnings", "sp500_eps_hist.json")):
         try:
             recs = _multpl_series(slug)
-            write_json(out, {"dates": [d.strftime("%Y-%m-%d") for d, _ in recs],
-                             "values": [v for _, v in recs]})
+            doc = {"dates": [d.strftime("%Y-%m-%d") for d, _ in recs],
+                   "values": [v for _, v in recs]}
+            if slug == "s-p-500-pe-ratio":
+                est = [(d, v) for d, v in _multpl_estimates(slug) if not recs or d > recs[-1][0]]
+                doc["estimates"] = {"dates": [d.strftime("%Y-%m-%d") for d, _ in est],
+                                    "values": [v for _, v in est],
+                                    "note": "multpl 标 Estimate 的月份（基于预估盈利），只作 E 展示；不进 dates/values、不进任何分位"}
+            write_json(out, doc)
         except Exception as e:
             print(f"  {slug} failed (kept old): {e}")
             _FAILURES.append({"section": f"multpl {slug}", "error": f"{type(e).__name__}: {str(e)[:200]}"})

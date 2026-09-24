@@ -1738,6 +1738,20 @@
       }).join("");
   }
 
+  // 2026-09-24：multpl 标 Estimate 的月份单独成一条「E」虚线，接在实际值末点后；不进 dates/values，任何中位/均值/分位都不含它
+  function estSeries(d, name, color) {
+    const e = d && d.estimates;
+    if (!e || !e.dates || !e.dates.length) return null;
+    const lastA = [d.dates[d.dates.length - 1], d.values[d.values.length - 1]];
+    return {
+      name: name + " E（估计）", type: "line", showSymbol: true, symbol: "emptyCircle", symbolSize: 5,
+      data: [lastA].concat(zip(e.dates, e.values)),
+      lineStyle: { color, width: 1.2, type: "dashed" }, itemStyle: { color },
+      label: { show: true, position: "top", fontSize: 9, fontFamily: "JetBrains Mono", color,
+               formatter: (x) => (x.dataIndex === e.dates.length ? x.value[1].toFixed(1) + "E" : "") },
+    };
+  }
+
   function simpleLine(dsName, name, colorKey, opts) {
     opts = opts || {};
     return async (p) => {
@@ -1757,7 +1771,7 @@
         grid: { left: 58, right: 20, top: 20, bottom: 28 },
         xAxis: timeX(p),
         yAxis: Object.assign({ type: opts.log ? "log" : "value" }, baseAxis(p)),
-        series: [series],
+        series: [series].concat(opts.estimates ? [estSeries(d, name, p.muted)].filter(Boolean) : []),
       };
     };
   }
@@ -1874,7 +1888,7 @@
           ml(st.med50, "近50年中位", p.gold),
           ml(st.med2010, "2010→中位", p.moss),
         ] },
-      }],
+      }].concat([estSeries(pe, "PE(TTM)", p.muted)].filter(Boolean)),
     };
   });
 
@@ -3073,7 +3087,7 @@
   chart("spy", "ch-spy-dd", ddChart("sp500_drawdowns"));
   chart("spy", "ch-spy-intra", intraChart("sp500_intrayear"));
   chart("spy", "ch-spy-cape", capeChart());
-  chart("spy", "ch-spy-pettm", simpleLine("sp500_pe_ttm", "PE(TTM)", "accent", { avgLine: true }));
+  chart("spy", "ch-spy-pettm", simpleLine("sp500_pe_ttm", "PE(TTM)", "accent", { avgLine: true, estimates: true }));
   chart("spy", "ch-spy-eps", simpleLine("sp500_eps_hist", "EPS(TTM)", "moss", { log: true }));
   chart("spy", "ch-spy-vol", volChart("sp500_volatility"));
   chart("spy", "ch-spy-season", seasonChart("sp500_seasonality"));
