@@ -14,6 +14,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install yfinance pandas requests lxml
+      - run: python scripts/test_build_fundamentals.py   # offline test first; a failure stops this run
       - run: python scripts/build_fundamentals.py
       - run: python scripts/fetch_logos.py   # 自托管 logo 同步（新增成分股补图，已有跳过）
       - name: commit data
