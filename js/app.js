@@ -698,6 +698,12 @@
       const el = document.getElementById(basket + "-fd-dash-cards");
       if (el) el.innerHTML = cards.map(([l, v]) =>
         `<div class="stat"><div class="label">${l}</div><div class="value" style="font-size:19px">${v}</div></div>`).join("");
+      // 2026-09-24: when the weekly build could not refresh this snapshot it keeps the previous one and flags it;
+      // the reader must see that the figures are carried over, so the card title says which date they are as of.
+      if (el && snap.snapshot_stale) {
+        const h = el.closest(".card") && el.closest(".card").querySelector("h3");
+        if (h) h.textContent += "（数据截至 " + (snap.snapshot_as_of || "上次构建") + " 日）";
+      }
     }
 
     const line = (data, name, colorKey, opts) => async (p) => {
