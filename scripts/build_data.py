@@ -2382,6 +2382,7 @@ def build_constituents():
         })
     except Exception as e:
         print(f"  sp500 constituents failed (kept old): {e}")
+        _FAILURES.append({"section": "sp500 constituents", "error": f"{type(e).__name__}: {str(e)[:200]}"})
     try:
         html = requests.get("https://en.wikipedia.org/wiki/Nasdaq-100", headers=UA, timeout=30).text
         found = None
@@ -2407,6 +2408,7 @@ def build_constituents():
         })
     except Exception as e:
         print(f"  ndx constituents failed (kept old): {e}")
+        _FAILURES.append({"section": "ndx constituents", "error": f"{type(e).__name__}: {str(e)[:200]}"})
 
 
 # 前二十大持仓两张卡均已下线（SPY/SSGA 于 2026-07-19，QQQ/stockanalysis 于 2026-07-20）。
@@ -2492,6 +2494,7 @@ def build_sector_weights():
             write_json(out_name, {"rows": rows, "etf": etf, "source": f"Yahoo Finance / {etf} funds_data"})
         except Exception as e:
             print(f"  {etf} 行业权重失败（留旧文件）: {e}")
+            _FAILURES.append({"section": f"sector weights {etf}", "error": f"{type(e).__name__}: {str(e)[:200]}"})
 
 
 def _multpl_series(slug: str):
@@ -2512,6 +2515,7 @@ def build_valuation_extras():
                              "values": [v for _, v in recs]})
         except Exception as e:
             print(f"  {slug} failed (kept old): {e}")
+            _FAILURES.append({"section": f"multpl {slug}", "error": f"{type(e).__name__}: {str(e)[:200]}"})
 
 
 # ------------------------------------------------------- 个股篮子板块
@@ -2712,6 +2716,7 @@ def build_cape():
         })
     except Exception as e:
         print(f"  CAPE unavailable this run (kept old file if any): {e}")
+        _FAILURES.append({"section": "CAPE", "error": f"{type(e).__name__}: {str(e)[:200]}"})
 
 
 # ---- 2026-07-19：非致命小节的失败必须留痕 ----
@@ -2779,10 +2784,12 @@ def main():
     build_constituents()
     build_valuation_extras()
     build_pulse()  # 依赖 constituents 与 pe_ttm，放在其后
+    # Guarded per basket / per ETF: one member's upstream error must not stop the whole
+    # daily run (and with it the already-built headline gauge). Failures land in meta.failures.
     for prefix, members in BASKETS.items():
-        build_basket(prefix, members)
+        _guard(f"basket {prefix}", build_basket, prefix, members)
     for etf in ETF_ANCHORS:
-        build_index_panels(f"s_{safe_ticker(etf)}", fetch_history(etf)["Close"])
+        _guard(f"ETF panel {etf}", lambda e=etf: build_index_panels(f"s_{safe_ticker(e)}", fetch_history(e)["Close"]))
         time.sleep(1)
     build_cape()
 
