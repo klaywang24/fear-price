@@ -1953,16 +1953,53 @@ VOL_INDICES = {
 }
 
 
+# 2026-09-24（Klay 定：指数波动率家族照温度计接雅虎补较新日期）。
+# 只收四只：09-24 实测 ^VIX/^VXN/^VXD/^VVIX 与 Cboe 近 20 个交易日逐日一致（差 0）；
+#   ^RVX 雅虎没有；^VXTLT 雅虎只给 1 行、对不了账 ⇒ 不收（家规：只用对过账的第二源）。
+# ⚠️ 雅虎也缺 09-22（它的指数日线整日缺）⇒ 只能补「比 Cboe 末日更新」的日子，中间缺口照样留空，绝不硬填。
+VOL_INDEX_YAHOO = {"VIX": "^VIX", "VXN": "^VXN", "VXD": "^VXD", "VVIX": "^VVIX"}
+
+
+def _vol_yahoo_topup(sym: str, s: pd.Series):
+    """Cboe 末日落后于雅虎 ⇒ 只把雅虎更新的日期接到末尾。返回 (序列, 补上的日期列表)。
+
+    🔴 今天这一行不收，除非已过 16:30 ET：VIX 在美东凌晨 3 点就开盘（全球交易时段），
+       雅虎凌晨就给出「今天」一行实时值（09-24 06:32 实测 ^VIX 当日 16.28），它不是收盘价。
+       云端 00:05 那班若照收，就会把盘前实时值当收盘入账。
+    与温度计的 _patch_stale_with_yahoo 分开写：那个把补过的日期记进全局 _YAHOO_PATCHED、写进 leaps_gauge 的 meta，
+    复用会把本家族的日期混进温度计的来源记录。"""
+    ysym = VOL_INDEX_YAHOO.get(sym)
+    if not ysym or s.empty:
+        return s, []
+    try:
+        y = _yahoo_close(ysym)
+    except Exception as e:
+        print(f"  {sym}: 雅虎查新鲜度失败（{type(e).__name__}），按 Cboe 原样用")
+        return s, []
+    now = pd.Timestamp.now(tz="America/New_York")
+    today = pd.Timestamp(now.date())
+    cutoff = today if now.hour * 60 + now.minute >= 16 * 60 + 30 else today - pd.Timedelta(days=1)
+    newer = y[(y.index > s.index.max()) & (y.index <= cutoff)].round(2)
+    if newer.empty:
+        return s, []
+    got = [d.strftime("%Y-%m-%d") for d in newer.index]
+    print(f"  ↪ {sym}: Cboe 末日 {s.index.max().date()} 落后，雅虎补 {got} = {list(newer.values)}")
+    return pd.concat([s, newer]).sort_index(), got
+
+
 def build_vol_indices():
     """Cboe 指数波动率家族（VIX/VXN/RVX/VXD/VXTLT/VVIX，日频）→ data/vol_indices.json。只报现值与三年/全史分位。"""
     print("== 指数波动率家族")
-    members, closes = [], {}
+    members, closes, patched = [], {}, {}
     for sym, label in VOL_INDICES.items():
         try:
             s = _cboe_close(sym).dropna()
         except Exception as e:
             print(f"  {sym} 拉取失败，跳过: {e}")
             continue
+        s, got = _vol_yahoo_topup(sym, s)
+        if got:
+            patched[sym] = got
         closes[sym] = s
         enough = len(s) >= MIN_PCTILE_DAYS
         tail = s.iloc[-260:]
@@ -1973,6 +2010,7 @@ def build_vol_indices():
             "p3y": _pctile_now(s, 756) if enough else None, "pfull": _pctile_now(s) if enough else None,
             "hi_1y": round(float(tail.max()), 2), "lo_1y": round(float(tail.min()), 2),
             "dates_1y": dates(tail.index), "values_1y": rnd(tail, 2),
+            "src": "cboe+yahoo_patch" if sym in patched else "cboe",
         })
     if not members:
         raise RuntimeError("指数波动率家族一条都没拉到")
@@ -1991,7 +2029,8 @@ def build_vol_indices():
         "meta": {"name": "指数波动率家族", "tenor": "30 天",
                  "headline": "各指数 30 天隐含波动率在过去 3 年（756 交易日）的百分位，高=贵",
                  "nature": "描述性温度计，非交易信号/非预测；仅为数据，非投资建议。",
-                 "note": "VVIX 量的是 VIX 自己的波动率（VIX 期权隐含），单位不同，只看分位。"},
+                 "note": "VVIX 量的是 VIX 自己的波动率（VIX 期权隐含），单位不同，只看分位。",
+                 "yahoo_patched": patched},
         "members": members, "ratios": ratios,
     })
 
