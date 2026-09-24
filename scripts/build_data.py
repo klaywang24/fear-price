@@ -1034,6 +1034,8 @@ CBOE_YAHOO_FALLBACK = {
 }
 # 本次运行各序列的实际来源，写进 meta 供站上显示降级状态
 _SOURCE_TRACE: dict[str, str] = {}
+# 2026-09-23：Cboe 正常返回但停更时，用 Yahoo 补上的日期（写进 meta.yahoo_patched）
+_YAHOO_PATCHED: dict[str, list] = {}
 
 
 def _yahoo_close(sym: str) -> pd.Series:
@@ -1046,13 +1048,39 @@ def _yahoo_close(sym: str) -> pd.Series:
     return s.dropna().sort_index()
 
 
+def _patch_stale_with_yahoo(name: str, s: pd.Series) -> pd.Series:
+    """Cboe 正常返回、但末日落后于 Yahoo ⇒ 只把 Yahoo 更新的日期接到末尾（2026-09-23 加）。
+
+    起因：09-23 Cboe 官网公共发布整体停在 09-22（历史 CSV 最后修改 09-22 21:51 ET、延迟行情接口
+    VIX/VIX9D/VIX1Y 的 last_trade_time 全是 09-22 16:15），而 Yahoo 走 Cboe 行情专线，16:15 就有 09-23。
+    旧备胎只在 Cboe **报错**时触发，「正常返回但停更」时不触发 ⇒ 温度计整晚停在 09-22。
+    Klay 09-23 常设令：单一上游缺数，直接用对过账的第二源顶上。两源同一个官方收盘值（每日对账一致，
+    07-17 起差 0.0000）。只补 Cboe 没有的新日期，已有日期一律用 Cboe；Cboe 日后发出同日值走
+    _merge_append_only 的修订检测，不一致会公开记入 meta.revisions，不悄悄覆盖。"""
+    try:
+        y = _yahoo_close(CBOE_YAHOO_FALLBACK[name])
+    except Exception as e:
+        print(f"  {name}: Yahoo 查新鲜度失败（{type(e).__name__}），按 Cboe 原样用")
+        return s
+    if y.empty:
+        return s
+    newer = y[y.index > s.index.max()]
+    if newer.empty:
+        return s
+    newer = newer.round(2)
+    _SOURCE_TRACE[name] = "cboe+yahoo_patch"
+    _YAHOO_PATCHED[name] = [d.strftime("%Y-%m-%d") for d in newer.index]
+    print(f"  ↪ {name}: Cboe 末日 {s.index.max().date()} 落后，Yahoo 补 {_YAHOO_PATCHED[name]} = {list(newer.values)}")
+    return pd.concat([s, newer]).sort_index()
+
+
 def _cboe_close_resilient(name: str) -> pd.Series:
     """Cboe 主 → Yahoo 备 → 空序列。永不抛异常：让调用方拿存底兜底，而不是整条管线倒下。"""
     try:
         s = _cboe_close(name)
         if not s.empty:
             _SOURCE_TRACE[name] = "cboe"
-            return s
+            return _patch_stale_with_yahoo(name, s)
         raise ValueError("Cboe 返回空序列")
     except Exception as e:
         print(f"  ⚠️ {name}: Cboe 拉取失败（{type(e).__name__}: {str(e)[:60]}），转 Yahoo 备胎")
@@ -1120,7 +1148,11 @@ def _reconcile_vix1y(series: pd.Series):
         if y.empty or series.empty:
             return None
         common = series.index.intersection(y.index)
+        # 2026-09-23：Yahoo 补上的日期不参与对账——那一格本来就是 Yahoo 的值，拿它比 Yahoo 是自证
+        patched = set(pd.to_datetime(_YAHOO_PATCHED.get("VIX1Y", [])))
+        common = common[~common.isin(patched)]
         if len(common) == 0:
+            print("  对账：两源没有 Cboe 自有的共同日期（Yahoo 只留最近 1 天且那天是补上的）——本轮无从比较")
             return None
         d = common.max()
         cv, yv = float(series[d]), float(y[d])
@@ -1239,6 +1271,7 @@ def build_leaps_index(gspc_close: pd.Series, vix_close: pd.Series):
     其余四条 Cboe 序列只用于 context 当前值快照（不入台账字段），故只做备胎不做存底。"""
     print("== 恐惧的标价指数（LEAPS 温度计）")
     _SOURCE_TRACE.clear()
+    _YAHOO_PATCHED.clear()
 
     # 头条输入：存底优先、只追加。这是全站唯一在赚钱的读数，单独按最高规格保护。
     banked = _banked_series("leaps_gauge.json", "dates", "vix1y")
@@ -1256,6 +1289,8 @@ def build_leaps_index(gspc_close: pd.Series, vix_close: pd.Series):
     # 降级状态写进 meta：站上据此显示「数据源中断」，绝不白屏，也绝不假装数据是新鲜的
     stale_days = (pd.Timestamp(datetime.now(ET).date()) - vix1y.index[-1].normalize()).days  # 2026-08-06 UTC 案同族修
     out["meta"]["sources"] = dict(_SOURCE_TRACE)
+    if _YAHOO_PATCHED:
+        out["meta"]["yahoo_patched"] = dict(_YAHOO_PATCHED)   # Cboe 停更时 Yahoo 补的日期（2026-09-23 起）
     out["meta"]["headline_source"] = _SOURCE_TRACE.get("VIX1Y", "unknown")
     out["meta"]["stale_days"] = int(stale_days)
     # 4 天＝跨一个周末+一个假日的上限；与 make_card.sh 的新鲜度闸同阈值，两处口径别打架
@@ -1268,7 +1303,7 @@ def build_leaps_index(gspc_close: pd.Series, vix_close: pd.Series):
     # 每日对账（2026-07-20）：只在源=Cboe 时做——已经走了 Yahoo 备胎就没有独立第二源可比。
     # 抓「Cboe 没报错但数字悄悄错了」，只报错的备胎盖不住这种。分歧写进 meta 让告警器响，
     # 不设站上横幅（两源不一致时不知道哪个对，是给运营者查的内部信号，不是给读者的状态）。
-    if _SOURCE_TRACE.get("VIX1Y") == "cboe":
+    if str(_SOURCE_TRACE.get("VIX1Y", "")).startswith("cboe"):   # cboe+yahoo_patch 也照常对账（比两边共有的最近一天）
         rec = _reconcile_vix1y(vix1y)
         if rec:
             out["meta"]["reconcile_warning"] = rec
