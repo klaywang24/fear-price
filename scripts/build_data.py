@@ -367,6 +367,10 @@ def build_kindex(ndx_close: pd.Series, spx_close: pd.Series, vix_close: pd.Serie
             "vix": round(float(df["vix"].iloc[-1]), 2),
             "k": round(float(df["k"].iloc[-1]), 3),
             "rating": live_note,
+            # 2026-09-24 加：当晚（美东同一天）跑出的末格 CNN 是 CNN 的当日读数，次日才定稿，会改
+            #   （09-21 当晚 33.7→定稿 34.17；09-24 00:05 那班的 09-23 已与定稿一致）。过了美东午夜再跑即视为定稿。
+            #   正文引「昨天的 K」须读下一轮的站上历史（digest 闸㉚ E 项对账）。
+            "provisional": pd.Timestamp.now(tz="America/New_York").strftime("%Y-%m-%d") == df.index[-1].strftime("%Y-%m-%d"),
         },
     })
     write_json("kindex_signals.json", {"signals": sig_rows, "since": "2011-01-01"})

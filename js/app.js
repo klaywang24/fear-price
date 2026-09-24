@@ -2481,7 +2481,7 @@
           <a class="ledger-card" href="kindex">
             <div class="lc-name">K 指数 <span>CNN 恐贪 ÷ VIX</span></div>
             <div class="lc-val">${kd.current.k.toFixed(2)}</div>
-            <div class="lc-state ${kTrig ? "neg" : "pos"}">${kTrig ? "触发中" : "未触发"} <span>（K &lt; 1 触发）</span></div>
+            <div class="lc-state ${kTrig ? "neg" : "pos"}">${kTrig ? "触发中" : "未触发"} <span>（K &lt; 1 触发）</span></div>${kd.current.provisional ? '<div class="lc-prov">当晚读数，次日按 CNN 定稿更新</div>' : ""}
             <div class="lc-meta"><b>${kAll}</b> <span>次触发（2011 年起）</span> · <span>60 个交易日后</span><br><span>标普</span> <b class="pos">${kWs}</b> <span>涨</span> <b class="neg">${kLs}</b> <span>跌</span> · <span>纳指</span> <b class="pos">${kW}</b> <span>涨</span> <b class="neg">${kL}</b> <span>跌</span></div>
           </a>
           <a class="ledger-card" href="leaps">

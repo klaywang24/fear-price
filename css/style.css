@@ -1267,6 +1267,8 @@ a.ledger-card:hover { border-color: var(--accent); transform: translateY(-1px); 
 }
 .lc-state { font-size: 12.5px; font-weight: 600; margin-bottom: 10px; }
 .lc-state span { font-weight: 400; color: var(--ink-muted); }
+/* 2026-09-24：K 当晚读数是临时值（CNN 次日定稿），kindex.json current.provisional 为真时显示 */
+.lc-prov { font-size: 11.5px; color: var(--ink-muted); margin: -6px 0 10px; text-align: center; }
 .lc-meta { font-size: 12px; color: var(--ink-muted); line-height: 1.7; }
 .lc-meta b { font-family: "JetBrains Mono", monospace; }
 .lc-row {

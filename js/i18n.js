@@ -29,6 +29,7 @@
     "CNN 恐贪 ÷ VIX": ["CNN Fear & Greed ÷ VIX", "", "", ""],
     "恐贪 < 25 · 极端恐惧": ["Fear & Greed < 25 · extreme fear", "", "", ""],
     "触发中": ["Triggered", "", "", ""],
+    "当晚读数，次日按 CNN 定稿更新": ["same-evening reading; updates to CNN's final value next day", "lecture du soir ; mise à jour avec la valeur finale de CNN le lendemain", "Abendwert; wird am Folgetag auf den CNN-Endwert aktualisiert", "lectura de la tarde; se actualiza al valor final de CNN al día siguiente"],
     "未触发": ["Not triggered", "", "", ""],
     "（K < 1 触发）": ["(triggers at K < 1)", "", "", ""],
     "（恐贪 < 25 开启）": ["(opens below 25)", "", "", ""],
