@@ -508,7 +508,10 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
               + (filed ? ", last filed " + dot(filed) : "") + ". Nothing already written is ever rewritten."),
       fr4: daily,
       fr5: grow(fl),
-      fr6: daily,
+      fr6: daily + ((D.two_lives_stale || []).length
+        ? tr(" 图里只放当天两个读数都齐的票；当天测不出、未入图：" + D.two_lives_stale.map(r => r.ticker + "（最新 " + dot(r.date) + "）").join("、") + "。",
+             " Only names with both readings for the day are charted; not measurable today and left out: " + D.two_lives_stale.map(r => r.ticker + " (latest " + dot(r.date) + ")").join(", ") + ".")
+        : ""),
       fr7: grow(cm),
       fr8: (D.gaps && D.gaps.date)
         ? tr("每个交易日收盘后加一天，已记 <b>" + D.gaps.days + "</b> 个交易日（本栏 " + dot(D.gaps.date) + " 起步）。跳空宇宙比期权宇宙宽：多了一批高波票与四只点名票，金融五只只当参照系、不参与排行。",
