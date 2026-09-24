@@ -925,33 +925,6 @@ def build_leaps(spx_close: pd.Series, ndx_close: pd.Series, vix_close: pd.Series
     })
 
 
-# --------------------------------------------------------- 仓位层：NAAIM 经理人敞口
-NAAIM_PAGE = "https://naaim.org/programs/naaim-exposure-index/"
-
-
-def build_naaim():
-    """NAAIM Exposure Index：主动管理人平均股票敞口（周频，2006→）。
-    官网 Excel 文件名带日期每周变，先抓页面找当前链接再下载。"""
-    print("== NAAIM 经理人敞口")
-    page = requests.get(NAAIM_PAGE, headers=UA, timeout=30)
-    page.raise_for_status()
-    m = re.search(r'href="(https://naaim\.org/wp-content/uploads/[^"]+\.xlsx?)"', page.text)
-    if not m:
-        raise RuntimeError("NAAIM xlsx link not found on page")
-    r = requests.get(m.group(1), headers=UA, timeout=60)
-    r.raise_for_status()
-    df = pd.read_excel(pd.io.common.BytesIO(r.content))
-    col = "NAAIM Number" if "NAAIM Number" in df.columns else "Mean/Average"
-    s = df.set_index("Date")[col].dropna().sort_index()
-    cur = round(float(s.iloc[-1]), 1)
-    pct = round(float((s <= s.iloc[-1]).mean() * 100), 1)
-    write_json("naaim.json", {
-        "dates": dates(s.index), "values": rnd(s, 1),
-        "current": cur, "pctile": pct,
-        "date": s.index[-1].strftime("%Y-%m-%d"), "since": s.index[0].strftime("%Y-%m-%d"),
-    })
-
-
 # --------------------------------------------------------- 情绪仪表盘
 CBOE_HIST = "https://cdn.cboe.com/api/global/us_indices/daily_prices/{}_History.csv"
 
@@ -2385,7 +2358,11 @@ def build_index_val():
     for etf in ("SPY", "QQQ"):
         try:
             info = yf.Ticker(etf).info
-            out[etf] = {"trailing_pe": info.get("trailingPE"), "forward_pe": info.get("forwardPE")}
+            # 2026-09-24 加 as_of：这份市盈率对应的那次报价的美东日期（原来不带日期，本机无法按日存档）
+            _t = info.get("regularMarketTime")
+            as_of = (pd.Timestamp(_t, unit="s", tz="UTC").tz_convert("America/New_York").strftime("%Y-%m-%d")
+                     if isinstance(_t, (int, float)) else None)
+            out[etf] = {"trailing_pe": info.get("trailingPE"), "forward_pe": info.get("forwardPE"), "as_of": as_of}
         except Exception as e:
             print(f"  {etf} info: {e}")
     write_json("index_val.json", out)
@@ -2884,7 +2861,7 @@ def main():
     build_kindex(ndx, gspc, vix)
     build_leaps(gspc, ndx, vix)
     _guard("情绪仪表盘", build_sentiment, vix, vxn)
-    # _guard("NAAIM", build_naaim)   # 🔴 2026-09-24 Klay 定停抓：NAAIM 08-01 起收费、公开页无当期数据，每天报错；
+    # （build_naaim 已于 2026-09-24 删除）🔴 2026-09-24 Klay 定停抓：NAAIM 08-01 起收费、公开页无当期数据，每天报错；
     #   宏观页「仓位与杠杆」改由 CFTC 股指期货持仓（cot_equity，周频免费）承担，NAAIM 卡片已下线
     _guard("恐惧的标价指数", build_leaps_index, gspc, vix)   # ← 唯一在赚钱的读数，失败必须吵
     _guard("VX 期限结构", build_vx_curve, vix)
