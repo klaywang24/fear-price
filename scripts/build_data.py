@@ -555,6 +555,50 @@ def pulse_breadth_gate(tot, prev, min_cover=PULSE_MIN_COVER):
     return False, keep
 
 
+def _missing_latest(px, ticks):
+    """最新一个交易日没有收盘价的成分股（列缺席或该格为 NaN）。px 为空⇒全部算缺。"""
+    if px is None or px.empty:
+        return list(ticks)
+    last = px.index.max()
+    return [t for t in ticks if t not in px.columns or pd.isna(px.at[last, t])]
+
+
+def _refetch_missing_closes(px, ticks, waits=(5, 15), chunk=110, download=None, sleep=time.sleep):
+    """成分股批量下载漏票就补取（2026-09-25 建·Klay 令「漏洞依次修掉」）。
+
+    🔴 起因：09-23、09-24 两晚云端 yf.download 五批 500 只，**只回来 60 只有当日收盘**，
+       不报错。pulse_breadth_gate 正确地拒绝写垃圾、沿用旧值，但沿用了两天：
+       首页涨跌分布/温度停在 09-22，breadth.json 停在 09-22，本机镜像闸按 2 天容忍报红。
+       同族先例＝09-24 基本面快照（Yahoo 对 GitHub 出口时好时坏、只回一半，752b2c27 加重试修）。
+    🔑 修法：批量下完后查「最新交易日缺收盘」的票，只对这些票新发请求重取，最多 2 次（退避 5/15 秒），
+       用 combine_first 只填空格、不覆盖已取到的值。重取后仍缺的票照旧交给覆盖率闸判（闸不动）。
+    🚫 不降低 PULSE_MIN_COVER，不拿别的源顶：够不够 400 仍是唯一判据。
+    download/sleep 可注入，供 scripts/test_pulse_refetch.py 离线测试。"""
+    dl = download or (lambda tks: yf.download(" ".join(tks), period="2y", interval="1d",
+                                              progress=False, auto_adjust=True)["Close"])
+    for n, wait in enumerate(waits, 1):
+        miss = _missing_latest(px, ticks)
+        if not miss:
+            break
+        print(f"  🟡 成分股最新交易日缺收盘 {len(miss)}/{len(ticks)} 只，第 {n} 次补取（先等 {wait}s）")
+        sleep(wait)
+        for i in range(0, len(miss), chunk):
+            part = miss[i:i + chunk]
+            try:
+                new = dl(part)
+            except Exception as e:                      # noqa: BLE001
+                print(f"    补取一批 {len(part)} 只失败：{type(e).__name__}，下一轮再试")
+                continue
+            if isinstance(new, pd.Series):
+                new = new.to_frame(part[0])
+            if new is None or new.empty:
+                continue
+            px = new if (px is None or px.empty) else px.combine_first(new)
+        px = px.dropna(how="all")
+        print(f"    补取后仍缺 {len(_missing_latest(px, ticks))} 只")
+    return px
+
+
 def build_pulse():
     """今日头版：市场温度（估值百分位+情绪百分位）/2、涨跌家数分布、板块当日涨跌。
     情绪 = 上涨家数占比 (涨 + 平/2)/总数 在近一年中的百分位；
@@ -571,6 +615,7 @@ def build_pulse():
         frames.append(df)
         time.sleep(2)
     px = pd.concat(frames, axis=1).dropna(how="all")
+    px = _refetch_missing_closes(px, ticks)
     ret = px.pct_change().iloc[1:]
     FLAT = 0.0001  # |涨跌| < 0.01% 记为持平
     up = (ret > FLAT).sum(axis=1)
