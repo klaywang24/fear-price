@@ -29,6 +29,7 @@ Pages 目录页就是强制加斜杠的）。相对资源路径在 /foo 下解�
 """
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -118,11 +119,31 @@ ROUTES = {
 }
 
 
+def _tracked_digest(root, pattern):
+    """digest/ 下匹配 pattern 且**已被 git 跟踪**（含已 git add 暂存）的页，按文件名排序。
+
+    🔴 2026-09-25 根修（Klay 拍板）：原先直接 glob 工作区。09-24 09:06 有人在本机跑本脚本，
+    digest 会话还没提交的 digest/2026-09-23(.en).html 被写进 sitemap 推上去，CI 检出里没有
+    这两页 ⇒ check_route_pages 报「sitemap 多」⇒ 18:05 daily-update 整轮停。
+    ⇒ 清单只认 git 知道的页：本机未提交的页不会漏进 sitemap，CI 与本机看到的是同一份。
+    新页要进 sitemap，先 git add（run_digest_archive 已这么做），再跑本脚本。
+    不是 git 仓（如临时副本）时退回 glob 并打警告，不静默。"""
+    d = root / "digest"
+    r = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", "digest/"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"⚠️ {root} 不是 git 仓，digest 页清单退回工作区 glob（可能含未提交页）",
+              file=sys.stderr)
+        return sorted(d.glob(pattern))
+    tracked = {pathlib.PurePosixPath(p).name for p in r.stdout.split("\0") if p}
+    return sorted(f for f in d.glob(pattern) if f.name in tracked)
+
+
 def expected_sitemap_urls(root=ROOT):
     """应收录页面清单的唯一实现 —— 生成器写 sitemap 用它，闸对账也用它。
     组成：首页 + ROUTES 全部路由 + /options（独立平铺页）+ /digest/ 归档页 + 各周报。
     noindex 转化页（pay/welcome/check-inbox/confirmed）与 /pulse（首页别名，
-    _redirects 已 301 归 /）永不入内。"""
+    _redirects 已 301 归 /）永不入内。digest 各页只算 git 已跟踪的（见 _tracked_digest）。"""
     urls = [f"{BASE}/"]
     urls += [f"{BASE}/{r}" for r in ROUTES]
     urls.append(f"{BASE}/options")
@@ -131,13 +152,13 @@ def expected_sitemap_urls(root=ROOT):
     urls.append(f"{BASE}/fear-price")   # 恐惧的标价术语页（2026-08-25·同上）
     urls.append(f"{BASE}/digest/")
     urls.append(f"{BASE}/digest/index.en")   # EN 归档索引（§77 2026-09-07：改无扩展。08-25 那版写 .html，Pages 把 .html 308 到无扩展 ⇒ sitemap 条目是跳转页、页内 canonical 又指回跳转页，GSC 09-06 拒收）
-    for f in sorted((root / "digest").glob("*-weekly.html")):
+    for f in _tracked_digest(root, "*-weekly.html"):
         urls.append(f"{BASE}/digest/{f.stem}")
-    for f in sorted((root / "digest").glob("*-weekly.en.html")):
+    for f in _tracked_digest(root, "*-weekly.en.html"):
         urls.append(f"{BASE}/digest/{f.stem}")    # EN 周报（2026-08-25·canonical 为无扩展 .en 形态，与页内一致）
-    for f in sorted((root / "digest").glob("20??-??-??.html")):
+    for f in _tracked_digest(root, "20??-??-??.html"):
         urls.append(f"{BASE}/digest/{f.stem}")    # 日更页（2026-08-25·Klay 拍板日更往期上站，T+1）
-    for f in sorted((root / "digest").glob("20??-??-??.en.html")):
+    for f in _tracked_digest(root, "20??-??-??.en.html"):
         urls.append(f"{BASE}/digest/{f.stem}")    # 日更 EN 页
     return urls
 

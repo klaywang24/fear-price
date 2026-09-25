@@ -15,7 +15,7 @@
     脚本从 2026-08-18 起因稿件格式漂移抛异常，站上档案停更两周无人知，直到 Klay 自己发现
     08-21 那期没上站。当时全仓 grep 零处 run —— **规矩没变成自动跑的动作，就等于没有。**
 """
-import datetime, os, shutil, subprocess, sys
+import datetime, os, re, shutil, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIZ = os.path.join(os.path.dirname(os.path.dirname(REPO)), "生意与起号")
@@ -67,6 +67,19 @@ def main():
         notify("判读档案没上站", f"生成器退出码 {r.returncode}，看 data/_digest_archive.log")
         return r.returncode
 
+    # 🔴 2026-09-25 根修（Klay 拍板）：build_route_pages 的 sitemap 清单改为只认 git 已跟踪的
+    #    digest 页（09-24 本机把未提交页写进 sitemap ⇒ CI 检出里没有 ⇒ 路由闸红、daily-update 停）。
+    #    ⇒ 本工具刚生成的新页必须**先 git add 再跑路由生成器**，sitemap 才会收它们，
+    #    两者随本轮同一笔提交。只暂存 digest/ 下本轮新冒出来的页，别的一概不碰。
+    new_pages = [l for l in git("ls-files", "--others", "--exclude-standard", "digest")
+                 .stdout.splitlines() if l.strip()]
+    if new_pages:
+        a = git("add", "--", *new_pages)
+        if a.returncode != 0:
+            say(f"❌ 暂存新页失败：{(a.stderr or a.stdout).strip()[:200]}")
+            return 1
+        say(f"暂存本轮新页 {len(new_pages)} 个（先入 git 索引，sitemap 才收）：" + " ".join(new_pages[:6]))
+
     # 🔴 2026-08-28（Klay 拍板·sitemap 失账同族二犯后）：加完页重跑路由生成器，sitemap 当晚入账。
     #    ⚠️ 前置依赖：index 源与产物已同步（0da9848 拆雷）——源脏时生成器会回滚定稿，
     #    所以要有源漂移守门。守门的两条铁律（首版实犯换来的，同晚被自己咬）：
@@ -79,6 +92,8 @@ def main():
         fh.write(g.stdout + g.stderr)
     if g.returncode != 0:
         say(f"❌ 路由生成器退出码 {g.returncode} —— sitemap 本轮没入账，会在 nightly 撞红")
+        if new_pages:   # 撤掉暂存：别让别人手跑路由生成器时把这些未提交页收进 sitemap
+            git("reset", "-q", "--", *new_pages)
         return g.returncode
     drift = False
     extra_add = []     # 2026-09-23：纯缓存版本号漂移的路由页，随本轮提交（见下）
@@ -114,9 +129,8 @@ def main():
     diff = git("diff", "--", *WATCH).stdout.splitlines()
     real = [l for l in diff
             if l[:1] in "+-" and not l.startswith(("+++", "---")) and "generated_at" not in l]
-    untracked = [l for l in git("ls-files", "--others", "--exclude-standard", "digest")
-                 .stdout.splitlines() if l.strip()]
-    if not real and not untracked and not extra_add:
+    # 新页已在上面 git add 过，ls-files --others 与 git diff 都看不见它们 ⇒ 用 new_pages 判
+    if not real and not new_pages and not extra_add:
         say("✅ 跑通，无实质变化（只有 generated_at 时间戳漂移），不提交")
         git("checkout", "--", "data/digest_archive.json")
         return 1 if drift else 0
@@ -128,6 +142,8 @@ def main():
             "commit", "-q", "-m", f"digest 档案自动同步（{stamp}）：{n} 处变化")
     if c.returncode != 0:
         say(f"❌ commit 失败：{(c.stderr or c.stdout).strip()[:200]}")
+        if new_pages:
+            git("reset", "-q", "--", *new_pages)
         return 1
     p = git("push", "-q", "origin", "HEAD")
     if p.returncode != 0:
