@@ -1165,6 +1165,11 @@ CBOE_YAHOO_FALLBACK = {
 _SOURCE_TRACE: dict[str, str] = {}
 # 2026-09-23：Cboe 正常返回但停更时，用 Yahoo 补上的日期（写进 meta.yahoo_patched）
 _YAHOO_PATCHED: dict[str, list] = {}
+# 2026-09-25：各序列 Cboe 自己发布到的最后一天（判断早先补过的日期 Cboe 发没发）
+_CBOE_LAST: dict[str, str] = {}
+# 累计记录上线前已被每轮重写丢掉的补数日（有据可查才登记）：VIX1Y 2026-09-23＝21.69 由雅虎补，
+# 证据＝提交 1b881f3f 的 leaps_gauge.json meta.yahoo_patched。Cboe 发布到该日后按 _merge_yahoo_patched 自动退场。
+_YAHOO_PATCHED_SEED = {"VIX1Y": ["2026-09-23"]}
 
 
 def _yahoo_close(sym: str) -> pd.Series:
@@ -1177,7 +1182,7 @@ def _yahoo_close(sym: str) -> pd.Series:
     return s.dropna().sort_index()
 
 
-def _patch_stale_with_yahoo(name: str, s: pd.Series) -> pd.Series:
+def _patch_stale_with_yahoo(name: str, s: pd.Series, now=None) -> pd.Series:
     """Cboe 正常返回、但末日落后于 Yahoo ⇒ 只把 Yahoo 更新的日期接到末尾（2026-09-23 加）。
 
     起因：09-23 Cboe 官网公共发布整体停在 09-22（历史 CSV 最后修改 09-22 21:51 ET、延迟行情接口
@@ -1193,7 +1198,14 @@ def _patch_stale_with_yahoo(name: str, s: pd.Series) -> pd.Series:
         return s
     if y.empty:
         return s
-    newer = y[y.index > s.index.max()]
+    _CBOE_LAST[name] = s.index.max().strftime("%Y-%m-%d")
+    # 🔴 2026-09-25 补（与 _vol_yahoo_topup 同一条保护）：VIX 家族美东凌晨 3 点就开盘，雅虎凌晨就给出
+    #    「今天」一行实时值，那不是收盘价。16:30 ET 前一律不收今天这一行。原先没有这道：
+    #    09-24 00:05 那班恰好在开盘前才没出事，任何白天手动触发的轮次都会把盘中值写进只追加的存底。
+    now = now or pd.Timestamp.now(tz="America/New_York")   # now 可注入，供 scripts/test_gauge_yahoo_patch.py
+    today = pd.Timestamp(now.date())
+    cutoff = today if now.hour * 60 + now.minute >= 16 * 60 + 30 else today - pd.Timedelta(days=1)
+    newer = y[(y.index > s.index.max()) & (y.index <= cutoff)]
     if newer.empty:
         return s
     newer = newer.round(2)
@@ -1201,6 +1213,25 @@ def _patch_stale_with_yahoo(name: str, s: pd.Series) -> pd.Series:
     _YAHOO_PATCHED[name] = [d.strftime("%Y-%m-%d") for d in newer.index]
     print(f"  ↪ {name}: Cboe 末日 {s.index.max().date()} 落后，Yahoo 补 {_YAHOO_PATCHED[name]} = {list(newer.values)}")
     return pd.concat([s, newer]).sort_index()
+
+
+def _merge_yahoo_patched(prev: dict, cur: dict, cboe_last: dict, series_dates: set) -> dict:
+    """累计「哪些日期是雅虎补的」（2026-09-25 建）。
+
+    本轮补的一律记；上一份文件里记过的日期，只要 Cboe 仍没发布到那天（> cboe_last）
+    且这天还在序列里，就继续记。Cboe 发布到那天以后不再记：那之后同日值走修订检测，
+    两源不一致会进 meta.revisions，一致就是已被官方确认。cboe_last 缺（本轮 Cboe 取数失败）
+    ⇒ 旧记录照留，宁可多记不可漏记。"""
+    out = {}
+    for name in set(prev) | set(cur):
+        ds = set(cur.get(name) or [])
+        last = cboe_last.get(name)
+        for d in prev.get(name) or []:
+            if d in series_dates and (last is None or d > last):
+                ds.add(d)
+        if ds:
+            out[name] = sorted(ds)
+    return out
 
 
 def _cboe_close_resilient(name: str) -> pd.Series:
@@ -1418,8 +1449,18 @@ def build_leaps_index(gspc_close: pd.Series, vix_close: pd.Series):
     # 降级状态写进 meta：站上据此显示「数据源中断」，绝不白屏，也绝不假装数据是新鲜的
     stale_days = (pd.Timestamp(datetime.now(ET).date()) - vix1y.index[-1].normalize()).days  # 2026-08-06 UTC 案同族修
     out["meta"]["sources"] = dict(_SOURCE_TRACE)
-    if _YAHOO_PATCHED:
-        out["meta"]["yahoo_patched"] = dict(_YAHOO_PATCHED)   # Cboe 停更时 Yahoo 补的日期（2026-09-23 起）
+    # Cboe 停更时 Yahoo 补的日期（2026-09-23 起）。🔴 2026-09-25 改为累计：VIX1Y 是只追加存底，
+    # 雅虎 ^VIX1Y 每次只给最近 1 天 ⇒ 原先每轮重写，09-23 那天的补数值留在序列里、记号却丢了。
+    try:
+        _prev_yp = json.loads((DATA / "leaps_gauge.json").read_text()).get("meta", {}).get("yahoo_patched") or {}
+    except Exception:
+        _prev_yp = {}
+    for _k, _ds in _YAHOO_PATCHED_SEED.items():
+        _prev_yp.setdefault(_k, [])
+        _prev_yp[_k] = sorted(set(_prev_yp[_k]) | set(_ds))
+    _yp = _merge_yahoo_patched(_prev_yp, _YAHOO_PATCHED, _CBOE_LAST, set(out["dates"]))
+    if _yp:
+        out["meta"]["yahoo_patched"] = _yp
     out["meta"]["headline_source"] = _SOURCE_TRACE.get("VIX1Y", "unknown")
     out["meta"]["stale_days"] = int(stale_days)
     # 4 天＝跨一个周末+一个假日的上限；与 make_card.sh 的新鲜度闸同阈值，两处口径别打架

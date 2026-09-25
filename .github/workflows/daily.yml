@@ -21,6 +21,7 @@ jobs:
           python-version: '3.12'
       - run: pip install yfinance pandas requests lxml openpyxl
       - run: python scripts/test_pulse_refetch.py   # offline test first (no network, writes nothing); a failure stops this run
+      - run: python scripts/test_gauge_yahoo_patch.py   # offline test first (no network, writes nothing); a failure stops this run
       - run: python scripts/build_data.py
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
