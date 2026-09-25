@@ -566,10 +566,9 @@ def _missing_latest(px, ticks):
 def _refetch_missing_closes(px, ticks, waits=(5, 15), chunk=110, download=None, sleep=time.sleep):
     """成分股批量下载漏票就补取（2026-09-25 建·Klay 令「漏洞依次修掉」）。
 
-    🔴 起因：09-23、09-24 两晚云端 yf.download 五批 500 只，**只回来 60 只有当日收盘**，
-       不报错。pulse_breadth_gate 正确地拒绝写垃圾、沿用旧值，但沿用了两天：
-       首页涨跌分布/温度停在 09-22，breadth.json 停在 09-22，本机镜像闸按 2 天容忍报红。
-       同族先例＝09-24 基本面快照（Yahoo 对 GitHub 出口时好时坏、只回一半，752b2c27 加重试修）。
+    🔴 勘误（09-25 本机复现）：建它时以为 09-23/09-24 的「样本 60」是批量下载漏票，**判错了**——
+       真因是 Yahoo 日线整天缺 09-22，见 _drop_hole_days。本函数仍保留：它防的是另一种真实存在的病
+       （Yahoo 对 GitHub 出口只回一半，同族先例＝09-24 基本面快照，752b2c27），复现当天也补回了 1 只超时的票。
     🔑 修法：批量下完后查「最新交易日缺收盘」的票，只对这些票新发请求重取，最多 2 次（退避 5/15 秒），
        用 combine_first 只填空格、不覆盖已取到的值。重取后仍缺的票照旧交给覆盖率闸判（闸不动）。
     🚫 不降低 PULSE_MIN_COVER，不拿别的源顶：够不够 400 仍是唯一判据。
@@ -599,6 +598,30 @@ def _refetch_missing_closes(px, ticks, waits=(5, 15), chunk=110, download=None, 
     return px
 
 
+def _drop_hole_days(px, min_cover=PULSE_MIN_COVER):
+    """剔掉「中间某天大部分成分股都没有收盘价」的空洞日（2026-09-25 建）。返回 (px, holes)。
+
+    🔴 起因（09-25 本机复现定案）：Yahoo 的日线历史**整天缺 09-22**（503 只里 443 只没有这一行，
+       与世纪图缺 09-22 同一个洞）。后果两处，都不报错：
+       ① 涨跌家数：09-23 的收益率是对 09-22 算的，09-22 为空 ⇒ 只剩 60 只 ⇒ 覆盖率闸沿用旧值；
+       ② 200 日广度：rolling(200).mean() 窗口里有一个空值就整段为空 ⇒ 之后 **200 个交易日**
+          每天都只剩 60 只 ⇒ breadth.json 永远停在 09-22。
+       09-24 当晚曾误判为「批量下载漏票」并加了补取（_refetch_missing_closes，保留，防真的漏票）。
+    🔑 判据只看覆盖：某天有收盘价的票 < min_cover 即空洞；**最后一行不剔**——今天不全是另一件事，
+       归 pulse_breadth_gate 拒写，不能让它悄悄退成「昨天」。
+    🚫 不填补（ffill 会把缺的那天造成「全体持平」）。剔掉后，空洞后一天的涨跌跨两个交易日，
+       200 日均线少一天，这两点随 holes 写进产物，不隐瞒。"""
+    if px is None or px.empty or len(px) < 2:
+        return px, []
+    cnt = px.notna().sum(axis=1)
+    body = cnt.iloc[:-1]
+    hole_idx = body[body < min_cover].index
+    holes = [d.strftime("%Y-%m-%d") for d in hole_idx]
+    if holes:
+        print(f"  🟡 剔除 {len(holes)} 个空洞日（当天有收盘价的成分股 < {min_cover}）：{holes[-6:]}")
+    return px.drop(index=hole_idx), holes
+
+
 def build_pulse():
     """今日头版：市场温度（估值百分位+情绪百分位）/2、涨跌家数分布、板块当日涨跌。
     情绪 = 上涨家数占比 (涨 + 平/2)/总数 在近一年中的百分位；
@@ -616,6 +639,7 @@ def build_pulse():
         time.sleep(2)
     px = pd.concat(frames, axis=1).dropna(how="all")
     px = _refetch_missing_closes(px, ticks)
+    px, holes = _drop_hole_days(px)
     ret = px.pct_change().iloc[1:]
     FLAT = 0.0001  # |涨跌| < 0.01% 记为持平
     up = (ret > FLAT).sum(axis=1)
@@ -647,6 +671,9 @@ def build_pulse():
             "dates": b_dates, "pct": b_vals,
             "current": b_cur, "pctile": b_pct,
             "since": b_dates[0] if b_dates else None,
+            # 本轮 2 年窗口里剔掉的空洞日（见 _drop_hole_days）：本轮不为这些天算广度，200 日均线少算这几天；
+            # 旧文件里若早先已有这天的值（当晚数据源还没丢这行时算的），合并时照旧保留
+            "holes_dropped": holes,
         })
     except Exception as e:
         print(f"  广度计算失败（留旧文件）: {e}")
@@ -748,6 +775,12 @@ def build_pulse():
         "sectors": sectors, "quotes": quotes, "fng": fng, "k": k,
         "sent_window": f"{ratio.index[0].strftime('%Y-%m')}→",
     }
+    # 空洞日紧挨在今天之前 ⇒ 今天的涨跌是对空洞前一天算的、跨两个交易日，写明，不冒充单日
+    _prev = px.index[-2] if len(px) >= 2 else None
+    _span = [h for h in holes if _prev is not None and _prev.strftime("%Y-%m-%d") < h < today.strftime("%Y-%m-%d")]
+    if _span:
+        out["ret_vs"] = {"date": _prev.strftime("%Y-%m-%d"), "skipped_holes": _span,
+                         "why": "数据源整天缺这些交易日，涨跌按空洞前一个交易日算，跨多日"}
     if not gate_ok:
         if reuse:
             print(f"  🔴 成分股当日样本 {tot} < {PULSE_MIN_COVER} ⇒ 涨跌分布/温度/板块沿用 "

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Offline test for build_data._refetch_missing_closes (no network, writes nothing).
 
-Why: on 2026-09-23 and 09-24 the cloud build got a latest close for only 60 of ~500 S&P 500
-constituents from one yf.download pass, so the coverage gate froze pulse.json and breadth.json on
-older values for two days. The fix re-requests only the tickers missing the latest close.
+Why: pulse.json and breadth.json froze on 09-22/09-23 values for two days. The real cause (reproduced
+2026-09-25) is that Yahoo's daily history lacks the whole 2026-09-22 session for 443 of 503
+constituents: the 09-23 return and every 200-day moving average spanning that day came out empty, so
+only 60 names counted. _drop_hole_days removes such interior hole days. _refetch_missing_closes (first
+suspected cause, kept) re-requests tickers missing the latest close, which also happens.
 
 Cases:
   1. Partial answer then a full retry: missing latest closes are filled.
@@ -13,6 +15,8 @@ Cases:
   5. Empty first pass (everything failed): the retry rebuilds the frame.
   6. Nothing to fix: no download call is made.
   7. Negative sample: an overwrite-style merge is caught by the check in case 2.
+  8-11. _drop_hole_days: an interior day most tickers lack is dropped and reported; a thin last row is
+        never dropped; no-hole input is untouched; negative sample shows the hole poisons a rolling mean.
 
 Usage: python scripts/test_pulse_refetch.py   (exit 0 = pass, 1 = fail)
 """
@@ -92,6 +96,23 @@ check("6 nothing missing, no download call", calls == [])
 bad = partial()
 bad.update(FULL)                                   # overwrite style
 check("7 negative sample: overwrite merge is detected", bad.at[IDX[-1], "AAA"] != 99.0)
+
+# 8-10 hole days (2026-09-25: Yahoo history lacks 09-22 for 443 of 503 constituents)
+T8 = [f"T{i}" for i in range(10)]
+idx = pd.to_datetime(["2026-09-19", "2026-09-22", "2026-09-23", "2026-09-24"])
+h = pd.DataFrame({t: [1.0, np.nan if i >= 2 else 1.1, 1.2, 1.3] for i, t in enumerate(T8)}, index=idx)
+out, holes = bd._drop_hole_days(h, min_cover=8)
+check("8 interior hole day is dropped and reported", holes == ["2026-09-22"] and len(out) == 3)
+thin_last = h.copy(); thin_last.iloc[1] = 1.1; thin_last.iloc[-1, 2:] = np.nan
+out, holes = bd._drop_hole_days(thin_last, min_cover=8)
+check("9 a thin LAST row is never dropped (left to the coverage gate)", holes == [] and len(out) == 4)
+full = h.copy(); full.iloc[1] = 1.1
+out, holes = bd._drop_hole_days(full, min_cover=8)
+check("10 no hole, nothing dropped", holes == [] and out.equals(full))
+# 11 negative sample: without the drop, a 3-day rolling mean stays NaN after the hole
+ma_bad = h.rolling(3).mean().notna().sum(axis=1).iloc[-1]
+ma_ok = bd._drop_hole_days(h, min_cover=8)[0].rolling(3).mean().notna().sum(axis=1).iloc[-1]
+check("11 negative sample: hole poisons the rolling mean, dropping it restores coverage", ma_bad == 2 and ma_ok == 10)
 
 print("\n%s" % ("all passed" if not FAILS else "%d failed: %s" % (len(FAILS), FAILS)))
 sys.exit(1 if FAILS else 0)
