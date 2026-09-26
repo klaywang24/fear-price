@@ -248,6 +248,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
 <div class="chapter-head" id="op-ch3"><span class="chapter-no">第三章</span><h2>昨天的钱，今天还在不在</h2></div>
 <p class="op-note" style="margin-bottom:10px" id="op-n3">这是本页的信用来源：第四章那些归因凭什么可信？凭我们对异动的每一次判断都<b>先立案、按约定条件开奖、错了原样留着</b>。台账只会变厚，不会被改写。点行展开看立案原文与验证条件。</p>
 <div id="op-score" class="op-score"></div>
+<p class="op-note" id="op-score-note"></p>
 <div class="op-chips" id="op-lfilter" style="margin:10px 0 12px"></div>
 <!-- 2026-09-12（Klay 令）：台账只会变厚，全表平铺会把页面越拉越长 ⇒ 改成框内滚动：
      待开奖永远排最前、表头吸顶、全部案子仍在 DOM 里（深链 #MM-DD 与行展开照旧），只是页面高度封顶。 -->
@@ -764,7 +765,21 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   drawAxis(cur); drawFlip(cur); drawCm(cur);
 
   /* ── Ⅲ 开奖台账（行展开 + 深链 #MM-DD 高亮）── */
-  const isWrong = c => /错/.test(c.outcome);
+  /* 2026-09-26（Klay 令）：记分牌拆成 对／错／收回／无法判定 四项，收回与无法判定不许算进对。
+     原来只有一条 `/错/.test(outcome)`，其余一律算对：收回 4 案、无法判定 10 案、部分成立 9 案全进了「对」，
+     且「核心输入错过取数日」因为「错过」带错字被算成错（两案）。线上因此写 61 对 · 9 错。
+     台账没有单独的对错字段，只能按结论开头的字判；开头对不上任何一类的（部分成立、只记了结果没写对错）
+     单独点数，不塞进四项。判据只在这一处。 */
+  const verdict = c => {
+    const o = String(c.outcome || "").replace(/^开奖[：:]\s*/, "").replace(/^\*+/, "");
+    if (/^(部分|一半|半收回)/.test(o)) return "part";
+    if (/^(无法判定|无法归因|判据不合格|按判据作废)/.test(o)) return "undet";
+    if (/^(错|判断错误)/.test(o)) return "wrong";
+    if (/^收回/.test(o) || /收回/.test(o.split(/[。；]/)[0])) return "withdrawn";
+    if (/^(对|成立|保留|加强条件命中)/.test(o)) return "right";
+    return "other";
+  };
+  const isWrong = c => verdict(c) === "wrong";
   const trTicker = t => L === "en" ? String(t || "").replace(/^(.*?)等(\d+)只$/, "$2 names incl. $1").replace(/^(\d+)只$/, "$1 names") : t;
   // 2026-09-12：状态多了两种终态 —— 已撤案 / 勘误（此前生成器只发 待开奖/已开奖，撤案与勘误被显示成「待开奖」）
   const badge = c => c.status === "待开奖" ? `<span class="op-badge wait">${tr("待开奖","Open")}</span>` :
@@ -775,16 +790,23 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   // 记分牌：历史感（累计数字只会涨）+ 时效性（数据日动静 + 下一个开奖）
   const done = D.ledger.filter(c => c.status === "已开奖"),
         wait = D.ledger.filter(c => c.status === "待开奖"),
-        wrong = done.filter(isWrong).length,
+        vc = done.reduce((m, c) => (m[verdict(c)] = (m[verdict(c)] || 0) + 1, m), {}),
+        nPart = vc.part || 0, nOther = vc.other || 0,
         todayNew = D.ledger.filter(c => c.events[0].date === D.meta.data_date).length,
         nextUp = wait.map(c => ({ c, d: c.events[0].expected })).filter(x => x.d)
                      .sort((a, b) => a.d < b.d ? -1 : 1)[0];
   $("op-score").innerHTML =
     `<div class="sc"><b>${D.ledger.length}</b><span>${tr("累计立案（自 " + dot(D.meta.ledger_since) + "）", "Cases filed since " + dot(D.meta.ledger_since))}</span></div>` +
-    `<div class="sc"><b>${tr(`${done.length - wrong} 对 · ${wrong} 错`, `${done.length - wrong} right · ${wrong} wrong`)}</b><span>${tr("已开奖 " + done.length + " 案，输赢都在账上", done.length + " settled, wins and losses alike")}</span></div>` +
+    [["right", "对", "right"], ["wrong", "错", "wrong"], ["withdrawn", "收回", "withdrawn"], ["undet", "无法判定", "undetermined"]]
+      .map(([k, z, e]) => `<div class="sc"><b>${vc[k] || 0}</b><span>${tr(z, e)}</span></div>`).join("") +
     `<div class="sc"><b>${wait.length}</b><span>${tr("待开奖","Open")}${todayNew ? tr(" · 数据日新立案 " + todayNew, " · filed on data date: " + todayNew) : ""}</span></div>` +
     (nextUp ? `<div class="sc next"><b>${trTicker(nextUp.c.ticker)} · ${tr("预计 ","est. ")}${dot(nextUp.d)}</b><span>${tr("下一个开奖，回来对答案","Next settlement: come back and check")}</span></div>` : "");
 
+  $("op-score-note").textContent = tr(
+    `已开奖 ${done.length} 案按结论分四项，输赢都在账上。` +
+      (nPart || nOther ? "另有 " + [nPart ? `${nPart} 案部分成立` : "", nOther ? `${nOther} 案只记了结果没写对错` : ""].filter(Boolean).join("，") + "，都不计入这四项。" : ""),
+    `${done.length} settled cases, sorted into four by their verdicts, wins and losses alike.` +
+      (nPart || nOther ? ` Another${nPart ? ` ${nPart} partly held` : ""}${nPart && nOther ? " and" : ""}${nOther ? ` ${nOther} recorded an outcome without a right-or-wrong call` : ""}; they are not counted in the four.` : ""));
   // 过滤 + 渲染：待开奖排前（它们是「还没完的事」），已开奖按日期倒序归档
   let lf = "all";
   const order = c => (c.status === "待开奖" ? "0" : "1") + c.events[0].date;
