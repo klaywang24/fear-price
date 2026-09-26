@@ -31,7 +31,8 @@
   <p class="dek">Fear-Price · 恐惧的标价</p>
 
   <ol>
-    <li>您好，你的订阅将在 24 小时内开通，之后每个交易日开盘前收到简报。</li>
+    <li>你的订阅将在 24 小时内开通，之后每个交易日开盘前收到简报。</li>
+    <li id="pro-note" hidden>你开通的是 <b>Pro</b>：全史数据（CSV）需要你回信索取，我收到后发下载链接。索取即放弃 14 天退款；没有索取的，14 天内仍可全额退款。</li>
     <li>付款收据由 <b>Paddle</b>（本站的 Merchant of Record）发送，账单上显示 <b>MARKETCHR</b>。</li>
     <li>随时可通过收据邮件里的管理链接取消订阅。</li>
   </ol>
@@ -41,5 +42,9 @@
     <a href="https://chronicle.klay-wang.com/">← 返回恐惧的标价</a> · <a href="https://chronicle.klay-wang.com/#refunds">退款政策</a>
   </p>
 </main>
+<script>
+// 2026-09-26：Pro 结账的 successUrl 带 ?plan=pro，只对 Pro 买家显示全史数据的领取方式与退款例外
+if (new URLSearchParams(location.search).get("plan") === "pro") document.getElementById("pro-note").hidden = false;
+</script>
 </body>
 </html>

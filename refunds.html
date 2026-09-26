@@ -189,13 +189,14 @@
 <section class="panel active" id="panel-refunds">
   <div class="doc-page">
     <div class="hero"><div class="kicker">REFUNDS</div><h1>退款政策</h1>
-      <p class="dek">最后更新：2026-07-14</p></div>
+      <p class="dek">最后更新：2026-09-25</p></div>
     <div class="doc-body">
       <h3>适用范围</h3>
       <p>本政策适用于本站的付费订阅：<strong>Standard · 每日盘前数据简报</strong>（$29 / 月，或 $290 / 年）与 <strong>Pro</strong>（$590 / 年，仅年付）。网站本身的全部图表、台账与方法论<strong>永久免费开放</strong>，不涉及退款。</p>
       <h3>退款条件</h3>
       <ul>
         <li><strong>14 天无理由退款</strong>：订阅后 14 天内不满意，可全额退款，无需说明理由；</li>
+        <li><strong>Pro 的例外</strong>：全史数据在你回信索取后发送。索取即视为同意立即交付、放弃上一条的 14 天退款；没有索取的，14 天内仍可全额退款；</li>
         <li>退款通过支付服务商 Paddle 处理，原路退回；</li>
         <li>申请方式：邮件 <a href="mailto:klaywang24+fearprice@gmail.com">klaywang24+fearprice@gmail.com</a>，附订单信息即可。</li>
       </ul>
@@ -255,7 +256,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="js/i18n.js?v=20260924a"></script>
 <script src="js/app.js?v=20260925b"></script>
-<script src="js/docs-i18n.js?v=20260925c"></script>
+<script src="js/docs-i18n.js?v=20260926a"></script>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
 // Paddle 结账（Standard 档自助订阅）。零后端：付款事件走 Paddle 的 Email notification destination。
@@ -271,11 +272,24 @@ if (window.Paddle) {
   const PADDLE_PRICES = {
     m: "pri_01kxgfsayca5nv3re1103pzvew", // Standard $29 / Monthly
     y: "pri_01kxgg3h87b5e9rzd9gmky685g", // Standard $290 / Yearly
+    pro: "pri_01m3dy38cqph260rq2r8kr5dhs", // Pro $590 / Yearly（2026-09-26 建，仅年付，数量上限 1）
   };
   // 创始价带码链接（2026-07-17）：?code=XXX 时结账自动挂码：「我亲手给你开的价」，
   // 收礼的人连码都不用输。有码时强制按年价：创始价定义就是按年 $99（$290−$191），
   // 且 $191 的 flat 折扣绝不能落在 $29 月价上（负价/清零边界）。
   const FOUNDING_CODE = new URLSearchParams(location.search).get("code");
+  // Pro 只有年付，不看月付/年付切换，也不挂创始码（创始码 restrict_to 只指向 Standard 的价格）。
+  // 付完落到 welcome/?plan=pro：那页多一条全史 CSV 的交付说明，Standard 买家看不到。
+  // 用捕获阶段（第三个参数 true）：#pro-btn 的 href=contact 是站内路由链接，app.js 在 document
+  // 冒泡阶段先注册了路由拦截；不抢在它前面 preventDefault，结账弹出的同时背后页面会被切到 /contact。
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#pro-btn")) return;
+    e.preventDefault();
+    Paddle.Checkout.open({
+      items: [{ priceId: PADDLE_PRICES.pro, quantity: 1 }],
+      settings: { successUrl: "https://chronicle.klay-wang.com/welcome/?plan=pro" },
+    });
+  }, true);
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#pay-btn")) return;
     e.preventDefault();
