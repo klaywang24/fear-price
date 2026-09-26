@@ -64,8 +64,10 @@ design system (Fraunces × Noto Serif SC × JetBrains Mono).
 
 Yahoo Finance (prices, statements, dividends) · CNN Fear & Greed via the
 [whit3rabbit archive](https://github.com/whit3rabbit/fear-greed-data) ·
-multpl.com (CAPE / PE / EPS since 1871) · macrotrends.net (20y quarterly stock
-fundamentals; ADRs for EU names) · Wikipedia (constituents) · parqet (logos).
+multpl.com (CAPE / PE / EPS since 1871) · SEC EDGAR companyfacts (quarterly PE / EPS /
+PB / ROE / FCF since 2007, computed here from as-reported filings + Yahoo adjusted
+prices; ROIC frozen at 2026-09-19 pending a replacement; TSM / RACE / LVMH / Hermès /
+BRK.B / V frozen: no usable EDGAR series) · Wikipedia (constituents) · parqet (logos).
 Metrics without a reliable free source are left blank and labeled — never faked.
 
 ## Run locally

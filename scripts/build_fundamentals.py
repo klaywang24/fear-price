@@ -2,7 +2,9 @@
 """个股基本面管线（每周更新，与每日价格管线分离）。
 
 数据源：
-- macrotrends.net：PE / PS / ROE / ROIC / FCF 的 15~20 年季频历史（美股 + 欧股 ADR）
+- 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：证监会 EDGAR 原始申报值 + 雅虎复权价，本站自算，见 edgar_history.py
+  （2026-09-26 起替代 macrotrends：其 09-24 起整站 Cloudflare 人机验证，自动访问一律 403。ROIC 暂无同定义替代，沿用上一版；
+   台积电/法拉利/LVMH/爱马仕/伯克希尔/Visa/闪迪/Circle 冻结沿用，名单在 edgar_history.FROZEN_TICKERS）
 - yfinance：当前快照指标、近 4 年报表、完整分红史
 
 输出：data/s_{ticker}_fund.json（逐股）+ data/{basket}_peers.json（同业对比快照）。
@@ -24,34 +26,17 @@ import yfinance as yf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_data import BASKETS, DATA, safe_ticker, write_json, UA
 
-# 欧股用美股 ADR 的 macrotrends 数据（美元计价，比率类指标不受币种影响）
-MT_SYMBOL = {"MC.PA": "LVMUY", "RMS.PA": "HESAY"}
-MT_PAGES = ("pe-ratio", "ps-ratio", "price-book", "roe", "roic", "free-cash-flow")
+from edgar_history import history_rows, FROZEN_TICKERS  # noqa: E402  长历史：证监会原始申报 + 雅虎复权价（2026-09-26 起）
+
+HISTORY_PAGES = ("pe-ratio", "ps-ratio", "price-book", "roe", "roic", "free-cash-flow")   # 与旧源同名，下游不改
 
 
-def mt_fetch(sym: str, page: str) -> list:
-    """返回 macrotrends 表格行（首列为 YYYY-MM-DD 的行），每行是字符串列表。
-    404 = 该指标对此公司不适用（如银行无 PS）；429 = 限流，退避重试。"""
-    url = f"https://www.macrotrends.net/stocks/charts/{sym}/x/{page}"
-    for attempt in range(4):
-        r = requests.get(url, headers=UA, timeout=30, allow_redirects=True)
-        if r.status_code == 429:
-            time.sleep(20 * (attempt + 1))
-            continue
-        break
-    if r.status_code != 200:
-        raise RuntimeError(f"{sym}/{page} HTTP {r.status_code}")
-    rows = []
-    for m in re.finditer(r"<tr>\s*((?:<td[^>]*>.*?</td>\s*)+)</tr>", r.text, re.S):
-        tds = [re.sub(r"<[^>]+>", "", t).strip() for t in
-               re.findall(r"<td[^>]*>(.*?)</td>", m.group(1), re.S)]
-        if tds and re.match(r"^\d{4}-\d{2}-\d{2}$", tds[0]):
-            rows.append(tds)
-    rows.sort(key=lambda x: x[0])
-    return rows
-
-
-def num(s: str):
+def num(s):
+    """旧源给字符串单元格（"$12.3"），新源（edgar_history）给数值；两者都收，空/None 回 None。"""
+    if s is None or s == "":
+        return None
+    if isinstance(s, (int, float)):
+        return round(float(s), 3)
     s = s.replace("$", "").replace(",", "").replace("%", "").replace("B", "").strip()
     try:
         return round(float(s), 3)
@@ -132,7 +117,7 @@ def previous_snapshot(ticker: str):
         return None
 
 
-# Which published keys each macrotrends page feeds (2026-09-25). When a page comes back empty this run,
+# Which published keys each history page feeds (2026-09-25). When a page comes back empty this run,
 # its keys are carried from the last published file instead of vanishing from the site.
 PAGE_KEYS = {"pe-ratio": ("pe", "eps", "driver"), "ps-ratio": ("ps",), "price-book": ("pb_hist",),
              "roe": ("roe",), "roic": ("roic",), "free-cash-flow": ("fcf",)}
@@ -148,7 +133,7 @@ def previous_fund(ticker: str) -> dict:
 
 
 def carry_history(fund: dict, mt: dict, prev: dict, today: str) -> list:
-    """Fill keys whose macrotrends page came back empty from the previous file; mark provenance.
+    """Fill keys whose history page came back empty from the previous file; mark provenance.
 
     2026-09-25: a macrotrends outage on 09-24 wrote every s_*_fund.json without pe/eps/driver/pb_hist/
     roe/roic/fcf (35/35) and the job still passed; the site's history charts went blank. Returns the keys
@@ -171,18 +156,15 @@ def carry_history(fund: dict, mt: dict, prev: dict, today: str) -> list:
 
 
 def build_stock_fund(ticker: str):
-    sym = MT_SYMBOL.get(ticker, ticker)
-    fund = {"ticker": ticker, "mt_symbol": sym}
+    fund = {"ticker": ticker}
 
-    # ---- macrotrends 长历史 ----
-    mt = {}
-    for page in MT_PAGES:
-        try:
-            mt[page] = mt_fetch(sym, page)
-        except Exception as e:
-            print(f"  {ticker} {page}: {e}")
-            mt[page] = []
-        time.sleep(2.5)
+    # ---- 长历史：证监会原始申报 + 雅虎复权价（edgar_history.py）。冻结票返回空页；任何失败留空 → carry_history 沿用上一版并标记，绝不伪造 ----
+    try:
+        hist = history_rows(ticker, previous_fund(ticker))
+    except Exception as e:  # noqa: BLE001
+        print(f"  {ticker} history: {type(e).__name__}: {e}")
+        hist = {}
+    mt = {page: hist.get(page) or [] for page in HISTORY_PAGES}
 
     pe_rows = mt["pe-ratio"]  # [date, price, eps_ttm, pe]
     if pe_rows:
@@ -337,18 +319,22 @@ def main():
 
 def check_carried(limit: int) -> int:
     """Run after the data is committed: fail the job (so it is noticed) when more than `limit` tickers had
-    to carry history. Kept out of the build step so a macrotrends outage never blocks the week's commit."""
+    to carry history. Kept out of the build step so a history-source outage never blocks the week's commit."""
     report = os.path.join(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir(), "fund_carried.json")
     try:
         carried = json.load(open(report, encoding="utf-8"))
     except Exception as e:  # noqa: BLE001
         print(f"::error::no build report ({type(e).__name__}); the build step did not finish")
         return 1
-    if len(carried) > limit:
-        print(f"::error::macrotrends history came back empty for {len(carried)} tickers (> {limit}); "
-              f"the site shows the last published history for: {sorted(carried)}")
+    # roic is carried for every ticker by design (no replacement source yet) and the frozen list carries everything;
+    # what this gate watches is a ticker outside that list whose PE history came back empty.
+    unexpected = sorted(t for t, keys in carried.items() if t not in FROZEN_TICKERS and "pe" in keys)
+    if len(unexpected) > limit:
+        print(f"::error::history came back empty for {len(unexpected)} tickers outside the frozen list (> {limit}); "
+              f"the site shows the last published history for: {unexpected}")
         return 1
-    print(f"history carried for {len(carried)} ticker(s) (limit {limit}) — ok")
+    print(f"history carried for {len(carried)} ticker(s): {len(unexpected)} unexpected (limit {limit}); "
+          f"frozen by design: {sorted(t for t in carried if t in FROZEN_TICKERS)}; roic carried for all — ok")
     return 0
 
 

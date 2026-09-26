@@ -70,7 +70,7 @@ GitHub Pages 自动发布
 | 指数 / ETF / 个股价格 | Yahoo Finance（yfinance） | 每日 |
 | CNN 恐惧贪婪指数 | [whit3rabbit/fear-greed-data](https://github.com/whit3rabbit/fear-greed-data) 存档（2011→）+ CNN 官方接口当天值 | 每日 |
 | 席勒 CAPE / PE(TTM) / EPS（1871→） | multpl.com | 每日 |
-| 个股 PE/PS/PB/ROE/ROIC/FCF（约 20 年季频） | macrotrends.net（欧股用 ADR：LVMUY / HESAY） | 每周 |
+| 个股 PE/EPS/PB/ROE/FCF（季频，2007→；更早沿用上一版） | 美国证监会 EDGAR 原始申报值 + 雅虎复权价，本站自算（ROIC 冻结于 2026-09-19 待定；台积电/法拉利/LVMH/爱马仕/伯克希尔/Visa 冻结） | 每周 |
 | 个股报表（近 4 财年）/ 分红全史 / 快照 | Yahoo Finance | 每周 |
 | 成分股名单与行业 | Wikipedia | 每日 |
 | 公司 Logo | assets.parqet.com | 实时 |
@@ -86,7 +86,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install yfinance pandas requests lxml
 
 python scripts/build_data.py           # 重刷每日数据（约 3 分钟）
-python scripts/build_fundamentals.py   # 重刷基本面（约 1 小时，macrotrends 限流）
+python scripts/build_fundamentals.py   # 重刷基本面（约 15 分钟；证监会接口 ≤10 请求/秒）
 
 python3 -m http.server 8137            # 打开 http://localhost:8137
 ```

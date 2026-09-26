@@ -62,7 +62,7 @@ class TwdFiler(Down):
 def run(ticker_cls, fx):
     written = {}
     bf.write_json = lambda name, obj: written.__setitem__(name, obj)
-    bf.mt_fetch = lambda *a, **k: []
+    bf.history_rows = lambda ticker, prev=None: {}   # 长历史不走网络（2026-09-26 起 edgar_history）
     bf.previous_fund = lambda ticker: {}
     bf.time.sleep = lambda s: None
     bf.yf.Ticker = ticker_cls
