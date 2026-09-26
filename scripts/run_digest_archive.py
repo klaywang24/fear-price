@@ -86,6 +86,12 @@ def main():
                        cwd=REPO, capture_output=True, text=True)
     with open(LOG, "a", encoding="utf-8") as fh:
         fh.write(r.stdout + r.stderr)
+    # 2026-09-25（兜底审计）：日更解析失败按设计不阻断（一篇坏稿不许挡住其余期），但原先退 0 也不通知 ⇒
+    #    站上缺一页没人知道（08-19~08-24 实发 13 次）。这里点名通知，流程照常往下走。
+    bad_daily = [l.strip() for l in r.stdout.splitlines() if "日更解析失败" in l]
+    if bad_daily:
+        say(f"🟡 {len(bad_daily)} 篇日更解析失败、本轮没上站：{bad_daily[0][:160]}")
+        notify("判读档案：日更缺页", f"{len(bad_daily)} 篇日更解析失败没上站，修稿件格式后下一轮自动补")
     if r.returncode != 0:
         tail = " ⏎ ".join((r.stdout + r.stderr).strip().splitlines()[-4:])[:400]
         say(f"❌ 生成器退出码 {r.returncode}（2=缩水闸/冻结源不见 · 其它多半是周报稿件格式漂移）：{tail}")
