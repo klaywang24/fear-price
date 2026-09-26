@@ -185,7 +185,8 @@
       <li><b>The reading archive</b> — filed daily, compounding</li>
 <!-- 2026-07-25 用户裁：与中文版同步删除「每周一期传说处决」。该栏目暂时不产出，
      售卖页不留不在交付的承诺。⚠️ 改定价权益必须中英同改：EN 版定价面板由本文件整块替换。 -->
-      <li>Options-structure data table — the dozen-odd names carrying the most US options volume; the list follows liquidity</li>
+      <!-- 2026-09-26：与中文同步，按实际交付改写（原为 options-structure data table）。 -->
+      <li>The options-structure reading inside each day's brief</li>
     </ul>
     <div class="ptier-foot">
       <a class="ptier-cta" href="#" id="pay-btn"><span class="p-m">Subscribe $29 / mo</span><span class="p-y">Subscribe $290 / yr</span></a>

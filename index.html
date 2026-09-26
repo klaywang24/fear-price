@@ -1102,7 +1102,9 @@
             <li><b>判读档案</b>：逐日归档，越攒越厚</li>
 <!-- 2026-07-25 用户裁：删除「每周一期传说处决：付费先看，30 天后公开」。该栏目暂时不产出，
      售卖页不留不在交付的承诺。恢复时连同「30 天后公开」的公开落点一起做，否则承诺无处兑现。 -->
-            <li>期权结构数据表：覆盖美股期权成交量前列的十余只标的，清单随流动性调整</li>
+            <!-- 2026-09-26 Klay 令：原写「期权结构数据表：覆盖美股期权成交量前列的十余只标的，清单随流动性调整」，
+     订户实际收到的是当日判读里对期权结构的解读，没有单独的数据表 ⇒ 按实际交付改写（售卖页只写现在能交付的）。 -->
+            <li>当日判读里的期权结构解读</li>
           </ul>
           <!-- 标签整串放进 p-m/p-y，不留裸文本节点：i18n 的 applyTo 按整节点精确匹配 D 字典，
                而 D 里已有 "订阅"→"Subscribe"（i18n.js:49）。留 "订阅 " 单独成节点会被译成 Subscribe，
@@ -1199,7 +1201,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="js/i18n.js?v=20260924a"></script>
 <script src="js/app.js?v=20260925b"></script>
-<script src="js/docs-i18n.js?v=20260926c"></script>
+<script src="js/docs-i18n.js?v=20260926d"></script>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
 // Paddle 结账（Standard 档自助订阅）。零后端：付款事件走 Paddle 的 Email notification destination。
