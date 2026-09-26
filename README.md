@@ -67,7 +67,7 @@ Yahoo Finance (prices, statements, dividends) · CNN Fear & Greed via the
 multpl.com (CAPE / PE / EPS since 1871) · SEC EDGAR companyfacts (quarterly PE / EPS /
 PB / ROE / FCF since 2007, computed here from as-reported filings + Yahoo adjusted
 prices; ROIC by this site's own definition, after-tax operating profit over the four-quarter average of equity + debt − cash, not shown for banks; TSM / RACE / LVMH / Hermès /
-BRK.B / V frozen: no usable EDGAR series) · Wikipedia (constituents) · parqet (logos).
+V frozen: no usable quarterly EDGAR series, PE tail still refreshed weekly, TSM / RACE appended yearly from 20-F; BRK.B per-share figures use Yahoo B-equivalent share counts) · Wikipedia (constituents) · parqet (logos).
 Metrics without a reliable free source are left blank and labeled — never faked.
 
 ## Run locally

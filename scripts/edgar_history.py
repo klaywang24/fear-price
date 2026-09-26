@@ -15,7 +15,9 @@
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
 · ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自证监会数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
-· 冻结名单 FROZEN_TICKERS：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、伯克希尔/Visa（股数按类别拆开申报，汇总层为空）、闪迪/Circle（上市不足两年）。
+· 冻结名单 FROZEN_TICKERS（7 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、Visa（股数按类别申报，接口无汇总，雅虎只给 A 类差 6–13%）、闪迪/Circle（上市不足两年）。
+· 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
+· 伯克希尔：证监会 EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
 证监会要求 UA 带联系方式、≤10 请求/秒。"""
 import json, os, csv, time, statistics as st, datetime as dt
 import requests
@@ -134,6 +136,22 @@ def get_prices_me(ticker):
     latest = {"last_date": h.index[-1].date().isoformat(), "last_adj": round(float(h["Adj Close"].iloc[-1]), 4)}
     return prices, latest
 
+def get_shares_history(ticker):
+    """雅虎流通股逐日历史（拆股已调）→ {yyyy-mm-dd: shares}；只对 SHARES_FROM_YAHOO 用。"""
+    s = _yf(ticker).get_shares_full(start="2005-01-01")
+    if s is None or len(s) == 0: return {}
+    s = s[~s.index.duplicated(keep="last")].sort_index()
+    return {d.date().isoformat(): float(v) for d, v in s.items()}
+
+def get_fx_me(cur):
+    """月末汇率：一单位外币值多少美元 → {yyyy-mm-dd: usd}。"""
+    sym = {"TWD": "TWD=X", "EUR": "EURUSD=X"}[cur]
+    h = _yf(sym).history(period="max", interval="1d", auto_adjust=False)
+    if h.index.tz is not None: h.index = h.index.tz_localize(None)
+    me = h["Close"].resample("ME").last().dropna()
+    if cur == "TWD": me = 1 / me
+    return {d.date().isoformat(): float(v) for d, v in me.items()}
+
 def get_splits(ticker):
     s = _yf(ticker).splits
     return [(d.date().isoformat(), float(r)) for d, r in s.items() if d.year >= 2000 and float(r) > 0]
@@ -153,8 +171,12 @@ CASH_TAGS= ["Cash","CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalent
 DEBT_NC  = ["LongTermDebtAndCapitalLeaseObligations","LongTermDebtNoncurrent"]; DEBT_C = ["LongTermDebtAndCapitalLeaseObligationsCurrent","LongTermDebtCurrent"]
 DEBT_TOT = ["LongTermDebt"]; STB = ["ShortTermBorrowings","CommercialPaper"]
 ROIC_EMIT = True    # 2026-09-26 Klay 定：按本站公开定义自算，不追旧源；整条自证监会数据起算，不与旧线缝合
+FROZEN_PRICE_TICKER = {"MC.PA": "LVMUY", "RMS.PA": "HESAY"}   # 旧源用 ADR（美元）算的，刷新末点也用 ADR 价
+ANNUAL_IFRS = {"TSM": ("TWD", 5), "RACE": ("EUR", 1)}            # 20-F 年报：报表币种、每 ADR 对应普通股数
+PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
+SHARES_FROM_YAHOO = {"BRK.B"}   # 证监会接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
-FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","BRK.B","SNDK","CRCL","V"}   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","SNDK","CRCL","V"}   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "2005-01-01"
 
 # ───────── 构建 ─────────
@@ -216,11 +238,15 @@ def build(t, prev, src, do_stitch=True):
     if eq_tag == "StockholdersEquity": flags.append("EQ=母")
     Dnc, Dc, Dt, Sb = I(DEBT_NC), I(DEBT_C), I(DEBT_TOT), I(STB)
     prices, latest = src.prices(t)
+    YSH = src.shares(t) if t in SHARES_FROM_YAHOO else {}
     def shares_at(e):
+        if YSH: return near(YSH, e, 120, 45)   # 伯克希尔：证监会股数标签是 A 股折算数（百万级），与 B 股口径不同，一律只用雅虎 B 股等价；日期不规则，季末前 120 天/后 45 天取最近
         v = near(SHi, e, 10, 0)            # 资产负债表日同日
         if v is None: v = near(SHd, e, 10, 0)   # 单季加权稀释股数
         if v is None: v = near(SHi, e, 0, 75)   # dei 封面日在季末后
         return v
+    if EPS and NI and max(EPS) < max(NI)[:4] + "-01-01" and int(max(NI)[:4]) - int(max(EPS)[:4]) >= 2:
+        flags.append(f"EPS标签{max(EPS)[:4]}后停更→NI/股数"); EPS = {}
     if not EPS and NI:                     # 多类别股（Visa/伯克希尔）：EPS = 单季净利/股数
         for e, v in NI.items():
             sh = shares_at(e)
@@ -269,7 +295,7 @@ def build(t, prev, src, do_stitch=True):
     rows["_n_new"] = len(rows["pe-ratio"])
     if do_stitch and B:
         rows["pe-ratio"]   = stitch(prev_rows(B, "pe", True), rows["pe-ratio"])
-        rows["price-book"] = stitch(prev_rows(B, "pb_hist"), rows["price-book"])
+        rows["price-book"] = rows["price-book"] if t in PB_NO_STITCH else stitch(prev_rows(B, "pb_hist"), rows["price-book"])
         rows["roe"]        = stitch(prev_rows(B, "roe"), rows["roe"])
         # roic 不缝合：本站定义与旧源不同，整条自证监会数据起算（≈2009），避免接缝；不适用票留空由上游删键
     return rows, flags
@@ -277,6 +303,8 @@ def build(t, prev, src, do_stitch=True):
 class NetSource:
     """CI 用：现拉。"""
     def facts(self, t): return get_facts(t)
+    def shares(self, t): return get_shares_history(t)
+    def fx(self, cur): return get_fx_me(cur)
     def prices(self, t): return get_prices_me(t)
     def splits(self, t): return get_splits(t)
 
@@ -293,10 +321,69 @@ class CacheSource:
             if r and r[0][:1].isdigit(): out[r[0][:10]] = float(r[2])
         return out, json.load(open(f"{self.d}/prices/_latest.json")).get(t)
     def splits(self, t): return [tuple(x) for x in json.load(open(f"{self.d}/prices/_splits.json")).get(t, [])]
+    def fx(self, cur):
+        return {r[0][:10]: float(r[1]) for r in csv.reader(open(f"{self.d}/prices/_fx_{cur}.csv")) if r and r[0][:1].isdigit()}
+    def shares(self, t):
+        p = f"{self.d}/prices/_shares_{t}.csv"
+        if not os.path.exists(p): return {}
+        return {r[0][:10]: float(r[1]) for r in csv.reader(open(p)) if r and r[0][:1].isdigit()}
+
+def annual_ifrs_rows(t, src, F):
+    """台积电/法拉利：20-F 年报（IFRS、本币）→ 每 ADR 美元口径的年度行。EPS×每ADR股数×年末汇率；流量用财年 12 个月末汇率均值。"""
+    cur, ratio = ANNUAL_IFRS[t]; fx = src.fx(cur); prices, _ = src.prices(t)
+    EPS = annual(F, ["DilutedEarningsLossPerShare"], f"{cur}/shares"); NI = annual(F, ["ProfitLoss", "ProfitLossAttributableToOwnersOfParent"], cur)
+    EQ = instant(F, ["Equity", "EquityAttributableToOwnersOfParent"], cur); OCF = annual(F, ["CashFlowsFromUsedInOperatingActivities"], cur)
+    CX = annual(F, ["PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"], cur)
+    SH = instant(F, ["EntityCommonStockSharesOutstanding"], "shares")   # 只用封面股数；法拉利 NumberOfSharesOutstanding 含库存股，PB 会偏三成
+    out = {"pe-ratio": [], "price-book": [], "roe": [], "free-cash-flow": []}
+    for fe, eps in EPS.items():
+        L = month_end_label(fe); p = prices.get(L); r_fx = near(fx, L, 40)
+        if not p or not r_fx: continue
+        eps_usd = eps * ratio * r_fx
+        out["pe-ratio"].append([L, round(p, 2), round(eps_usd, 2), round(p / eps_usd, 2) if eps_usd > 0 else 0.0])
+        eq, sh = near(EQ, fe), near(SH, fe, 45, 120)
+        if eq and sh: bvps = eq / sh * ratio * r_fx; out["price-book"].append([L, round(p, 2), round(bvps, 2), round(p / bvps, 2)])
+        ni = NI.get(fe); eq_prev = near(EQ, (_d(fe) - dt.timedelta(days=365)).isoformat(), 45)
+        if ni and eq and eq_prev: out["roe"].append([L, ni, (eq + eq_prev) / 2, round(ni / ((eq + eq_prev) / 2) * 100, 2)])
+        ocf, cx = OCF.get(fe), CX.get(fe)
+        months = [k for k in fx if (_d(fe) - dt.timedelta(days=365)) < _d(k) <= _d(fe)]
+        if ocf is not None and cx is not None and months:
+            out["free-cash-flow"].append([f"{fe[:4]}-12-31", round((ocf - cx) * st.mean(fx[k] for k in months) / 1e6, 1)])
+    return out
+
+def frozen_rows(t, prev, src):
+    """冻结票：长历史沿用上一版（其它页留空由 carry_history 打标）；PE 末点按最新价 ÷ 最后一期 EPS 刷新；台积电/法拉利另追加晚于旧序列末点的年报行。"""
+    rows = {}
+    old = prev_rows(prev or {}, "pe", True); real = [r for r in old if r[2] != ""]
+    if not real: return rows
+    last_eps = real[-1][2]
+    if not (isinstance(last_eps, (int, float)) and last_eps > 0): return {}     # LVMH/爱马仕旧序列 EPS 为空或 0：原样沿用，不动
+    _, latest = src.prices(FROZEN_PRICE_TICKER.get(t, t))
+    pe_rows = list(real)
+    if t in ANNUAL_IFRS:
+        try:
+            ann = annual_ifrs_rows(t, src, src.facts(t)); last_pe = real[-1][0]
+            pe_rows += [r for r in ann["pe-ratio"] if r[0] > last_pe]
+            for page, key in (("price-book", "pb_hist"), ("roe", "roe")):
+                lastd = (prev.get(key) or {}).get("dates", [""])[-1]
+                add = [r for r in ann[page] if r[0] > lastd]
+                if add: rows[page] = prev_rows(prev, key) + add
+            lasty = (prev.get("fcf") or {}).get("dates", [""])[-1]
+            addf = [r for r in ann["free-cash-flow"] if r[0][:4] > lasty]
+            if addf: rows["free-cash-flow"] = [[f"{y}-12-31", v] for y, v in zip((prev.get("fcf") or {}).get("dates", []), (prev.get("fcf") or {}).get("values", []))] + addf
+            rows["_annual_preview"] = ann
+        except Exception as ex:
+            print(f"  {t} annual: {type(ex).__name__}: {str(ex)[:80]}")
+    if last_eps and last_eps > 0 and latest:
+        pe_rows.append([latest["last_date"], latest["last_adj"], "", round(latest["last_adj"] / (pe_rows[-1][2] if pe_rows[-1][2] != "" else last_eps), 2)])
+    rows["pe-ratio"] = pe_rows
+    return rows
 
 def history_rows(ticker, prev=None, src=None):
-    """给 build_fundamentals 用：返回与旧源同形状的六页行；冻结票返回 {}（由 carry_history 沿用上一版）。"""
-    if ticker in FROZEN_TICKERS: return {}
+    """给 build_fundamentals 用：返回与旧源同形状的六页行；冻结票只刷新 PE 末点（及台积电/法拉利年报追加），其余页留空由 carry_history 沿用上一版。"""
+    if ticker in FROZEN_TICKERS:
+        rows = frozen_rows(ticker, prev, src or NetSource())
+        return {k: v for k, v in rows.items() if not k.startswith("_")}
     rows, flags = build(ticker, prev, src or NetSource())
     if flags: print(f"  {ticker} history: {' '.join(flags)}")
     return {k: v for k, v in rows.items() if not k.startswith("_")}
@@ -306,7 +393,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--validate":      # 离线复算：与工作区验证产物比对
         d = sys.argv[2]; os.makedirs(f"{d}/out_repo", exist_ok=True); src = CacheSource(d)
         for t in json.load(open(f"{d}/tickers.json")):
-            if t in FROZEN_TICKERS: continue
             p = f"{d}/baseline/s_{t.lower().replace('.', '-')}_fund.json"
             prev = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else {}
             json.dump(history_rows(t, prev, src), open(f"{d}/out_repo/{t}.json", "w"), ensure_ascii=False)
