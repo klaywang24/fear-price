@@ -196,7 +196,7 @@
     <div class="ptier-name">Pro</div>
 <!-- 2026-09-25 与中文同步：Pro 仅年付 $590；只写现在能交付的，提醒与 API 标 planned。 -->
     <div class="ptier-price"><span class="p-m">$590<i class="u">/ yr</i></span><span class="p-y">$590<i class="u">/ yr</i></span></div>
-    <div class="ptier-tag"><span class="p-m">Annual only · use the ruler yourself</span><span class="p-y">≈ $49 / mo · annual only</span></div>
+    <div class="ptier-tag"><span class="p-m">Annual only</span><span class="p-y">≈ $49 / mo · annual only</span></div>
     <ul class="ptier-list">
       <li>Everything in Standard</li>
       <li>Macro transmission-chain full history (CSV): Fed balance sheet and liquidity, bank cash by bank size, the 10-year Treasury yield and Treasury futures positioning, from the start to today</li>

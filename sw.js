@@ -19,7 +19,8 @@
 // 09-25 的定价改版（0d590478）漏了这一步，回访者多看了一次旧定价，本次一并作废。
 // 2026-09-26 → mc-v33：Pro 权益改为只写公共领域部分（售卖页承诺变了，回访者不能再看一次旧承诺）。
 // 2026-09-26 → mc-v34：定价三卡加宽、间距 28px、不再单字换行（Klay 当 bug 报的，同 mc-v6 先例主动 bump）。
-const CACHE = "mc-v34";
+// 2026-09-26 → mc-v35：定价页整页内容栏放宽到 1040 与卡片对齐，Pro 副标删「自己用这把尺子」。
+const CACHE = "mc-v35";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
