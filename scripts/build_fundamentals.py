@@ -26,7 +26,7 @@ import yfinance as yf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_data import BASKETS, DATA, safe_ticker, write_json, UA
 
-from edgar_history import history_rows, FROZEN_TICKERS  # noqa: E402  长历史：证监会原始申报 + 雅虎复权价（2026-09-26 起）
+from edgar_history import history_rows, FROZEN_TICKERS, ROIC_NOT_APPLICABLE  # noqa: E402  长历史：证监会原始申报 + 雅虎复权价（2026-09-26 起）
 
 HISTORY_PAGES = ("pe-ratio", "ps-ratio", "price-book", "roe", "roic", "free-cash-flow")   # 与旧源同名，下游不改
 
@@ -204,6 +204,12 @@ def build_stock_fund(ticker: str):
                        "values": [num(r[1]) for r in annual]}
 
     _c = carry_history(fund, mt, previous_fund(ticker), datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    if ticker in ROIC_NOT_APPLICABLE:   # 2026-09-26：银行/券商类不显示 ROIC（本站定义对其不适用），也不沿用旧源的那条
+        fund.pop("roic", None)
+        _c = [k for k in _c if k != "roic"]
+        if fund.get("history_carried"):
+            fund["history_carried"]["keys"] = [k for k in fund["history_carried"]["keys"] if k != "roic"]
+            if not fund["history_carried"]["keys"]: fund.pop("history_carried")
     if _c:
         CARRIED[ticker] = _c
         print(f"  {ticker} history carried from the last published file: {', '.join(_c)}")
@@ -326,7 +332,7 @@ def check_carried(limit: int) -> int:
     except Exception as e:  # noqa: BLE001
         print(f"::error::no build report ({type(e).__name__}); the build step did not finish")
         return 1
-    # roic is carried for every ticker by design (no replacement source yet) and the frozen list carries everything;
+    # the frozen list carries everything by design;
     # what this gate watches is a ticker outside that list whose PE history came back empty.
     unexpected = sorted(t for t, keys in carried.items() if t not in FROZEN_TICKERS and "pe" in keys)
     if len(unexpected) > limit:
@@ -334,7 +340,7 @@ def check_carried(limit: int) -> int:
               f"the site shows the last published history for: {unexpected}")
         return 1
     print(f"history carried for {len(carried)} ticker(s): {len(unexpected)} unexpected (limit {limit}); "
-          f"frozen by design: {sorted(t for t in carried if t in FROZEN_TICKERS)}; roic carried for all — ok")
+          f"frozen by design: {sorted(t for t in carried if t in FROZEN_TICKERS)} — ok")
     return 0
 
 

@@ -2752,7 +2752,7 @@
           ? `数据截至 ${asof} · ${src} · ${opts.freq}`
           : `数据截至 ${dd}-${mo}-${y}（结算日） · ${src} · 每月两次结算，结算日后约 8 个交易日发布`;
       } else if (/-fd-/.test(inner.id || "")) {
-        line = `数据截至 ${metaDate} · macrotrends + Yahoo Finance · 每周六自动更新`;
+        line = `数据截至 ${metaDate} · 证监会 EDGAR + Yahoo Finance · 每周六自动更新`;
       } else {
         line = `数据截至 ${metaDate} · ${src} · 每交易日收盘后自动更新`;
       }

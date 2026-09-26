@@ -13,7 +13,7 @@
 · ROE＝母公司净利 TTM ÷ 构成 TTM 的四个季末总权益均值（苹果五个时点精确相等）。
 · FCF＝财年 OCF − 资本开支（净额，扣处置回款；只认 10-K，亚马逊每份 10-Q 也报 12 个月滚动值）。
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
-· ROIC：旧源定义无法复现（网格搜索最好 ±1.5 点），本版不产出，沿用上一版并由 carry_history 标记来源；待定。
+· ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自证监会数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
 · 冻结名单 FROZEN_TICKERS：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、伯克希尔/Visa（股数按类别拆开申报，汇总层为空）、闪迪/Circle（上市不足两年）。
 证监会要求 UA 带联系方式、≤10 请求/秒。"""
@@ -152,7 +152,8 @@ OPI_TAGS = ["OperatingIncomeLoss"]; TAX_TAGS = ["IncomeTaxExpenseBenefit"]
 CASH_TAGS= ["Cash","CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents","CashAndCashEquivalentsAtCarryingValue"]
 DEBT_NC  = ["LongTermDebtAndCapitalLeaseObligations","LongTermDebtNoncurrent"]; DEBT_C = ["LongTermDebtAndCapitalLeaseObligationsCurrent","LongTermDebtCurrent"]
 DEBT_TOT = ["LongTermDebt"]; STB = ["ShortTermBorrowings","CommercialPaper"]
-ROIC_EMIT = False   # ROIC 旧源定义无法复现，暂不产出，沿用上一版
+ROIC_EMIT = True    # 2026-09-26 Klay 定：按本站公开定义自算，不追旧源；整条自证监会数据起算，不与旧线缝合
+ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
 FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","BRK.B","SNDK","CRCL","V"}   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "2005-01-01"
 
@@ -253,7 +254,7 @@ def build(t, prev, src, do_stitch=True):
             eqk = near(EQ, k)
             if eqk is None: ic = []; break
             ic.append(eqk + debt_at(k) - (near(CASH, k) or 0))
-        if ROIC_EMIT and ic and st.mean(ic) > 0: rows["roic"].append([L, nopat, st.mean(ic), round(nopat / st.mean(ic) * 100, 2)])
+        if ROIC_EMIT and t not in ROIC_NOT_APPLICABLE and ic and st.mean(ic) > 0: rows["roic"].append([L, round(nopat / 1e6, 1), round(st.mean(ic) / 1e6, 1), round(nopat / st.mean(ic) * 100, 2)])
     if rows["pe-ratio"] and latest and last_eps:
         rows["pe-ratio"].append([latest["last_date"], latest["last_adj"], "", round(latest["last_adj"] / last_eps, 2) if last_eps > 0 else 0.0])
     for fe, v in OCFa.items():
@@ -270,7 +271,7 @@ def build(t, prev, src, do_stitch=True):
         rows["pe-ratio"]   = stitch(prev_rows(B, "pe", True), rows["pe-ratio"])
         rows["price-book"] = stitch(prev_rows(B, "pb_hist"), rows["price-book"])
         rows["roe"]        = stitch(prev_rows(B, "roe"), rows["roe"])
-        rows["roic"]       = stitch(prev_rows(B, "roic"), rows["roic"]) if ROIC_EMIT else []   # 不产出时留空，让 carry_history 沿用并打 history_carried 标记（否则来源标记会丢）
+        # roic 不缝合：本站定义与旧源不同，整条自证监会数据起算（≈2009），避免接缝；不适用票留空由上游删键
     return rows, flags
 
 class NetSource:
