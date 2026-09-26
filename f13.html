@@ -40,7 +40,12 @@ try { var _l = localStorage.getItem("mc-lang"); if (_l && _l !== "zh") document.
    （index/路由页 .tab 胶囊按钮 7px13px+边框+圆角8px；options/f13 裸文字 padding 2px 0）。
    ⇒ 导航外观归主站 .tab 一处定义，本页只管排布与右侧控件（一处样式一个实现）。 */
 .f13-nav2 { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 4px 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-.f13-nav2 .tabs { flex: 1; }
+/* 🐛 2026-09-26 修：窄屏（≤820px）导航竖排成一列、挤在按钮旁边。页内 `.f13-nav2 .tabs { flex:1 }`（0,2,0）
+   压过 css/style.css 窄屏那条 `.tabs { order:3; flex:0 0 100% }`（0,1,0），tab 栏被挤成约 158px 宽，
+   每个 tab 一行，375px 实测高 404px。⇒ flex:1 只在宽屏生效；窄屏照主站：控件占第一行（靠右），
+   tab 栏独占第二行满宽横滚。 */
+@media (min-width: 821px) { .f13-nav2 .tabs { flex: 1; } }
+@media (max-width: 820px) { .f13-nav2 .tabs { order: 3; flex: 0 0 100%; flex-wrap: nowrap; overflow-x: auto; } .f13-navctl { order: 2; } }
 .f13-nav2 a.tab { text-decoration: none; }
 /* 🔑 2026-08-18：外观由 `.topbar-navband .tab`（纯文字+底部 2px 砖红线）统一，
    本页 nav 补该祖先类即与路由页同源；此前只吃到基础 .tab（带框胶囊）⇒ 两套观感。 */
@@ -118,7 +123,7 @@ html:not([lang^="zh"]) .f13-nav2 a.tab { padding: 6px 10px; }
    覆盖了 flex —— **却没覆盖 order** ⇒ 借了主站的类只接住一半规则，
    窄屏下 tabs(order 3) 排到控件(order 0)后面：785px 实测「订阅/EN/主题」在左、导航在右。
    ⇒ 本页显式收回 order。断点取 820 与主站那条对齐，不自己另起一个。 */
-@media (max-width: 820px) { .f13-nav2 .tabs { order: 0; } }
+/* 2026-09-26：上面这条只收回了 order、没收回 flex:1，窄屏照样竖排；已被本页顶部那对 @media 取代，原规则删除。 */
 .f13-panel { border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card); padding: 20px 22px 24px; margin: 0 0 40px; }
 .f13-panel h2 { font-family: 'Noto Serif SC',serif; font-size: 20px; margin: 0 0 4px; color: var(--ink); }
 .f13-panel .pmeta { font-size: 12.5px; color: var(--ink-muted); font-family: 'JetBrains Mono',monospace; margin-bottom: 14px; }

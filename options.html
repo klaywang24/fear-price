@@ -26,7 +26,12 @@ try { var _l = localStorage.getItem("mc-lang"); if (_l && _l !== "zh") document.
 .op-langbtn { font-size: 12.5px; color: var(--ink-soft); background: transparent; border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; cursor: pointer; }
 .op-langbtn:hover { color: var(--ink); border-color: var(--ink-muted); }
 /* 2026-08-18：导航外观归主站 .tab 一处定义（此前本页裸文字，与路由页胶囊按钮两套观感） */
-.op-nav .tabs { flex: 1; }
+/* 🐛 2026-09-26 修：窄屏（≤820px）导航竖排成一列、挤在按钮旁边。页内 `.op-nav .tabs { flex:1 }`（0,2,0）
+   压过 css/style.css 窄屏那条 `.tabs { order:3; flex:0 0 100% }`（0,1,0），tab 栏被挤成约 158px 宽，
+   每个 tab 一行，375px 实测高 404px。⇒ flex:1 只在宽屏生效；窄屏照主站：控件占第一行（靠右），
+   tab 栏独占第二行满宽横滚。 */
+@media (min-width: 821px) { .op-nav .tabs { flex: 1; } }
+@media (max-width: 820px) { .op-nav .tabs { order: 3; flex: 0 0 100%; flex-wrap: nowrap; overflow-x: auto; } .op-navctl { order: 2; } }
 .op-nav a.tab { text-decoration: none; }
 /* 🔑 2026-08-18：外观由 `.topbar-navband .tab`（纯文字+底部 2px 砖红线）统一，
    本页 nav 补该祖先类即与路由页同源；此前只吃到基础 .tab（带框胶囊）⇒ 两套观感。 */
