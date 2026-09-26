@@ -199,8 +199,8 @@
     <div class="ptier-tag"><span class="p-m">Annual only · use the ruler yourself</span><span class="p-y">≈ $49 / mo · annual only</span></div>
     <ul class="ptier-list">
       <li>Everything in Standard</li>
-      <li>Full-history download (CSV) for every ruler: one method, from the start to today</li>
-      <li>Component series, including the macro transmission chain (rates, credit, equities)</li>
+      <li>Macro transmission-chain full history (CSV): Fed balance sheet and liquidity, bank cash by bank size, the 10-year Treasury yield and Treasury futures positioning, from the start to today</li>
+      <li>Full history (CSV) for each of the site's rulers: added once data licensing is confirmed (planned)</li>
       <li>Custom threshold alerts, API (planned)</li>
     </ul>
     <div class="ptier-foot">

@@ -1117,14 +1117,16 @@
         <div class="ptier t-pro">
           <div class="ptier-name">Pro</div>
 <!-- 2026-09-25 Klay 定：Pro 取消月付、只年付 $590（＝Standard 年付 2 倍：读 vs 用）。
-     权益只写现在就能交付的（07-25 规矩：售卖页不留不在交付的承诺）：全史与 CSV 先私享链接人工交付；
+     权益只写现在就能交付的（07-25 规矩：售卖页不留不在交付的承诺）：全史 CSV 按买家索取人工交付；
+     09-26 Klay 定先只交公共领域部分（ops/Pro交付包 默认包：美联储 H.4.1/H.8/H.15＋CFTC），
+     各把尺子是 Cboe/CNN 等上游衍生，律师清关前标规划中，不写成现有权益；
      自定义阈值提醒与 API 标为规划中。#pro-btn 由文末脚本接 Paddle 年付价（PADDLE_PRICES.pro）；href=contact 是 paddle.js 加载失败时的退路。 -->
           <div class="ptier-price"><span class="p-m">$590<i class="u">/ 年</i></span><span class="p-y">$590<i class="u">/ 年</i></span></div>
           <div class="ptier-tag"><span class="p-m">仅年付 · 自己用这把尺子</span><span class="p-y">≈ $49 / 月 · 仅年付</span></div>
           <ul class="ptier-list">
             <li>Standard 全部内容</li>
-            <li>每把尺子的全史数据下载（CSV）：同一口径，从起点到今天</li>
-            <li>各组成序列，含宏观传导链（利率、信用、股票三层）</li>
+            <li>宏观传导链全史数据（CSV）：美联储资产负债表与流动性、银行现金分层、10 年期国债、国债期货持仓，从起点到今天</li>
+            <li>各把尺子的全史数据（CSV）：数据许可确认后加入（规划中）</li>
             <li>自定义阈值提醒、API（规划中）</li>
           </ul>
           <div class="ptier-foot">
@@ -1197,7 +1199,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="js/i18n.js?v=20260924a"></script>
 <script src="js/app.js?v=20260925b"></script>
-<script src="js/docs-i18n.js?v=20260926a"></script>
+<script src="js/docs-i18n.js?v=20260926b"></script>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
 // Paddle 结账（Standard 档自助订阅）。零后端：付款事件走 Paddle 的 Email notification destination。
