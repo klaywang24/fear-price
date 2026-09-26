@@ -20,7 +20,8 @@
 // 2026-09-26 → mc-v33：Pro 权益改为只写公共领域部分（售卖页承诺变了，回访者不能再看一次旧承诺）。
 // 2026-09-26 → mc-v34：定价三卡加宽、间距 28px、不再单字换行（Klay 当 bug 报的，同 mc-v6 先例主动 bump）。
 // 2026-09-26 → mc-v35：定价页整页内容栏放宽到 1040 与卡片对齐，Pro 副标删「自己用这把尺子」。
-const CACHE = "mc-v36";
+// 2026-09-26 → mc-v37：个股页 /t/ 上线，/t/ 改为先走网络。
+const CACHE = "mc-v37";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -42,7 +43,8 @@ self.addEventListener("fetch", (e) => {
     return; // 其余跨域不碰
   }
 
-  const networkFirst = url.pathname.includes("/data/");
+  // 2026-09-26：个股页 /t/<TK> 的读数写在页面里、每天换一次，与 /data/ 同理先走网络。
+  const networkFirst = url.pathname.includes("/data/") || url.pathname.startsWith("/t/");
   e.respondWith(networkFirst ? fromNetwork(req) : staleWhileRevalidate(req));
 });
 

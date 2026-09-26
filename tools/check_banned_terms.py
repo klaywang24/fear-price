@@ -31,6 +31,8 @@ def targets():
     # ⇒ 这里把它们纳入扫描但只作 INFO 播报，不 fail 构建；非归档路径照旧硬失败。
     for p in sorted(ROOT.glob("*.html")):
         yield p
+    for p in sorted(ROOT.glob("t/*.html")):   # 2026-09-26 个股页
+        yield p
     # 归档面：真的 yield 出去才叫扫（2026-08-11 首版只往集合里塞路径没 yield，
     # 闸照旧报「24 个文件·违规 0」——自造 bug 只在真跑时现形）
     for p in sorted(ROOT.glob("digest/*.html")) + [ROOT / "feed.xml"]:

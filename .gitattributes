@@ -22,4 +22,5 @@ spy.html linguist-generated=true
 tech.html linguist-generated=true
 terms.html linguist-generated=true
 digest/*.html linguist-generated=true
+t/*.html linguist-generated=true
 feed.xml linguist-generated=true

@@ -28,6 +28,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BAD = {"「": "直角引号", "」": "直角引号", "“": "弯引号", "”": "弯引号", "——": "中文破折号"}
 ARCHIVE = set()
+TICKER = set()
+VB, VE = "<!--verbatim-->", "<!--/verbatim-->"
 
 
 def visible(html: str) -> str:
@@ -45,6 +47,11 @@ def targets():
         if p.exists():
             ARCHIVE.add(str(p))
             yield p
+    # 2026-09-26：个股页 t/*.html。模板文字硬失败；台账原文用 <!--verbatim-->…<!--/verbatim--> 圈起，
+    # 圈内按归档口径只播报（立案原文原样存证不改），见 main() 里的拆分。
+    for p in sorted(ROOT.glob("t/*.html")):
+        TICKER.add(str(p))
+        yield p
 
 
 def main():
@@ -52,8 +59,15 @@ def main():
     bad, archived = [], []
     for path in targets():
         files += 1
-        text = visible(path.read_text(encoding="utf-8", errors="replace"))
-        for ch, name in BAD.items():
+        raw = path.read_text(encoding="utf-8", errors="replace")
+        parts = [(raw, str(path) in ARCHIVE)]
+        if str(path) in TICKER:   # 个股页：圈外硬失败、圈内（台账原文）只播报
+            inside = "".join(f">{m}<" for m in re.findall(re.escape(VB) + "(.*?)" + re.escape(VE), raw, re.S))
+            outside = re.sub(re.escape(VB) + ".*?" + re.escape(VE), "", raw, flags=re.S)
+            parts = [(outside, False), (inside, True)]
+        for chunk, soft_part in parts:
+          text = visible(chunk)
+          for ch, name in BAD.items():
             n = text.count(ch)
             if not n:
                 continue
@@ -63,7 +77,7 @@ def main():
             if m:
                 sample = m.group().replace("\n", " ").strip()
             line = f"{rel}：{name} ×{n}   …{sample}…"
-            if str(path) in ARCHIVE:
+            if soft_part:
                 archived.append(line); soft += n
             else:
                 bad.append(line); hard += n
@@ -72,7 +86,7 @@ def main():
         print("🔴 一个文件都没扫到 —— 目录结构变了？本闸此刻无效")
         return 2
 
-    print(f"扫了 {files} 个文件（其中归档 {len(ARCHIVE)} 个只播报不失败）")
+    print(f"扫了 {files} 个文件（其中归档 {len(ARCHIVE)} 个只播报不失败；个股页 {len(TICKER)} 个的台账原文只播报）")
     if archived:
         print(f"ℹ️ 归档面 {soft} 处（旧文不回改，不失败）：")
         for b in archived:

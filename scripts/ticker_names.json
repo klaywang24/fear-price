@@ -1,0 +1,181 @@
+{
+ "_note": "个股页中英名。逐只取自券商个股页（中文优先一家、英文优先另一家，缺一家用另一家，只合并空格不改字），出处链接留在维护者私有名单。不在表里的票页面只显示代码。",
+ "names": {
+  "AAPL": [
+   "苹果",
+   "Apple"
+  ],
+  "AMD": [
+   "AMD",
+   "Advanced Micro Devices"
+  ],
+  "AMZN": [
+   "亚马逊",
+   "Amazon"
+  ],
+  "AVGO": [
+   "博通",
+   "Broadcom"
+  ],
+  "BAC": [
+   "美国银行",
+   "Bank of America"
+  ],
+  "C": [
+   "花旗",
+   "Citigroup"
+  ],
+  "COIN": [
+   "Coinbase",
+   "Coinbase"
+  ],
+  "CRWV": [
+   "Coreweave",
+   "CoreWeave"
+  ],
+  "DELL": [
+   "戴尔科技-C",
+   "Dell Technologies"
+  ],
+  "GOOG": [
+   "谷歌-C",
+   "Alphabet-C"
+  ],
+  "GOOGL": [
+   "谷歌-A",
+   "Alphabet-A"
+  ],
+  "GS": [
+   "高盛",
+   "Goldman Sachs"
+  ],
+  "HOOD": [
+   "Robinhood",
+   "Robinhood"
+  ],
+  "HYG": [
+   "美国高收益债 ETF - iShares",
+   "Ishares Iboxx $ High Yield Corporate Bond Etf"
+  ],
+  "INTC": [
+   "英特尔",
+   "Intel"
+  ],
+  "IWM": [
+   "罗素 2000 指数 ETF - iShares",
+   "iShares Russell 2000 ETF"
+  ],
+  "JPM": [
+   "摩根大通",
+   "JPMorgan"
+  ],
+  "KRE": [
+   "标普区域银行指数 ETF - SPDR",
+   "Spdr Series Trust S&P Regional Bkg Etf"
+  ],
+  "LQD": [
+   "美国投资级公司债 - iShares",
+   "Ishares Iboxx $ Investment Grade Corporate Bond Etf"
+  ],
+  "META": [
+   "Meta",
+   "Meta Platforms"
+  ],
+  "MRVL": [
+   "迈威尔科技",
+   "Marvell Technology"
+  ],
+  "MSFT": [
+   "微软",
+   "Microsoft"
+  ],
+  "MSTR": [
+   "Strategy",
+   "Strategy"
+  ],
+  "MU": [
+   "美光科技",
+   "Micron Technology"
+  ],
+  "NBIS": [
+   "Nebius",
+   "NEBIUS"
+  ],
+  "NVDA": [
+   "英伟达",
+   "NVIDIA"
+  ],
+  "ORCL": [
+   "甲骨文",
+   "Oracle"
+  ],
+  "PLTR": [
+   "Palantir Tech",
+   "Palantir"
+  ],
+  "QCOM": [
+   "高通",
+   "Qualcomm"
+  ],
+  "QQQ": [
+   "纳指 100 ETF - Invesco",
+   "Invesco QQQ Trust"
+  ],
+  "SKHY": [
+   "SK海力士",
+   "SK hynix"
+  ],
+  "SMCI": [
+   "超微电脑",
+   "Super Micro Computer"
+  ],
+  "SMH": [
+   "半导体 ETF - VanEck Vectors",
+   "VanEck Semiconductor ETF"
+  ],
+  "SNDK": [
+   "闪迪",
+   "SanDisk"
+  ],
+  "SOFI": [
+   "SoFi Tech",
+   "SoFi Technologies"
+  ],
+  "SPCX": [
+   "SpaceX",
+   "SpaceX"
+  ],
+  "SPY": [
+   "标普 500 ETF - SPDR",
+   "SPDR S&P 500 ETF"
+  ],
+  "TLT": [
+   "20 年期以上美国国债 ETF - iShares",
+   "iShares 20+ Year Treasury Bond ETF"
+  ],
+  "TSLA": [
+   "特斯拉",
+   "Tesla"
+  ],
+  "TSM": [
+   "台积电",
+   "Taiwan Semiconductor"
+  ],
+  "WFC": [
+   "富国银行",
+   "Wells Fargo & Co"
+  ],
+  "XLF": [
+   "金融业 ETF - SPDR",
+   "Financial Select Sector SPDR Fund"
+  ],
+  "XLK": [
+   "高科技指数 ETF - SPDR",
+   "The Technology Select Sector SPDR® Fund"
+  ],
+  "XLV": [
+   "医疗业 ETF - SPDR",
+   "The Health Care Select Sector SPDR® Fund"
+  ]
+ }
+}

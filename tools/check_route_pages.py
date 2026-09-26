@@ -146,7 +146,50 @@ for f in sorted((ROOT / "digest").glob("*.html")):
         if alt.endswith(".html"):
             err(f"digest/{f.name}：hreflang 指向带 .html 的 {alt} —— 落地会 308，语言对儿对不上")
 
+# ⑨ 个股页 /t/<TK>（2026-09-26 加）
+# 判据全部 import 自生成器（universe / page_days / MIN_DAYS / 原文标记），这里不另写一份。
+#   · 宇宙里每只票中英两页都在，t/ 里没有宇宙外的页（票被移出后页面不能留着装作还在更新）
+#   · canonical 自指、hreflang 中英成对，都是无扩展形态
+#   · noindex 当且仅当 page_days < MIN_DAYS
+#   · 页面 fp-data-date ＝ options_page.json 的 data_date（数据更新了、页面没跟上＝红：管线那一步挂了）
+#   · 英文页在台账原文标记之外不许有中文（语言切换钮「简」除外）
+import build_ticker_pages as BT  # noqa: E402
+_D = json.loads((ROOT / "data/options_page.json").read_text(encoding="utf-8"))
+_uni = BT.universe(_D)
+_want_files = {f for tk in _uni for f in BT.page_files(tk)}
+_have_files = set((ROOT / "t").glob("*.html")) if (ROOT / "t").is_dir() else set()
+for f in sorted(_want_files - _have_files):
+    err(f"个股页缺 t/{f.name}（宇宙里有这只票，页面没生成）")
+for f in sorted(_have_files - _want_files):
+    err(f"个股页多 t/{f.name}（不在宇宙里的票还留着页面）")
+_cjk = re.compile(r"[\u3400-\u9fff\uff00-\uffef\u3000-\u303f]")
+for tk in _uni:
+    for f, en in zip(BT.page_files(tk), (False, True)):
+        if not f.exists():
+            continue
+        h = f.read_text(encoding="utf-8")
+        me = f"{BASE}/t/{tk}" + (".en" if en else "")
+        if f'<link rel="canonical" href="{me}">' not in h:
+            err(f"t/{f.name}：canonical 不自指（应为 {me}）")
+        for lang, u in (("zh-CN", f"{BASE}/t/{tk}"), ("en", f"{BASE}/t/{tk}.en")):
+            if f'<link rel="alternate" hreflang="{lang}" href="{u}">' not in h:
+                err(f"t/{f.name}：缺 hreflang {lang} → {u}")
+        noidx = 'name="robots" content="noindex' in h
+        should = BT.page_days(_D, tk) < BT.MIN_DAYS
+        if noidx != should:
+            err(f"t/{f.name}：noindex={noidx}，按 {BT.page_days(_D, tk)} 个交易日应为 {should}")
+        m = re.search(r'<meta name="fp-data-date" content="([^"]+)">', h)
+        if not m or m.group(1) != _D["meta"]["data_date"]:
+            err(f"t/{f.name}：页面数据日 {m.group(1) if m else '缺'} ≠ options_page.json {_D['meta']['data_date']}（生成器没跟着跑？）")
+        if en:
+            body = re.sub(re.escape(BT.VB) + ".*?" + re.escape(BT.VE), "", h, flags=re.S)
+            body = re.sub(r'<a class="tp-lang"[^>]*>.*?</a>', "", body)
+            body = re.sub(r"<!--.*?-->|<script\b.*?</script>|<style\b.*?</style>", "", body, flags=re.S)
+            hit = _cjk.findall("".join(re.findall(r">([^<]*)<", body)))
+            if hit:
+                err(f"t/{f.name}：英文页在台账原文之外有中文 {''.join(hit[:12])}")
+
 if errors:
     print(f"\n共 {len(errors)} 条红。路由页正文重复/sitemap 失账会直接导致 GSC 拒收，修完再提交。")
     sys.exit(1)
-print(f"✅ 路由页判重闸全绿：{len(ROUTES)} 路由页各含唯一 panel，canonical 自指，sitemap {len(expected)} 条对账一致，导航内链可爬")
+print(f"✅ 路由页判重闸全绿：{len(ROUTES)} 路由页各含唯一 panel，canonical 自指，sitemap {len(expected)} 条对账一致，导航内链可爬；个股页 {len(_uni)} 只×中英 {len(_have_files)} 页逐页核过")

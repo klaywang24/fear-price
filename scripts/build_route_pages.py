@@ -160,7 +160,26 @@ def expected_sitemap_urls(root=ROOT):
         urls.append(f"{BASE}/digest/{f.stem}")    # 日更页（2026-08-25·Klay 拍板日更往期上站，T+1）
     for f in _tracked_digest(root, "20??-??-??.en.html"):
         urls.append(f"{BASE}/digest/{f.stem}")    # 日更 EN 页
+    urls += _ticker_urls(root)                    # 个股页 /t/<TK>(.en)（2026-09-26）
     return urls
+
+
+def _ticker_urls(root):
+    """个股页进 sitemap 的清单：已被 git 跟踪（同 _tracked_digest 的理由）且页面没写 noindex 的 t/*.html。
+    noindex 由生成器按 build_ticker_pages.page_days() 判（不满 10 个交易日），这里只读页面本身，
+    不重算判据 —— 页面上写的就是事实，sitemap 跟页面走，两者不可能对不上。中文页在前、英文页在后。"""
+    r = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", "t/"], capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"⚠️ {root} 不是 git 仓，个股页清单退回工作区 glob（可能含未提交页）", file=sys.stderr)
+        files = sorted((root / "t").glob("*.html"))
+    else:
+        files = sorted(root / f for f in r.stdout.split("\0") if f.endswith(".html"))
+    zh, en = [], []
+    for f in files:
+        if not f.exists() or 'name="robots" content="noindex' in f.read_text(encoding="utf-8"):
+            continue
+        (en if f.name.endswith(".en.html") else zh).append(f"{BASE}/t/{f.name[:-5]}")
+    return zh + en
 
 
 def write_sitemap(root=ROOT):
