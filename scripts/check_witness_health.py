@@ -231,6 +231,10 @@ def anchor_verdict(rec: dict, age: int | None) -> dict:
         return {"status": "unknown", "age": age,
                 "detail": (f"{rec.get('date')} 锚定：{n_unk} 个未能查证（IA 限流）· SLA 内 {n_ok} "
                            f"—— 未测到的是：" + _names(_is_unk))}
+    if not (n_ok or 0):
+        # 2026-09-25（兜底审计）：各计数全 0 或没有明细时原先落到这里报 ok ⇒ 「锚了零个」也是绿
+        return {"status": "unknown", "age": age,
+                "detail": f"{rec.get('date')} 锚定记录里一个在 SLA 内的存档都没有（计数全 0 或无明细）—— 判不了，不算正常"}
     return {"status": "ok", "age": age,
             "detail": f"{rec.get('date')} 锚定正常，{n_ok} 个存档全部在 SLA 内" + _save_note(rec)}
 
@@ -316,6 +320,9 @@ def check_archive_match() -> dict:
         return {"status": "unknown", "detail": f"对账脚本执行失败：{str(e)[:60]}"}
     tail = [l for l in out.stdout.strip().splitlines() if l.strip()]
     last = tail[-1] if tail else ""
+    # 2026-09-25（兜底审计）：对账脚本自己崩（Traceback，或约定的退出码 2）原先也报成「与存档不符」＝把代码 bug 说成篡改
+    if out.returncode == 2 or "Traceback" in (out.stderr or ""):
+        return {"status": "unknown", "detail": "对账脚本自身出错（不是存档不符）：" + ((out.stderr or "").strip().splitlines() or [""])[-1][:80]}
     if out.returncode != 0:
         return {"status": "bad", "detail": "🔴 已发布的历史与第三方存档不符 —— " + last[:90]}
     if "未能" in out.stdout or "没测到" in out.stdout:
@@ -479,7 +486,13 @@ def main() -> int:
     if args.selftest:
         return selftest()
 
-    results = {name: escalate_if_stale(name, fn()) for name, fn in CHECKS.items()}
+    def _safe(name, fn):
+        # 2026-09-25（兜底审计）：一项检查抛错原先打死整份体检（--record 也不写）。现在这一项记 unknown 写明原因，其余照查
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001
+            return {"status": "unknown", "detail": f"这项检查的代码自身出错（不是见证坏了）：{type(e).__name__}: {str(e)[:80]}"}
+    results = {name: escalate_if_stale(name, _safe(name, fn)) for name, fn in CHECKS.items()}
     bad = [n for n, r in results.items() if r["status"] == "bad"]
     unk = [n for n, r in results.items() if r["status"] == "unknown"]
     overall = "bad" if bad else ("unknown" if unk else "ok")

@@ -185,6 +185,7 @@ jobs:
         continue-on-error: true
         run: |
           U="https://github.com/${{ github.repository }}/releases/tag/ledger-${{ steps.bundle.outputs.month }}"
-          curl -sS -m 60 "https://web.archive.org/save/$U" -o /dev/null \
+          # 2026-09-25：加 -f（原先 HTTP 429/5xx 退出码仍 0 ⇒ 印「已存档」；与 daily 的 bug A 同病，daily 已在 anchor_wayback.py 修）
+          curl -fsS -m 60 "https://web.archive.org/save/$U" -o /dev/null \
             && echo "已存档 $U" \
             || echo "::warning::Release 页 Wayback 存档失败，该版本无独立见证"

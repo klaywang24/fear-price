@@ -243,4 +243,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # 2026-09-25：自身崩溃退 2（原先 traceback 退 1，与「和存档不符」同码，被体检报成篡改）
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        sys.exit(2)

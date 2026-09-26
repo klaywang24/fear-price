@@ -90,6 +90,9 @@ def main() -> int:
                                  "detail": f'current.date={cur["date"]} vs 序列末日={dates[i]}'})
 
     mismatches = [c for c in checks if c["diff"] > TOL]
+    # 2026-09-25（兜底审计）：一个数都没核（序列空、p3[i] 为 None、current 日期不对上）原先 ok=true ⇒ 零覆盖冒充通过
+    if not checks and not problems:
+        problems.append({"kind": "no_checks", "detail": "本次一个读数都没能复算（序列空或当日值为空）—— 零覆盖不算通过"})
     ok = not mismatches and not problems
     max_diff = max((c["diff"] for c in checks), default=None)
 

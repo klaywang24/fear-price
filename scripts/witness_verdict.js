@@ -51,6 +51,11 @@
       return { status: "unknown", names,
         detail: `${rec.date} 锚定：${nUnk} 个未能查证（IA 限流）· SLA 内 ${nOk} —— 未测到的是：${names.join("、") || "（记录里没有逐条明细）"}` };
     }
+    // 2026-09-25：计数全 0／无明细原先落到 ok（「锚了零个」也是绿）；与 check_witness_health.py 同改
+    if (!(nOk || 0)) {
+      return { status: "unknown", names: [],
+        detail: `${rec.date} 锚定记录里一个在 SLA 内的存档都没有（计数全 0 或无明细）—— 判不了，不算正常` };
+    }
     return { status: "ok", names: [], detail: `${rec.date} 锚定正常，${nOk} 个存档全部在 SLA 内` + saveNote() };
   }
   return { anchorVerdict };

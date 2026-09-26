@@ -149,6 +149,18 @@
      }
     ]
    }
+  },
+  {
+   "name": "负向·锚了零个（计数全 0、无明细）⇒ unknown（2026-09-25：原先报 ok）",
+   "age": 0,
+   "expect": "unknown",
+   "rec": {
+    "date": "2026-09-25",
+    "within_sla": 0,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "results": []
+   }
   }
  ]
 }
