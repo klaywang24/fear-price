@@ -115,7 +115,10 @@ html:not([lang^="zh"]) .f13-nav2 a.tab { padding: 6px 10px; }
 .f13-cap.dis:hover { background: var(--bg-card); border-color: var(--border); }
 .f13-groupttl { font-size: 10.5px; color: var(--ink-muted); letter-spacing: .08em; margin: 16px 0 6px; padding-left: 10px; opacity: .75; }
 .f13-groupttl:first-child { margin-top: 0; }
-@media (max-width: 860px) { .f13-layout { grid-template-columns: 1fr; } .f13-side { position: static; max-height: none; }
+/* 🐛 2026-09-26 修：原写 `1fr`＝minmax(auto,1fr)，列宽下限被开奖表的最小宽度（约 488px，全站 td nowrap）撑开，
+   375px 视口里侧栏与正文都被拉到 511px、整页横滚（scrollWidth 535）。表外本来就有 .f13-scroll 横滚框，
+   只是列不肯缩。⇒ 与宽屏那条 `minmax(0, 1fr)` 同写法，列可缩到视口宽，宽表在自己的框里横滚。 */
+@media (max-width: 860px) { .f13-layout { grid-template-columns: minmax(0, 1fr); } .f13-side { position: static; max-height: none; }
   .f13-wrap { padding-left: 24px; } }   /* §73.1：单列时正文回到 24，顶栏跟着回收 */
 /* 🐛 §73.1 顺手修（既有问题，非本轮引入）：主站 @820px 那套窄屏顶栏给 `.tabs` 打了
    `order:3 + flex:0 0 100%`，是为主站的「品牌/控件/tabs 三兄弟」排的（tabs 占满第三行）。
