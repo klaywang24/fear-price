@@ -34,7 +34,7 @@ jobs:
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
           { echo 'report<<INTEG_EOF'; cat /tmp/integrity.txt; echo 'INTEG_EOF'; } >> "$GITHUB_OUTPUT"
       - name: commit fingerprint step
-        if: steps.chk.outputs.rc == '0'
+        if: steps.chk.outputs.rc == '0' || steps.chk.outputs.rc == '4'
         run: |
           git config user.name "Klay" && git config user.email "klaywang24@gmail.com"
           git add data/upstream_fp.json
@@ -70,3 +70,10 @@ jobs:
                 owner: context.repo.owner, repo: context.repo.repo,
                 title, body, labels: ['upstream-integrity'] });
             }
+      # 2026-09-25：2（哨兵自身出错）/3（全部拉取失败）/4（上游停更）原先不进任何分支、job 照绿。现在让 job 红，
+      #   GitHub 按失败发邮件；回改（1）仍走上面的 Issue。
+      - name: fail on sentinel error, fetch failure or stale upstream
+        if: always() && steps.chk.outputs.rc != '0' && steps.chk.outputs.rc != '1'
+        run: |
+          echo "::error::upstream-integrity rc=${{ steps.chk.outputs.rc }}（2=哨兵自身出错 3=全部拉取失败 4=上游停更）"
+          exit 1

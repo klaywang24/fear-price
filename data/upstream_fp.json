@@ -1,15 +1,33 @@
 {
  "series": {
   "VIXHY": {
+   "through": "09/25/2026",
+   "rows": 3710,
+   "sha": "110d639f1856156c70dd69933b2197dbb8a77a7942d3961f3e908f2170d444a9",
+   "source": "cboe-json-v1"
+  },
+  "VIXIG": {
+   "through": "09/25/2026",
+   "rows": 3703,
+   "sha": "f6ae2235c8d3c7b9a3c32cf69dc3a67fa75a26b4844d4ece8fc608a947087b18",
+   "source": "cboe-json-v1"
+  }
+ },
+ "updated": "2026-09-26T02:14:44+00:00",
+ "archived": {
+  "VIXHY": {
    "through": "08/14/2026",
    "rows": 3681,
-   "sha": "a5b9636fbfcd5440b2f656d955ecab765a87dd4e230bd0b48c20240ea95677ae"
+   "sha": "a5b9636fbfcd5440b2f656d955ecab765a87dd4e230bd0b48c20240ea95677ae",
+   "archived_at": "2026-09-26",
+   "why": "旧 CSV 源 08/14 起冻结／403，换 JSON 活端点重建基线"
   },
   "VIXIG": {
    "through": "08/14/2026",
    "rows": 3674,
-   "sha": "962dc968002d0c0269c0bcf07a0c832e2006f53eb46ff75dcf220e2fcbc30962"
+   "sha": "962dc968002d0c0269c0bcf07a0c832e2006f53eb46ff75dcf220e2fcbc30962",
+   "archived_at": "2026-09-26",
+   "why": "旧 CSV 源 08/14 起冻结／403，换 JSON 活端点重建基线"
   }
- },
- "updated": "2026-09-24T17:56:15+00:00"
+ }
 }

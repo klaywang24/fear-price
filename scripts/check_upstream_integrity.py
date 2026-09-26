@@ -29,8 +29,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FP = ROOT / "data" / "upstream_fp.json"
-SERIES = {s: f"https://cdn.cboe.com/api/global/us_indices/daily_prices/{s}_History.csv"
+# 2026-09-25 换源：原 `us_indices/daily_prices/{s}_History.csv` 自 08/14 起冻结（本机已 403，云端读到的是
+#   08/14 那份死文件）⇒ 哨兵每天对着死文件报「历史未动 +0 新行」，一个多月没人发现。改用本机账房
+#   fetch_institutional 同一个活端点（charts/historical JSON·全史 2012-03 起·齐到最新交易日）。
+SERIES = {s: f"https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_{s}.json"
           for s in ("VIXHY", "VIXIG")}
+SOURCE = "cboe-json-v1"      # 指纹里记来源；与旧 CSV 指纹不可比，换源时旧指纹存档、重建基线
+MAX_STALE_WEEKDAYS = 5       # 上游末日落后超过 5 个工作日＝源停更了（不是历史被改），退出码 4
 UA = "market-chronicle-integrity/1.0 (+https://chronicle.klay-wang.com)"
 
 
@@ -40,12 +45,31 @@ def fetch(url):
         return r.read().decode("utf-8-sig")
 
 
-def parse(text):
-    """返回 (数据行列表[bytes], 逐行日期列表)。首行表头排除；逐字节保留（转录者视角）。"""
-    lines = [l for l in text.split("\n") if l.strip()]
-    rows = lines[1:]
-    dates = [l.split(",", 1)[0].strip() for l in rows]
-    return [l.encode("utf-8") for l in rows], dates
+def parse_json(text):
+    """JSON 全史 → (逐行 bytes「mm/dd/yyyy,close」, 日期列表)。close 保留上游原串（逐字转录）。"""
+    j = json.loads(text)
+    seq = j["data"] if isinstance(j.get("data"), list) else j["data"]["data"]
+    rows, dates = [], []
+    for rec in seq:
+        v = (rec.get("close") or "").strip() if isinstance(rec.get("close"), str) else rec.get("close")
+        if v in (None, ""):
+            continue
+        y, m, d = rec["date"][:10].split("-")
+        ds = f"{m}/{d}/{y}"
+        rows.append(f"{ds},{v}".encode("utf-8"))
+        dates.append(ds)
+    return rows, dates
+
+
+def weekday_lag(mdY, today):
+    """(末日, today] 之间的工作日数（未扣假日：宁可多报）。"""
+    from datetime import date, timedelta
+    m, d, y = mdY.split("/")
+    cur, n = date(int(y), int(m), int(d)), 0
+    while cur < today:
+        cur += timedelta(days=1)
+        n += cur.weekday() < 5
+    return n
 
 
 def prefix_sha(rows_bytes, upto_idx):
@@ -90,39 +114,69 @@ def selftest():
     # ④ 删掉 through 行本身 → revised
     rows5 = rows2[:-2]; dates5 = dates2[:-2]
     v, _, m = check_series("T", rows5, dates5, base); assert v == "revised", m
-    print("selftest: 4/4 通过（追加放行·改行/删行/删基线全报）")
+    # 2026-09-25：JSON 解析与新鲜度
+    from datetime import date
+    r, d = parse_json('{"data":[{"date":"2026-09-24","close":"131.1"},{"date":"2026-09-25","close":"131.38"}]}')
+    assert r == [b"09/24/2026,131.1", b"09/25/2026,131.38"] and d[-1] == "09/25/2026", r
+    assert weekday_lag("08/14/2026", date(2026, 9, 25)) > MAX_STALE_WEEKDAYS, "08/14 冻结没判出陈旧"
+    assert weekday_lag("09/24/2026", date(2026, 9, 25)) <= MAX_STALE_WEEKDAYS
+    print("selftest: 7/7 通过（追加放行·改行/删行/删基线全报·JSON 解析·08/14 冻结判陈旧·昨日不判）")
     return 0
 
 
 def main():
+    """退出码：0 历史未动 · 1 检出回改（开 Issue）· 2 本脚本自身出错 · 3 全部拉取失败 · 4 上游停更（末日陈旧）。
+    2026-09-25：2/3/4 在 workflow 里单独判红（原先 3 两个分支都不进、job 绿；崩溃退 1 会误开「历史被改」Issue）。"""
     if "--selftest" in sys.argv:
         return selftest()
+    try:
+        return _run()
+    except Exception as e:                                   # noqa: BLE001
+        print(f"🔴 哨兵自身出错（不是上游回改）：{type(e).__name__}: {e}")
+        return 2
+
+
+def _run():
+    from datetime import datetime, timezone
     fp = json.loads(FP.read_text()) if FP.exists() else {"series": {}}
-    revised, fetched = [], 0
+    revised, fetched, stale = [], 0, []
+    today = datetime.now(timezone.utc).date()
     for name, url in SERIES.items():
         try:
             text = fetch(url)
+            rows, dates = parse_json(text)
         except Exception as e:
-            print(f"{name}: ⚠️ 拉取失败（无法验证，不算回改）：{type(e).__name__}")
+            print(f"{name}: ⚠️ 拉取/解析失败（无法验证，不算回改）：{type(e).__name__}")
             continue
-        rows, dates = parse(text)
         if len(rows) < 3000:
             print(f"{name}: ⚠️ 仅 {len(rows)} 行，疑半截页，跳过（不算回改）")
             continue
         fetched += 1
-        verdict, entry, msg = check_series(name, rows, dates, fp["series"].get(name))
+        old = fp["series"].get(name)
+        if old and old.get("source") != SOURCE:
+            fp.setdefault("archived", {})[name] = dict(old, archived_at=today.isoformat(),
+                                                       why="旧 CSV 源 08/14 起冻结／403，换 JSON 活端点重建基线")
+            print(f"{name}: ↪ 换源（{old.get('source', 'csv')} → {SOURCE}）⇒ 旧指纹存档，按新源重建基线")
+            old = None
+        verdict, entry, msg = check_series(name, rows, dates, old)
         print(msg)
         if verdict == "revised":
             revised.append(msg)
-        else:
-            fp["series"][name] = entry
+            continue
+        entry["source"] = SOURCE
+        fp["series"][name] = entry
+        lag = weekday_lag(entry["through"], today)
+        if lag > MAX_STALE_WEEKDAYS:
+            stale.append(f"{name} 末日 {entry['through']}（落后 {lag} 个工作日）")
     if revised:
         return 1
     if fetched == 0:
         return 3
-    from datetime import datetime, timezone
     fp["updated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     FP.write_text(json.dumps(fp, ensure_ascii=False, indent=1) + "\n")
+    if stale:
+        print("🔴 上游停更（不是历史被改）：" + "；".join(stale))
+        return 4
     return 0
 
 
