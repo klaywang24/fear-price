@@ -28,7 +28,11 @@ WATCH = ["digest", "feed.xml", "data/digest_archive.json", "sitemap.xml"]
 os.environ["PATH"] = "/opt/homebrew/bin:" + os.environ.get("PATH", "/usr/bin:/bin")
 
 
+_LAST = {"msg": ""}      # 最后一条 say（非零退出时拿它当通知正文）
+
+
 def say(msg):
+    _LAST["msg"] = msg
     line = f"[{datetime.datetime.now().astimezone():%Y-%m-%d %H:%M:%S %z}] {msg}"
     with open(LOG, "a", encoding="utf-8") as fh:
         fh.write(line + "\n")
@@ -48,6 +52,27 @@ def git(*args, **kw):
     return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True, **kw)
 
 
+def ahead():
+    """本地比 origin/main 领先几笔（零网络·读本地跟踪分支）；读不出 ⇒ -1。"""
+    r = git("rev-list", "--count", "origin/main..HEAD")
+    try:
+        return int(r.stdout.strip()) if r.returncode == 0 else -1
+    except ValueError:
+        return -1
+
+
+def push():
+    """推：直推 → 失败就 pull --rebase --autostash 再推一次。返回 (ok, 说明)。
+    2026-09-25（兜底审计）：原先只推一次，失败说「下次会一起推」，可下一轮若无新变化就直接 return 0 不推
+    （09-24 20:20 推失败、22:42「跑通无实质变化」实发）。"""
+    p = git("push", "-q", "origin", "HEAD")
+    if p.returncode == 0:
+        return True, ""
+    git("pull", "-q", "--rebase", "--autostash", "origin", "main")
+    p2 = git("push", "-q", "origin", "HEAD")
+    return p2.returncode == 0, (p2.stderr or p2.stdout or p.stderr or "").strip()[:200]
+
+
 def main():
     say("── 开始")
     if not os.path.isdir(BIZ):
@@ -64,7 +89,6 @@ def main():
     if r.returncode != 0:
         tail = " ⏎ ".join((r.stdout + r.stderr).strip().splitlines()[-4:])[:400]
         say(f"❌ 生成器退出码 {r.returncode}（2=缩水闸/冻结源不见 · 其它多半是周报稿件格式漂移）：{tail}")
-        notify("判读档案没上站", f"生成器退出码 {r.returncode}，看 data/_digest_archive.log")
         return r.returncode
 
     # 🔴 2026-09-25 根修（Klay 拍板）：build_route_pages 的 sitemap 清单改为只认 git 已跟踪的
@@ -131,28 +155,40 @@ def main():
             if l[:1] in "+-" and not l.startswith(("+++", "---")) and "generated_at" not in l]
     # 新页已在上面 git add 过，ls-files --others 与 git diff 都看不见它们 ⇒ 用 new_pages 判
     if not real and not new_pages and not extra_add:
-        say("✅ 跑通，无实质变化（只有 generated_at 时间戳漂移），不提交")
         git("checkout", "--", "data/digest_archive.json")
+        n_ahead = ahead()
+        if n_ahead > 0:                     # 上一轮提交了却没推上去：这一轮补推
+            ok, why = push()
+            if not ok:
+                say(f"❌ 无新变化，但本地领先远端 {n_ahead} 笔且补推失败：{why}")
+                return 1
+            say(f"✅ 无新变化；补推了上一轮没推上的 {n_ahead} 笔")
+            return 1 if drift else 0
+        say("✅ 跑通，无实质变化（只有 generated_at 时间戳漂移），不提交")
         return 1 if drift else 0
 
     n = len([l for l in git("status", "--porcelain", "--", *WATCH, *extra_add).stdout.splitlines() if l.strip()])
     git("add", "-A", *WATCH, *extra_add)
     stamp = datetime.date.today().isoformat()
+    # 2026-09-25：commit 带路径，只提交本工具的产物（原先不带路径，别的会话已暂存的东西会被一并带走）
     c = git("-c", "user.name=Klay", "-c", "user.email=klaywang24@gmail.com",
-            "commit", "-q", "-m", f"digest 档案自动同步（{stamp}）：{n} 处变化")
+            "commit", "-q", "-m", f"digest 档案自动同步（{stamp}）：{n} 处变化", "--", *WATCH, *extra_add)
     if c.returncode != 0:
         say(f"❌ commit 失败：{(c.stderr or c.stdout).strip()[:200]}")
         if new_pages:
             git("reset", "-q", "--", *new_pages)
         return 1
-    p = git("push", "-q", "origin", "HEAD")
-    if p.returncode != 0:
-        say(f"❌ push 失败（钥匙串取不到凭据？）本地已 commit，下次会一起推："
-            f"{(p.stderr or p.stdout).strip()[:200]}")
+    ok, why = push()
+    if not ok:
+        say(f"❌ push 失败（重试一次仍失败·钥匙串取不到凭据？）本地已 commit，下一轮开头会先补推：{why}")
         return 1
     say(f"✅ 已提交并推送：{n} 处变化 · {git('log', '-1', '--format=%h').stdout.strip()}")
     return 1 if drift else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    rc = main()
+    # 2026-09-25：原先只有生成器失败发通知，路由生成器失败/漂移/提交失败/推送失败都只落退出码（没人看）
+    if rc:
+        notify("判读档案同步没成", (_LAST["msg"] or f"退出码 {rc}")[:180])
+    sys.exit(rc)
