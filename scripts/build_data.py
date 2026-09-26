@@ -1238,12 +1238,22 @@ def _cboe_close_resilient(name: str) -> pd.Series:
     """Cboe 主 → Yahoo 备 → 空序列。永不抛异常：让调用方拿存底兜底，而不是整条管线倒下。"""
     try:
         s = _cboe_close(name)
-        if not s.empty:
-            _SOURCE_TRACE[name] = "cboe"
-            return _patch_stale_with_yahoo(name, s)
-        raise ValueError("Cboe 返回空序列")
+        if s.empty:
+            raise ValueError("Cboe 返回空序列")
     except Exception as e:
         print(f"  ⚠️ {name}: Cboe 拉取失败（{type(e).__name__}: {str(e)[:60]}），转 Yahoo 备胎")
+    else:
+        # 🔴 2026-09-25 移出 Cboe 的 try：原先补丁放在里面，补丁代码自己出任何错都会被当成「Cboe 失败」，
+        #    把已经拿到的 Cboe 全史丢掉、改走 Yahoo 并标 yahoo_fallback（当晚对账随之跳过）。
+        #    补丁只是锦上添花：它出错就按 Cboe 原样用。
+        _SOURCE_TRACE[name] = "cboe"
+        try:
+            return _patch_stale_with_yahoo(name, s)
+        except Exception as e:
+            _SOURCE_TRACE[name] = "cboe"
+            _YAHOO_PATCHED.pop(name, None)       # 补丁半路出错：已记的「补过哪天」要撤，不然 meta 声称补了序列里没有的日子
+            print(f"  ⚠️ {name}: Yahoo 补新日期出错（{type(e).__name__}: {str(e)[:60]}），按 Cboe 原样用")
+            return s
     try:
         s = _yahoo_close(CBOE_YAHOO_FALLBACK[name])
         if not s.empty:
@@ -2114,6 +2124,8 @@ def _vol_yahoo_topup(sym: str, s: pd.Series):
     except Exception as e:
         print(f"  {sym}: 雅虎查新鲜度失败（{type(e).__name__}），按 Cboe 原样用")
         return s, []
+    if y.empty:   # 🔴 09-25 补：yfinance 限流常返回空表而不抛错 ⇒ 空序列的整数索引跟日期一比就 TypeError，整节停更
+        return s, []
     now = pd.Timestamp.now(tz="America/New_York")
     today = pd.Timestamp(now.date())
     cutoff = today if now.hour * 60 + now.minute >= 16 * 60 + 30 else today - pd.Timedelta(days=1)
@@ -2125,17 +2137,43 @@ def _vol_yahoo_topup(sym: str, s: pd.Series):
     return pd.concat([s, newer]).sort_index(), got
 
 
+def _prev_vol_indices() -> dict:
+    """上一份已发布的 vol_indices.json（Cboe 挂时沿用用）。读不到 ⇒ {}。"""
+    try:
+        return json.loads((DATA / "vol_indices.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def build_vol_indices():
     """Cboe 指数波动率家族（VIX/VXN/RVX/VXD/VXTLT/VVIX，日频）→ data/vol_indices.json。只报现值与三年/全史分位。"""
     print("== 指数波动率家族")
-    members, closes, patched = [], {}, {}
+    members, closes, patched, carried = [], {}, {}, []
+    prev = _prev_vol_indices()
+    prev_members = {m.get("symbol"): m for m in prev.get("members") or []}
     for sym, label in VOL_INDICES.items():
         try:
             s = _cboe_close(sym).dropna()
+            if s.empty:
+                raise ValueError("Cboe 返回空序列")
         except Exception as e:
-            print(f"  {sym} 拉取失败，跳过: {e}")
+            # 🔴 2026-09-25 改：原先直接 continue ⇒ Cboe 一挂，这只（连同它参与的比值）就从页面上整只消失，
+            #    而 Cboe「停更」时反倒有雅虎补新日期——同一上游，挂比停更的待遇还差。
+            #    现在沿用上一份已发布的读数原样不动，标 stale（日期仍是旧日期，不冒充今天）。
+            old = prev_members.get(sym)
+            if old:
+                members.append(dict(old, stale=True,
+                                    stale_reason=f"Cboe 拉取失败（{type(e).__name__}），沿用上一份已发布读数"))
+                carried.append(sym)
+                print(f"  ⚠️ {sym} Cboe 拉取失败，沿用上一份已发布读数（{old.get('date')}）: {str(e)[:60]}")
+            else:
+                print(f"  ⚠️ {sym} Cboe 拉取失败且无旧读数可沿用，本轮缺: {str(e)[:60]}")
             continue
-        s, got = _vol_yahoo_topup(sym, s)
+        try:
+            s, got = _vol_yahoo_topup(sym, s)
+        except Exception as e:   # 第二源只是补新日期：它出任何错都按 Cboe 原样用，不许连累整节
+            print(f"  ⚠️ {sym}: 雅虎补新日期出错（{type(e).__name__}: {str(e)[:60]}），按 Cboe 原样用")
+            got = []
         if got:
             patched[sym] = got
         closes[sym] = s
@@ -2163,12 +2201,15 @@ def build_vol_indices():
         r = (closes["RVX"][idx] / closes["VIX"][idx]).dropna()
         ratios["rvx_vix"] = {"what": "RVX ÷ VIX：小盘相对大盘的波动溢价", "current": round(float(r.iloc[-1]), 3),
                              "p3y": _pctile_now(r, 756), "pfull": _pctile_now(r), "date": r.index[-1].strftime("%Y-%m-%d")}
+    for k, old in (prev.get("ratios") or {}).items():     # 比值同理：算不出（一腿沿用）就沿用旧值并标 stale
+        if k not in ratios:
+            ratios[k] = dict(old, stale=True)
     write_json("vol_indices.json", {
         "meta": {"name": "指数波动率家族", "tenor": "30 天",
                  "headline": "各指数 30 天隐含波动率在过去 3 年（756 交易日）的百分位，高=贵",
                  "nature": "描述性温度计，非交易信号/非预测；仅为数据，非投资建议。",
                  "note": "VVIX 量的是 VIX 自己的波动率（VIX 期权隐含），单位不同，只看分位。",
-                 "yahoo_patched": patched},
+                 "yahoo_patched": patched, "carried_forward": carried},
         "members": members, "ratios": ratios,
     })
 
