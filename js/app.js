@@ -3234,7 +3234,8 @@
       tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toFixed(1) + " " + T("分位")) }),
       grid: { left: 150, right: 44, top: 22, bottom: 34 },
       xAxis: Object.assign({ type: "value", min: 0, max: 100 }, baseAxis(p)),
-      yAxis: Object.assign({ type: "category", data: rows.map((r) => `${T(r.label)} (${r.current.toFixed(1)})`) },
+      // 2026-09-25：Cboe 挂时 build_data 沿用上一份读数并标 stale ⇒ 标签带上它的旧日期，不冒充今天的数
+      yAxis: Object.assign({ type: "category", data: rows.map((r) => `${T(r.label)} (${r.current.toFixed(1)}${r.stale ? " · " + String(r.date).slice(5) : ""})`) },
         baseAxis(p), { axisLabel: { color: p.muted, fontSize: 11 } }),
       series: [{
         type: "bar", data: rows.map((r) => r.p3y), barMaxWidth: 18,
