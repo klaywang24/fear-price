@@ -1,5 +1,5 @@
 {
- "_note": "个股页中英名。逐只取自券商个股页（中文优先一家、英文优先另一家，缺一家用另一家，只合并空格不改字），出处链接留在维护者私有名单。不在表里的票页面只显示代码。",
+ "_note": "个股页中英名。规则（2026-09-26 定）：中文取长桥个股页、英文取富途个股页，缺一家用另一家；券商写法有转写问题的基金（大小写被改乱、缩写、写的是信托注册名而非基金名）英文改用发行商官网正式名；一律去掉 ® ™ © 等商标符号，只合并空格不改字。出处链接在维护者私有名单。不在表里的票页面只显示代码。",
  "names": {
   "AAPL": [
    "苹果",
@@ -55,7 +55,7 @@
   ],
   "HYG": [
    "美国高收益债 ETF - iShares",
-   "Ishares Iboxx $ High Yield Corporate Bond Etf"
+   "iShares iBoxx $ High Yield Corporate Bond ETF"
   ],
   "INTC": [
    "英特尔",
@@ -71,11 +71,11 @@
   ],
   "KRE": [
    "标普区域银行指数 ETF - SPDR",
-   "Spdr Series Trust S&P Regional Bkg Etf"
+   "State Street SPDR S&P Regional Banking ETF"
   ],
   "LQD": [
    "美国投资级公司债 - iShares",
-   "Ishares Iboxx $ Investment Grade Corporate Bond Etf"
+   "iShares iBoxx $ Investment Grade Corporate Bond ETF"
   ],
   "META": [
    "Meta",
@@ -171,11 +171,11 @@
   ],
   "XLK": [
    "高科技指数 ETF - SPDR",
-   "The Technology Select Sector SPDR® Fund"
+   "The Technology Select Sector SPDR Fund"
   ],
   "XLV": [
    "医疗业 ETF - SPDR",
-   "The Health Care Select Sector SPDR® Fund"
+   "The Health Care Select Sector SPDR Fund"
   ]
  }
 }

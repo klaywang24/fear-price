@@ -32,7 +32,9 @@ EXCLUDE = {"XLC"}    # 只有 30 天读数、没有一年期（Klay 09-26 定：
 
 # 中英名：scripts/ticker_names.json，逐只取自券商个股页（中文长桥、英文富途，缺一家用另一家），
 # 出处链接在私有工作区名单里。查不到出处的票不进这份表 ⇒ 页面只显示代码，不猜。
-NAMES = json.loads((ROOT / "scripts" / "ticker_names.json").read_text(encoding="utf-8"))["names"]
+# 读入时再去一遍 ® ™ ©：名单规则是不带商标符号，这里兜底，以后新加的票手滑带进来也不会上页面。
+NAMES = {t: [re.sub(r"[®™©]", "", x).strip() for x in v]
+         for t, v in json.loads((ROOT / "scripts" / "ticker_names.json").read_text(encoding="utf-8"))["names"].items()}
 
 # 百年档案里有长期走势卡的票 ⇒ 给一条去那边的链接（名单与 js/app.js BASKET_CFG 同步）
 _ARCH = {
