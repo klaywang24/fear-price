@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>标普区域银行指数 ETF - SPDR KRE 期权读数：保险价格一年分位、墙位与开奖记录 · 恐惧的标价 Fear-Price</title>
+<link rel="canonical" href="https://chronicle.klay-wang.com/t/KRE">
+<link rel="alternate" hreflang="zh-CN" href="https://chronicle.klay-wang.com/t/KRE">
+<link rel="alternate" hreflang="en" href="https://chronicle.klay-wang.com/t/KRE.en">
+<link rel="alternate" hreflang="x-default" href="https://chronicle.klay-wang.com/t/KRE">
+<meta name="description" content="标普区域银行指数 ETF - SPDR（KRE）期权市场每个交易日收盘后的读数：一个月期保险价格在过去一年里的位置、上下两面墙、本周预期波动区间、最近 30 个交易日的轨迹，以及我们对它立过的每一案和开奖结果。">
+<meta property="og:title" content="标普区域银行指数 ETF - SPDR KRE 期权读数：保险价格一年分位、墙位与开奖记录 · 恐惧的标价 Fear-Price">
+<meta property="og:description" content="标普区域银行指数 ETF - SPDR（KRE）期权市场每个交易日收盘后的读数：一个月期保险价格在过去一年里的位置、上下两面墙、本周预期波动区间、最近 30 个交易日的轨迹，以及我们对它立过的每一案和开奖结果。">
+<meta property="og:url" content="https://chronicle.klay-wang.com/t/KRE">
+<meta property="og:type" content="website">
+<meta name="fp-data-date" content="2026-09-25">
+<script>try{var _t=localStorage.getItem("mc-theme");if(_t?_t==="dark":true)document.documentElement.classList.add("dark-mode")}catch(e){}</script>
+<style>html{background:#FFFFFF}html.dark-mode{background:#111111}</style>
+<link rel="stylesheet" href="/css/style.css?v=20260926c">
+<style>
+.tp-wrap{max-width:1180px;margin:0 auto;padding:0 24px 24px}
+.tp-top{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
+.tp-brand{font-family:'Noto Serif SC','Songti SC','STSong',serif;font-size:19px;font-weight:700;color:var(--ink);text-decoration:none}
+.tp-nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.tp-nav a.tab{text-decoration:none}
+@media (min-width:821px){.tp-nav .tabs{flex:1}}
+@media (max-width:820px){.tp-nav .tabs{order:3;flex:0 0 100%;flex-wrap:nowrap;overflow-x:auto}.tp-navctl{order:2}}
+.tp-navctl{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tp-navctl a.tp-sub{font-size:13px;font-weight:600;color:#fff;background:var(--accent);border-radius:20px;padding:6px 16px;text-decoration:none;white-space:nowrap}
+.tp-navctl a.tp-lang{font-size:12.5px;color:var(--ink-soft);border:1px solid var(--border);border-radius:20px;padding:5px 13px;text-decoration:none}
+html:not([lang^="zh"]) .tp-nav{gap:8px}
+html:not([lang^="zh"]) .tp-nav .tabs{gap:6px}
+html:not([lang^="zh"]) .tp-nav a.tab{padding:6px 10px}
+.tp-crumb{font-size:12.5px;color:var(--ink-muted);margin:14px 0 0}.tp-crumb a{color:var(--ink-muted)}
+.tp-h1logo{width:34px;height:34px;border-radius:8px;vertical-align:-4px;margin-right:12px;background:#fff}
+.tp-note{font-size:12.5px;color:var(--ink-muted);margin:8px 0 0}
+.tp-fresh a,.tp-note a,.tp-more a{color:var(--accent)}
+.tp-fresh{font-size:12px;color:var(--ink-muted);margin:14px 0 40px;padding-left:11px;border-left:2px solid var(--border);line-height:1.8;text-wrap:balance}
+.tp-paused{border:1px dashed var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 30px;font-size:13.5px;color:var(--ink-soft)}
+.tp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0 6px}
+.tp-kpi{border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--bg-card)}
+.tp-kpi .k{font-size:11.5px;color:var(--ink-muted);letter-spacing:.02em}
+.tp-kpi .v{display:block;font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink);line-height:1.25;margin:4px 0 6px;white-space:nowrap}
+.tp-kpi .v small{font-size:14px;font-weight:600;color:var(--ink-soft)}
+.tp-kpi p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:0;text-wrap:balance}
+.tp-meter{position:relative;height:8px;border-radius:4px;margin:2px 0 8px;background:linear-gradient(90deg,color-mix(in srgb,#00A86B 22%,transparent),color-mix(in srgb,#FF2400 22%,transparent))}
+.tp-meter i{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);transform:translate(-50%,-50%)}
+.tp-ladder{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.tp-ladder td{padding:8px 8px;border-bottom:1px solid var(--border);white-space:normal;text-align:left;vertical-align:top}
+.tp-ladder td.p{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;width:1%}
+.tp-ladder td.d{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;width:1%;color:var(--ink-muted)}
+.tp-ladder td.n{white-space:nowrap;width:1%;font-weight:600;color:var(--ink);font-family:inherit}
+.tp-ladder td.m{color:var(--ink-muted);font-size:12.5px;line-height:1.55;font-family:inherit}
+.tp-ladder tr.spot td{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.tp-ladder tr.spot td.n{color:var(--accent)}
+.tp-chart{width:100%;height:300px}
+.tp-table{width:100%;border-collapse:collapse;font-size:13px}
+.tp-table th{text-align:left;font-size:11.5px;color:var(--ink-muted);font-weight:600;padding:6px 8px;border-bottom:2px solid var(--ink);white-space:nowrap}
+.tp-table td{padding:7px 8px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:left}
+.tp-table td.zh{font-family:inherit;font-size:13px;white-space:normal}
+.tp-table th.n,.tp-table td.n{text-align:right}
+.tp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tp-scroll .tp-table{width:max-content;min-width:100%}
+.tp-cases{border-top:2px solid var(--ink);margin-top:10px}
+.tp-case{border-bottom:1px solid var(--border)}
+.tp-case summary{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 4px;cursor:pointer;list-style:none}
+.tp-case summary::-webkit-details-marker{display:none}
+.tp-case summary .dt{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink-muted)}
+.tp-case summary .j{font-size:13.5px;color:var(--ink);line-height:1.6}
+.tp-case summary .j em{font-style:normal;font-size:11.5px;color:var(--ink-muted);margin-left:6px}
+.tp-case[open] summary{background:color-mix(in srgb,var(--border) 30%,transparent)}
+.tp-case .body{padding:6px 4px 14px 72px;font-size:12.5px;color:var(--ink-soft);line-height:1.75}
+.tp-case .body .ev{margin:6px 0}.tp-case .body b{color:var(--ink)}
+.tp-case .body .h{font-size:11px;color:var(--ink-muted);letter-spacing:.04em;margin:8px 0 2px}
+.tp-badge{display:inline-block;font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;white-space:nowrap}
+.tp-badge.wait{color:var(--gold);border:1px solid var(--gold)}
+.tp-badge.done{color:var(--ink-soft);border:1px solid var(--ink-muted)}
+.tp-badge.wrong{color:var(--accent);border:1px solid var(--accent)}
+.tp-count{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.tp-count div{border:1px solid var(--border);border-radius:10px;padding:8px 14px;background:var(--bg-card);font-size:11.5px;color:var(--ink-muted)}
+.tp-count b{display:block;font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink)}
+.tp-more{margin:10px 0 0;font-size:13.5px;line-height:1.8}
+.tp-idx{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.tp-idx .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tp-idx .g{font-size:11px;color:var(--ink-muted);min-width:96px}
+.tp-idx a{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:14px;color:var(--ink-soft);text-decoration:none;background:var(--bg-card)}
+.tp-idx a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tp-idx a img{width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;background:#fff}
+.tp-cal{border:1px dashed var(--border);border-radius:10px;padding:16px 18px;font-size:13px;color:var(--ink-soft);line-height:1.8;margin-top:40px}
+.tp-cal b{color:var(--ink)}
+@media (max-width:640px){.tp-ladder td.n{white-space:normal;min-width:64px}.tp-ladder td{padding:8px 5px}.tp-badge{white-space:normal;max-width:100%}.tp-idx .g{min-width:100%}.tp-case summary{grid-template-columns:48px minmax(0,1fr)}.tp-case summary .tp-badge{grid-column:2;justify-self:start}.tp-case .body{padding-left:4px}.tp-kpi .v{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="tp-wrap">
+<div class="tp-top"><a class="tp-brand" href="/">恐惧的标价</a></div>
+<nav class="tp-nav topbar-navband"><nav class="tabs">
+<a class="tab" href="/">今日</a>
+<a class="tab" href="/kindex">K 指数</a>
+<a class="tab" href="/leaps">恐惧的标价</a>
+<a class="tab tab-ext active" href="/options">期权异动</a>
+<a class="tab" href="/f13">13F 开奖</a>
+<a class="tab" href="/macro">宏观</a>
+<a class="tab" href="/spy">百年档案</a>
+</nav>
+<div class="tp-navctl"><a class="tp-sub" href="/pricing">订阅</a><a class="tp-lang" href="/t/KRE.en" data-lang="en">EN</a><button class="theme-toggle" id="tp-theme" title="日夜切换">☀</button></div>
+</nav>
+<p class="tp-crumb"><a href="/options">期权异动</a> / 个股页 / KRE</p>
+<div class="hero">
+<div class="kicker">个股页 · KRE</div>
+<h1><img class="tp-h1logo" src="/logos/kre.png" alt="" onerror="this.remove()">标普区域银行指数 ETF - SPDR KRE</h1>
+<p class="dek">今天给 KRE 买保护贵不贵，最近一个月怎么走过来的，我们对 KRE 立过的案开奖了没有。每个交易日收盘后更新，对的错的都留着。</p>
+<p class="tp-note">数据日 09.25</p>
+</div>
+<div class="chapter-head"><span class="chapter-no">一</span><h2>今天在哪</h2></div>
+<div class="tp-kpis">
+<div class="tp-kpi"><span class="k">30 天 / 一年期保险价格（隐含波动率 %）</span><span class="v">27.89<small> / 25.91</small></span><p>30 天比一年期高 1.98 点：眼前有事被单独加价。</p></div>
+</div>
+<p class="tp-fresh">数据日 09.25。保险价格每个交易日收盘前取一次。</p>
+<div class="chapter-head"><span class="chapter-no">二</span><h2>最近 30 个交易日</h2></div>
+<p class="tp-note" style="margin-top:22px">一年期和 30 天的保险价格，逐日。短线跳、长线不动，是眼前这件事在涨价；长线也抬头，涨价的是整段故事。</p>
+<div class="tp-chart" id="ch-cm"></div>
+<p class="tp-fresh">这里放最近 30 个交易日；更早的在<a href="/options#op-ch7">期权页第七章</a>。</p>
+<div class="chapter-head"><span class="chapter-no">三</span><h2>我们对它立过的案</h2></div>
+<p class="tp-note">每一案先写下判断和验证条件，到期按条件开奖，错了原样留着。这里是所有提到 KRE 的案子，一案不删。点开看立案原文。</p>
+<div class="tp-count"><div><b>3</b>案 · 自 09.16</div><div><b>2</b>已开奖</div><div><b>1</b>待开奖</div></div>
+<div class="tp-cases">
+<details class="tp-case">
+<summary><span class="dt">09.25</span><span class="j"><!--verbatim-->利率冲击最先落地在地区银行，科技股排在后面<!--/verbatim--><em>同案：XLF</em></span><span class="tp-badge wait">待开奖 · 预计 10.02</span></summary>
+<div class="body">
+<div class="h">立案原文与验证条件 · 原样存证不改</div>
+<div class="ev" lang="zh"><b>09.25 立案</b>（置信度：倾向于）<br><!--verbatim-->利率冲击最先落地在地区银行，科技股排在后面：同日 MOVE 104.58→96.00、标普 cm30 −0.65，地区银行 KRE cm30 反而 24.83→27.89（+3.06）高于 cm365 25.91，整周 +5.65；XLF 2026-10-16 54.5P 成交 70097 张对持仓 592（118 倍）<!--/verbatim--><br>验证条件：<!--verbatim-->10-02 前 KRE cm30 回落到 cm365 之下（15:45 主枪）⇒ 收回；09-28 晨 XLF 54.5P 结算 OI 留存 (OI−592)/70097 &lt;50% ⇒ 那半是过路钱，收回<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.17</span><span class="j"><!--verbatim-->银行短的保险退了，长的有人买<!--/verbatim--><em>同案：XLF、GS、JPM、BAC、C、WFC</em></span><span class="tp-badge done"><!--verbatim-->成立<!--/verbatim--></span></summary>
+<div class="body">
+<div class="ev"><b>开奖</b><br><!--verbatim-->成立<!--/verbatim--></div>
+<div class="h">立案原文与验证条件 · 原样存证不改</div>
+<div class="ev" lang="zh"><b>09.17 立案</b>（置信度：倾向于）<br><!--verbatim-->银行短的保险退了，长的有人买：五家 cm30 全退回 09.15 以下（GS −3.58 / KRE −3.28 / C −3.01 / JPM −2.03 / BAC −1.66 / WFC −1.40）；XLF 近月 P 66120 / C 9481（6.97x）；长天期 2027-01 50P 25214（OI 65721）/ 2027-12 50P 25008（OI 7972）/ 2028-12 45P 22000（OI 13603），行权价低 10.5%–19.5%，三档各两万多张像一个买家铺梯子；股价 XLF −0.09 / KRE 0.00 在全市场 +1.13% 的日子没跟<!--/verbatim--><br>验证条件：<!--verbatim-->09-18 晨 行情尺 核三档 OI 未增 ⇒ 当天进出，收回；09.24 前 XLF 收回 57 上方 ⇒ 股价半句收回。🔴 OI 最晚取数日 09-18<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.24 开奖</b><br><!--verbatim-->成立结清：股价半句未触发收回，XLF 09-17 起收盘 55.88 / 55.86 / 55.90 / 54.80 / 54.54 / 54.53，最高 55.93（09-16）以下，从没回到 57；长的半句 09-18 晨已成立（三档 OI 65721→90528 / 7972→32972 / 13603→35103，留 99%）。全案成立：银行短的保险退了、长的有人买，金融板块股价也没跟上<!--/verbatim--><br>结果：<!--verbatim-->成立<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.16</span><span class="j"><!--verbatim-->加息日被重新定价的是银行，理由在曲线<!--/verbatim--><em>同案：GS、WFC、BAC、C、JPM</em></span><span class="tp-badge done"><!--verbatim-->成立<!--/verbatim--></span></summary>
+<div class="body">
+<div class="ev"><b>开奖</b><br><!--verbatim-->成立<!--/verbatim--></div>
+<div class="h">立案原文与验证条件 · 原样存证不改</div>
+<div class="ev" lang="zh"><b>09.16 立案</b>（置信度：倾向于）<br><!--verbatim-->加息日被重新定价的是银行，理由在曲线：GS −3.96 / WFC −2.98 / BAC −2.72 / C −2.36 / KRE −1.77 / JPM −1.01；两年期 4.738% 高点（2024-07 以来最高）、十年期 4.994、三十年 5.338、2s10s 27.5bp 6/30 以来最平；Δcm30 GS +2.56 / KRE +1.89 / BAC +1.56 / C +1.16 / JPM +1.03 / WFC +0.98 第三天全涨。银行股价跌、保费涨＝有人在卖；半导体股价涨、保费也涨＝边买边保<!--/verbatim--><br>验证条件：<!--verbatim-->09.18 前银行五只 cm30 回落到 09-15 水平以下（GS &lt;36.33 / BAC &lt;26.35 / C &lt;32.76 / JPM &lt;26.13 / WFC &lt;29.75）⇒ 只是决议日一天行情，收回。只引 15:45 主枪<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.17 开奖</b><br><!--verbatim-->保费半句收回：15:45 主枪 cm30 GS 35.31 / BAC 26.25 / C 30.91 / JPM 25.13 / WFC 29.33，五只全回落到 09-15 以下，三天的加价是决议日对冲。股价半句保留：全市场 +1.13% 而 XLF −0.09 / KRE 0.00 / JPM +0.11 / C −0.18 / WFC −0.18（GS +1.43）<!--/verbatim--><br>验证条件：<!--verbatim-->股价半句 09-18 再看一天<!--/verbatim--><br>结果：<!--verbatim-->半收回<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.18 开奖</b><br><!--verbatim-->股价半句成立结清：五家一周 GS −8.47 / BAC −7.91 / C −5.08 / WFC −4.62 / JPM −1.84，GS 09-18 收 942.00 跌破 200 日线 948.67（前复权）；保费半句 09-17 已收回<!--/verbatim--><br>结果：<!--verbatim-->成立<!--/verbatim--></div>
+</div></details>
+</div>
+<p class="tp-fresh">全部标的的案子在<a href="/options#op-ch3">期权页第三章</a>。台账只加不改，改判也是新加一行。</p>
+<div class="chapter-head"><span class="chapter-no">四</span><h2>其他个股</h2></div>
+<div class="tp-idx">
+<div class="row"><span class="g">指数 · ETF</span><a href="/t/SPY"><img src="/logos/spy.png" alt="" loading="lazy" onerror="this.remove()">SPY</a><a href="/t/QQQ"><img src="/logos/qqq.png" alt="" loading="lazy" onerror="this.remove()">QQQ</a><a href="/t/IWM"><img src="/logos/iwm.png" alt="" loading="lazy" onerror="this.remove()">IWM</a><a href="/t/TLT"><img src="/logos/tlt.png" alt="" loading="lazy" onerror="this.remove()">TLT</a><a href="/t/SMH"><img src="/logos/smh.png" alt="" loading="lazy" onerror="this.remove()">SMH</a><a href="/t/XLF"><img src="/logos/xlf.png" alt="" loading="lazy" onerror="this.remove()">XLF</a><a href="/t/XLK"><img src="/logos/xlk.png" alt="" loading="lazy" onerror="this.remove()">XLK</a><a href="/t/XLV"><img src="/logos/xlv.png" alt="" loading="lazy" onerror="this.remove()">XLV</a><a href="/t/HYG"><img src="/logos/hyg.png" alt="" loading="lazy" onerror="this.remove()">HYG</a><a href="/t/LQD"><img src="/logos/lqd.png" alt="" loading="lazy" onerror="this.remove()">LQD</a></div>
+<div class="row"><span class="g">八巨头</span><a href="/t/AAPL"><img src="/logos/aapl.png" alt="" loading="lazy" onerror="this.remove()">AAPL</a><a href="/t/AMZN"><img src="/logos/amzn.png" alt="" loading="lazy" onerror="this.remove()">AMZN</a><a href="/t/GOOG"><img src="/logos/goog.png" alt="" loading="lazy" onerror="this.remove()">GOOG</a><a href="/t/GOOGL"><img src="/logos/googl.png" alt="" loading="lazy" onerror="this.remove()">GOOGL</a><a href="/t/META"><img src="/logos/meta.png" alt="" loading="lazy" onerror="this.remove()">META</a><a href="/t/MSFT"><img src="/logos/msft.png" alt="" loading="lazy" onerror="this.remove()">MSFT</a><a href="/t/NVDA"><img src="/logos/nvda.png" alt="" loading="lazy" onerror="this.remove()">NVDA</a><a href="/t/TSLA"><img src="/logos/tsla.png" alt="" loading="lazy" onerror="this.remove()">TSLA</a><a href="/t/SPCX"><img src="/logos/spcx.png" alt="" loading="lazy" onerror="this.remove()">SPCX</a></div>
+<div class="row"><span class="g">半导体 · 存储</span><a href="/t/AVGO"><img src="/logos/avgo.png" alt="" loading="lazy" onerror="this.remove()">AVGO</a><a href="/t/TSM"><img src="/logos/tsm.png" alt="" loading="lazy" onerror="this.remove()">TSM</a><a href="/t/AMD"><img src="/logos/amd.png" alt="" loading="lazy" onerror="this.remove()">AMD</a><a href="/t/INTC"><img src="/logos/intc.png" alt="" loading="lazy" onerror="this.remove()">INTC</a><a href="/t/MU"><img src="/logos/mu.png" alt="" loading="lazy" onerror="this.remove()">MU</a><a href="/t/SNDK"><img src="/logos/sndk.png" alt="" loading="lazy" onerror="this.remove()">SNDK</a><a href="/t/MRVL"><img src="/logos/mrvl.png" alt="" loading="lazy" onerror="this.remove()">MRVL</a><a href="/t/QCOM"><img src="/logos/qcom.png" alt="" loading="lazy" onerror="this.remove()">QCOM</a><a href="/t/SKHY"><img src="/logos/skhy.png" alt="" loading="lazy" onerror="this.remove()">SKHY</a><a href="/t/SMCI"><img src="/logos/smci.png" alt="" loading="lazy" onerror="this.remove()">SMCI</a><a href="/t/DELL"><img src="/logos/dell.png" alt="" loading="lazy" onerror="this.remove()">DELL</a></div>
+<div class="row"><span class="g">软件 · AI 云</span><a href="/t/ORCL"><img src="/logos/orcl.png" alt="" loading="lazy" onerror="this.remove()">ORCL</a><a href="/t/PLTR"><img src="/logos/pltr.png" alt="" loading="lazy" onerror="this.remove()">PLTR</a><a href="/t/CRWV"><img src="/logos/crwv.png" alt="" loading="lazy" onerror="this.remove()">CRWV</a><a href="/t/NBIS"><img src="/logos/nbis.png" alt="" loading="lazy" onerror="this.remove()">NBIS</a></div>
+<div class="row"><span class="g">加密 · 券商</span><a href="/t/COIN"><img src="/logos/coin.png" alt="" loading="lazy" onerror="this.remove()">COIN</a><a href="/t/HOOD"><img src="/logos/hood.png" alt="" loading="lazy" onerror="this.remove()">HOOD</a><a href="/t/MSTR"><img src="/logos/mstr.png" alt="" loading="lazy" onerror="this.remove()">MSTR</a><a href="/t/SOFI"><img src="/logos/sofi.png" alt="" loading="lazy" onerror="this.remove()">SOFI</a></div>
+<div class="row"><span class="g">银行</span><a href="/t/JPM"><img src="/logos/jpm.png" alt="" loading="lazy" onerror="this.remove()">JPM</a><a href="/t/BAC"><img src="/logos/bac.png" alt="" loading="lazy" onerror="this.remove()">BAC</a><a href="/t/C"><img src="/logos/c.png" alt="" loading="lazy" onerror="this.remove()">C</a><a href="/t/WFC"><img src="/logos/wfc.png" alt="" loading="lazy" onerror="this.remove()">WFC</a><a href="/t/GS"><img src="/logos/gs.png" alt="" loading="lazy" onerror="this.remove()">GS</a><a href="/t/KRE" class=on aria-current=page><img src="/logos/kre.png" alt="" loading="lazy" onerror="this.remove()">KRE</a></div>
+</div>
+<div class="tp-cal">
+<b>口径说明</b><br>
+· 一年分位与 30 天、一年期保险价格来自两把不同的尺子，只各自比自己的过去，互相不拼。<br>
+· 30 天、一年期保险价格是恒定期限读数：用两个相邻到期日插值到正好 30 天和 365 天，每天收盘前取一次。<br>
+· 大单一行是一个合约当天的累计，不是一笔交易。我们没有逐笔时间戳和主动买卖方向，所以只说换手额。<br>
+· 每个读数由两把独立的尺子核对，收盘后更新一次。原始数据不在本站提供。<br>
+· <b>仅为数据与信息，不构成投资建议，不含任何买卖推荐。</b>
+</div>
+<p class="tp-more">今天对这只票的判读在<a href="/pricing">当日订户邮件</a>里，<a href="/digest/">往期</a>隔天公开。</p>
+</div>
+<footer class="site-footer"><div class="footer-main"><div class="footer-brand-col"><div class="footer-brand">恐惧的标价<span>Fear-Price</span></div><div class="footer-tag">每个交易日自动更新的美股百年图表档案与读数台账</div></div><div class="footer-colgroup"><div class="footer-col"><div class="footer-col-h">About</div><a href="/about">关于我们</a><a href="/methodology">方法论</a><a href="/contact">联系我们</a></div><div class="footer-col"><div class="footer-col-h">Get Started</div><a href="/pricing">定价与套餐</a><a href="https://github.com/klaywang24/fear-price/blob/main/data/README.md" target="_blank" rel="noopener">数据 &amp; API</a><a href="/digest/">周报档案</a></div><div class="footer-col"><div class="footer-col-h">Legal</div><a href="/terms">服务条款</a><a href="/privacy">隐私政策</a><a href="/refunds">退款政策</a></div></div></div><div class="footer-note"><span class="footer-left">仅供信息与教育用途，不构成投资建议</span><span class="footer-copy">© 2026 Fear-Price</span></div></footer>
+<script type="application/json" id="tp-data">{"lang":"zh","fh":[],"cm":[{"date":"2026-08-14"},{"date":"2026-08-17"},{"date":"2026-08-18"},{"date":"2026-08-19"},{"date":"2026-08-20"},{"date":"2026-08-21"},{"date":"2026-08-24"},{"date":"2026-08-25"},{"date":"2026-08-26"},{"date":"2026-08-27"},{"date":"2026-08-28"},{"date":"2026-08-31","iv30":22.89,"iv365":25.93},{"date":"2026-09-01","iv30":47.27,"iv365":32.72},{"date":"2026-09-02","iv30":23.91,"iv365":26.64},{"date":"2026-09-03","iv30":24.28,"iv365":26.3},{"date":"2026-09-04","iv30":22.95,"iv365":26.23},{"date":"2026-09-08","iv30":24.44,"iv365":26.02},{"date":"2026-09-09","iv30":24.83,"iv365":25.81},{"date":"2026-09-10","iv30":24.42,"iv365":25.78},{"date":"2026-09-11","iv30":23.32,"iv365":25.46},{"date":"2026-09-14","iv30":23.38,"iv365":25.74},{"date":"2026-09-15","iv30":24.26,"iv365":25.88},{"date":"2026-09-16","iv30":26.15,"iv365":27.44},{"date":"2026-09-17","iv30":22.87,"iv365":25.82},{"date":"2026-09-18","iv30":22.24,"iv365":24.21},{"date":"2026-09-21","iv30":23.1,"iv365":26.46},{"date":"2026-09-22","iv30":23.92,"iv365":27.06},{"date":"2026-09-23","iv30":24.48,"iv365":26.85},{"date":"2026-09-24","iv30":24.83,"iv365":27.1},{"date":"2026-09-25","iv30":27.89,"iv365":25.91}]}</script>
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById("tp-theme");
+  btn.textContent=root.classList.contains("dark-mode")?"\u263e":"\u2600";
+  btn.addEventListener("click",function(){root.classList.toggle("dark-mode");
+    try{localStorage.setItem("mc-theme",root.classList.contains("dark-mode")?"dark":"light")}catch(e){}location.reload();});
+  var lb=document.querySelector(".tp-lang");
+  lb.addEventListener("click",function(){try{localStorage.setItem("mc-lang",lb.dataset.lang)}catch(e){}});
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+(function(){
+  if(!window.echarts)return;
+  var D=JSON.parse(document.getElementById("tp-data").textContent),EN=D.lang==="en";
+  var tr=function(z,e){return EN?e:z};
+  var dark=document.documentElement.classList.contains("dark-mode");
+  var INK=dark?"#e8e4dc":"#1a1a1a",MUTED=dark?"#8a867e":"#8a8a8a",BORDER=dark?"#3a3833":"#e5e0d8",
+      RED="#FF2400",GREEN=dark?"#34D96C":"#00A86B",GOLD="#B8893E";
+  var dot=function(d){return d.slice(5).replace("-",".")};
+  var ax={axisLine:{lineStyle:{color:BORDER}},axisLabel:{color:MUTED,fontSize:11},splitLine:{lineStyle:{color:BORDER,opacity:.5}}};
+  function mk(id){var el=document.getElementById(id);if(!el)return null;var c=echarts.init(el);
+    new ResizeObserver(function(){c.resize()}).observe(el);return c;}
+  var a=mk("ch-walls");
+  if(a){var h=D.fh;a.setOption({grid:{left:56,right:18,top:36,bottom:30},
+    legend:{top:4,textStyle:{color:MUTED}},tooltip:{trigger:"axis"},
+    xAxis:{type:"category",data:h.map(function(r){return dot(r.date)}),axisLine:ax.axisLine,axisLabel:ax.axisLabel},
+    yAxis:{type:"value",scale:true,axisLine:ax.axisLine,axisLabel:ax.axisLabel,splitLine:ax.splitLine},
+    series:[
+      {name:tr("收盘","Close"),type:"line",data:h.map(function(r){return r.close}),lineStyle:{color:INK,width:2.5},itemStyle:{color:INK},connectNulls:true,z:5},
+      {name:tr("多空分界","Flip"),type:"line",data:h.map(function(r){return r.flip}),lineStyle:{color:GOLD,width:1.5,type:"dashed"},itemStyle:{color:GOLD},connectNulls:true},
+      {name:tr("下墙","Put wall"),type:"line",step:"middle",data:h.map(function(r){return r.pw}),lineStyle:{color:RED,width:1.5},itemStyle:{color:RED},symbol:"none",connectNulls:true},
+      {name:tr("上墙","Call wall"),type:"line",step:"middle",data:h.map(function(r){return r.cw}),lineStyle:{color:GREEN,width:1.5},itemStyle:{color:GREEN},symbol:"none",connectNulls:true}]});}
+  var b=mk("ch-cm");
+  if(b){var k=D.cm;b.setOption({grid:{left:56,right:18,top:36,bottom:30},
+    legend:{top:4,textStyle:{color:MUTED}},tooltip:{trigger:"axis",valueFormatter:function(v){return v==null?"—":v+"%"}},
+    xAxis:{type:"category",data:k.map(function(r){return dot(r.date)}),axisLine:ax.axisLine,axisLabel:ax.axisLabel},
+    yAxis:{type:"value",scale:true,name:tr("隐含波动率 %","Implied vol %"),nameTextStyle:{color:MUTED},axisLine:ax.axisLine,axisLabel:ax.axisLabel,splitLine:ax.splitLine},
+    series:[
+      {name:tr("一年期","One-year"),type:"line",data:k.map(function(r){return r.iv365}),lineStyle:{color:INK,width:2.5},itemStyle:{color:INK},z:5},
+      {name:tr("30 天","30-day"),type:"line",data:k.map(function(r){return r.iv30}),lineStyle:{color:RED,width:1.5,type:"dashed"},itemStyle:{color:RED}}]});}
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "21badd8cf43d430e8b00d2fcad37a312"}'></script>
+</body>
+</html>

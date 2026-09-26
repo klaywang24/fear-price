@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Broadcom (AVGO) options: implied volatility percentile, walls and settled calls · Fear-Price</title>
+<link rel="canonical" href="https://chronicle.klay-wang.com/t/AVGO.en">
+<link rel="alternate" hreflang="zh-CN" href="https://chronicle.klay-wang.com/t/AVGO">
+<link rel="alternate" hreflang="en" href="https://chronicle.klay-wang.com/t/AVGO.en">
+<link rel="alternate" hreflang="x-default" href="https://chronicle.klay-wang.com/t/AVGO">
+<meta name="description" content="Broadcom (AVGO) options after every close: where one-month implied volatility sits in its one-year range, the put and call walls, this week&#x27;s priced move, the last 30 trading days, and every call we have filed on it with its settlement.">
+<meta property="og:title" content="Broadcom (AVGO) options: implied volatility percentile, walls and settled calls · Fear-Price">
+<meta property="og:description" content="Broadcom (AVGO) options after every close: where one-month implied volatility sits in its one-year range, the put and call walls, this week&#x27;s priced move, the last 30 trading days, and every call we have filed on it with its settlement.">
+<meta property="og:url" content="https://chronicle.klay-wang.com/t/AVGO.en">
+<meta property="og:type" content="website">
+<meta name="fp-data-date" content="2026-09-25">
+<script>try{var _t=localStorage.getItem("mc-theme");if(_t?_t==="dark":true)document.documentElement.classList.add("dark-mode")}catch(e){}</script>
+<style>html{background:#FFFFFF}html.dark-mode{background:#111111}</style>
+<link rel="stylesheet" href="/css/style.css?v=20260926c">
+<style>
+.tp-wrap{max-width:1180px;margin:0 auto;padding:0 24px 24px}
+.tp-top{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
+.tp-brand{font-family:'Noto Serif SC','Songti SC','STSong',serif;font-size:19px;font-weight:700;color:var(--ink);text-decoration:none}
+.tp-nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.tp-nav a.tab{text-decoration:none}
+@media (min-width:821px){.tp-nav .tabs{flex:1}}
+@media (max-width:820px){.tp-nav .tabs{order:3;flex:0 0 100%;flex-wrap:nowrap;overflow-x:auto}.tp-navctl{order:2}}
+.tp-navctl{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tp-navctl a.tp-sub{font-size:13px;font-weight:600;color:#fff;background:var(--accent);border-radius:20px;padding:6px 16px;text-decoration:none;white-space:nowrap}
+.tp-navctl a.tp-lang{font-size:12.5px;color:var(--ink-soft);border:1px solid var(--border);border-radius:20px;padding:5px 13px;text-decoration:none}
+html:not([lang^="zh"]) .tp-nav{gap:8px}
+html:not([lang^="zh"]) .tp-nav .tabs{gap:6px}
+html:not([lang^="zh"]) .tp-nav a.tab{padding:6px 10px}
+.tp-crumb{font-size:12.5px;color:var(--ink-muted);margin:14px 0 0}.tp-crumb a{color:var(--ink-muted)}
+.tp-h1logo{width:34px;height:34px;border-radius:8px;vertical-align:-4px;margin-right:12px;background:#fff}
+.tp-note{font-size:12.5px;color:var(--ink-muted);margin:8px 0 0}
+.tp-fresh a,.tp-note a,.tp-more a{color:var(--accent)}
+.tp-fresh{font-size:12px;color:var(--ink-muted);margin:14px 0 40px;padding-left:11px;border-left:2px solid var(--border);line-height:1.8;text-wrap:balance}
+.tp-paused{border:1px dashed var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 30px;font-size:13.5px;color:var(--ink-soft)}
+.tp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0 6px}
+.tp-kpi{border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--bg-card)}
+.tp-kpi .k{font-size:11.5px;color:var(--ink-muted);letter-spacing:.02em}
+.tp-kpi .v{display:block;font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink);line-height:1.25;margin:4px 0 6px;white-space:nowrap}
+.tp-kpi .v small{font-size:14px;font-weight:600;color:var(--ink-soft)}
+.tp-kpi p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:0;text-wrap:balance}
+.tp-meter{position:relative;height:8px;border-radius:4px;margin:2px 0 8px;background:linear-gradient(90deg,color-mix(in srgb,#00A86B 22%,transparent),color-mix(in srgb,#FF2400 22%,transparent))}
+.tp-meter i{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);transform:translate(-50%,-50%)}
+.tp-ladder{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.tp-ladder td{padding:8px 8px;border-bottom:1px solid var(--border);white-space:normal;text-align:left;vertical-align:top}
+.tp-ladder td.p{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;width:1%}
+.tp-ladder td.d{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;width:1%;color:var(--ink-muted)}
+.tp-ladder td.n{white-space:nowrap;width:1%;font-weight:600;color:var(--ink);font-family:inherit}
+.tp-ladder td.m{color:var(--ink-muted);font-size:12.5px;line-height:1.55;font-family:inherit}
+.tp-ladder tr.spot td{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.tp-ladder tr.spot td.n{color:var(--accent)}
+.tp-chart{width:100%;height:300px}
+.tp-table{width:100%;border-collapse:collapse;font-size:13px}
+.tp-table th{text-align:left;font-size:11.5px;color:var(--ink-muted);font-weight:600;padding:6px 8px;border-bottom:2px solid var(--ink);white-space:nowrap}
+.tp-table td{padding:7px 8px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:left}
+.tp-table td.zh{font-family:inherit;font-size:13px;white-space:normal}
+.tp-table th.n,.tp-table td.n{text-align:right}
+.tp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tp-scroll .tp-table{width:max-content;min-width:100%}
+.tp-cases{border-top:2px solid var(--ink);margin-top:10px}
+.tp-case{border-bottom:1px solid var(--border)}
+.tp-case summary{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 4px;cursor:pointer;list-style:none}
+.tp-case summary::-webkit-details-marker{display:none}
+.tp-case summary .dt{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink-muted)}
+.tp-case summary .j{font-size:13.5px;color:var(--ink);line-height:1.6}
+.tp-case summary .j em{font-style:normal;font-size:11.5px;color:var(--ink-muted);margin-left:6px}
+.tp-case[open] summary{background:color-mix(in srgb,var(--border) 30%,transparent)}
+.tp-case .body{padding:6px 4px 14px 72px;font-size:12.5px;color:var(--ink-soft);line-height:1.75}
+.tp-case .body .ev{margin:6px 0}.tp-case .body b{color:var(--ink)}
+.tp-case .body .h{font-size:11px;color:var(--ink-muted);letter-spacing:.04em;margin:8px 0 2px}
+.tp-badge{display:inline-block;font-size:11px;font-weight:600;border-radius:10px;padding:2px 9px;white-space:nowrap}
+.tp-badge.wait{color:var(--gold);border:1px solid var(--gold)}
+.tp-badge.done{color:var(--ink-soft);border:1px solid var(--ink-muted)}
+.tp-badge.wrong{color:var(--accent);border:1px solid var(--accent)}
+.tp-count{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.tp-count div{border:1px solid var(--border);border-radius:10px;padding:8px 14px;background:var(--bg-card);font-size:11.5px;color:var(--ink-muted)}
+.tp-count b{display:block;font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink)}
+.tp-more{margin:10px 0 0;font-size:13.5px;line-height:1.8}
+.tp-idx{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.tp-idx .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tp-idx .g{font-size:11px;color:var(--ink-muted);min-width:96px}
+.tp-idx a{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:14px;color:var(--ink-soft);text-decoration:none;background:var(--bg-card)}
+.tp-idx a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tp-idx a img{width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;background:#fff}
+.tp-cal{border:1px dashed var(--border);border-radius:10px;padding:16px 18px;font-size:13px;color:var(--ink-soft);line-height:1.8;margin-top:40px}
+.tp-cal b{color:var(--ink)}
+@media (max-width:640px){.tp-ladder td.n{white-space:normal;min-width:64px}.tp-ladder td{padding:8px 5px}.tp-badge{white-space:normal;max-width:100%}.tp-idx .g{min-width:100%}.tp-case summary{grid-template-columns:48px minmax(0,1fr)}.tp-case summary .tp-badge{grid-column:2;justify-self:start}.tp-case .body{padding-left:4px}.tp-kpi .v{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="tp-wrap">
+<div class="tp-top"><a class="tp-brand" href="/">Fear-Price</a></div>
+<nav class="tp-nav topbar-navband"><nav class="tabs">
+<a class="tab" href="/">Today</a>
+<a class="tab" href="/kindex">KAPX</a>
+<a class="tab" href="/leaps">Fear-Price Index</a>
+<a class="tab tab-ext active" href="/options">Options</a>
+<a class="tab" href="/f13">13F</a>
+<a class="tab" href="/macro">Macro</a>
+<a class="tab" href="/spy">The Archive</a>
+</nav>
+<div class="tp-navctl"><a class="tp-sub" href="/pricing">Subscribe</a><a class="tp-lang" href="/t/AVGO" data-lang="zh">简</a><button class="theme-toggle" id="tp-theme" title="Toggle theme">☀</button></div>
+</nav>
+<p class="tp-crumb"><a href="/options">Options</a> / Tickers / AVGO</p>
+<div class="hero">
+<div class="kicker">TICKER PAGE · AVGO</div>
+<h1><img class="tp-h1logo" src="/logos/avgo.png" alt="" onerror="this.remove()">Broadcom (AVGO)</h1>
+<p class="dek">Is protection on Broadcom cheap or dear today, at which prices has money been placed, how did the last month get here, and how did the calls we filed on Broadcom settle. Updated after every close, right calls and wrong ones alike.</p>
+<p class="tp-note">Data date 09.25 · close 352.81 (+0.70%) · −28.28% from the 52-week high</p>
+</div>
+<div class="chapter-head"><span class="chapter-no">I</span><h2>Where it stands today</h2></div>
+<div class="tp-kpis">
+<div class="tp-kpi"><span class="k">One-year percentile</span><span class="v">1<small> / 100</small></span><div class="tp-meter"><i style="left:2.0%"></i></div><p>Where one-month protection (30-day implied volatility) sits in its past year, 0 the cheapest and 100 the dearest. Protection on Broadcom is now in the cheapest stretch of the past year.</p></div>
+<div class="tp-kpi"><span class="k">30-day / one-year implied vol (%)</span><span class="v">33.89<small> / 43.75</small></span><p>The one-year sits 9.86 points above the 30-day, the usual shape: a longer policy covers more.</p></div>
+<div class="tp-kpi"><span class="k">Priced move this week</span><span class="v">±3.2%<small> ±11.43</small></span><p>Option prices imply 338.93 to 361.79 for the week. A close outside it means the protection sellers lose.</p></div>
+<div class="tp-kpi"><span class="k">Put ÷ call (volume / open interest)</span><span class="v">0.43<small> / 0.53</small></span><p>Calls outtraded puts. It counts contracts, not direction: a put buyer may be insuring shares they own.</p></div>
+</div>
+<p class="tp-note" style="margin-top:18px">Levels from high to low, with distance from the close:</p>
+<table class="tp-ladder">
+<tr><td class="n">Priced move, top</td><td class="p">361.79</td><td class="d">+2.55%</td><td class="m">This week's implied high.</td></tr>
+<tr><td class="n">Call wall</td><td class="p">360</td><td class="d">+2.04%</td><td class="m">The strike with the most call open interest: a target someone paid a deposit on.</td></tr>
+<tr><td class="n">Flip level</td><td class="p">355.57</td><td class="d">+0.78%</td><td class="m">Above it, dealer hedging damps moves; below it, hedging amplifies them.</td></tr>
+<tr class="spot"><td class="n">Close</td><td class="p">352.81</td><td class="d"></td><td class="m"></td></tr>
+<tr><td class="n">Put wall</td><td class="p">350</td><td class="d">−0.80%</td><td class="m">The strike with the most put open interest: protection someone already paid for.</td></tr>
+<tr><td class="n">Priced move, bottom</td><td class="p">338.93</td><td class="d">−3.93%</td><td class="m">This week's implied low.</td></tr>
+</table>
+<p class="tp-fresh">Data date 09.25. Updated once after each trading day's close; spot is the official close.</p>
+<div class="chapter-head"><span class="chapter-no">II</span><h2>The last 30 trading days</h2></div>
+<p class="tp-note">Close, flip level, put wall and call wall, day by day: which side of the walls price is on, and whether the walls moved.</p>
+<div class="tp-chart" id="ch-walls"></div>
+<p class="tp-note" style="margin-top:22px">One-year and 30-day implied vol, day by day. The short line jumping while the long line holds means only the near-term event is being repriced; the long line rising too means the whole story is.</p>
+<div class="tp-chart" id="ch-cm"></div>
+<p class="tp-fresh">Shown: the last 30 trading days. Earlier records are in <a href="/options#op-ch5">Chapter V</a> (walls) and <a href="/options#op-ch7">Chapter VII</a> (implied vol) of the options page.</p>
+<div class="chapter-head"><span class="chapter-no">III</span><h2>Today's big prints</h2></div>
+<p class="tp-note">No Broadcom contract made the big board today.</p>
+<p class="tp-fresh">Data date only. The board for every name is in <a href="/options#op-ch4">Chapter IV of the options page</a>.</p>
+<div class="chapter-head"><span class="chapter-no">IV</span><h2>Every call we filed on it</h2></div>
+<p class="tp-note">Each call is written down with its test before the fact, settled by that test, and left standing when wrong. These are all the cases that name Broadcom, none removed. Open one for the original filing.</p>
+<div class="tp-count"><div><b>7</b>cases since 08.17</div><div><b>7</b>settled</div><div><b>0</b>open</div></div>
+<div class="tp-cases">
+<details class="tp-case">
+<summary><span class="dt">09.14</span><span class="j">The letter changed the overnight price and did not change the session&#x27;s positions<em>Also: SMH, MU, SNDK, AMD, INTC, QCOM, NVDA, ARM</em></span><span class="tp-badge done">holds</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>holds</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>09.14 Filed</b> (confidence: Leaning)<br><!--verbatim-->AI 放缓那封信改变的是夜里的价，没有改变白天的仓位：SMH 跳空 −5.02 白天 +0.28（2.01x）；MU −7.10/+1.99、SNDK −6.85/+2.00、AMD −5.78/+1.47、INTC −6.92/+1.43、QCOM −6.15/+5.49 白天全被买回；NVDA −3.23/−0.13、AVGO −3.41/−1.40、ARM −8.46/−1.39 没人接。白天被买回的名单与 FT 09-11 报道 Situational Awareness 用深度价外看涨重建仓位的名单（AMD/INTC/SKHY/SNDK/CRWV）重合<!--/verbatim--><br>Test: <!--verbatim-->09.15 SMH 开盘跳空超过 −2% 且白天不再买回 ⇒ 今日的买回是空头回补，收回。只引 每日跳空.csv EOD 17:15<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.15 Settled</b><br><!--verbatim-->保留：SMH 09-15 跳空 +0.94 白天 −0.82 收 +0.11，成交量 0.57x，缩量回落＝无人问津不是交货；MU +1.46/−1.06、SNDK +1.14/−2.47、INTC +1.69/−1.71、NVDA +1.14/−0.56、AVGO +0.38/−1.96；QCOM +0.21/+4.02 例外<!--/verbatim--><br>Test: <!--verbatim-->收回条件（gap ≤−2% 且白天不买回）未触发<!--/verbatim--><br>Result: <!--verbatim-->保留<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.14</span><span class="j">Protection sellers treated the bank guidance as new information and did not treat the letter as new information<em>Also: GS, WFC, JPM, BAC, C, MU, SNDK, INTC, AMD, NVDA, TSM</em></span><span class="tp-badge done">confirmed</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>confirmed</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>09.14 Filed</b> (confidence: Leaning)<br><!--verbatim-->卖保护的人把银行的指引当成了新信息，没把那封信当成新信息：cm30 单日变化 GS +3.51 / WFC +2.99 / JPM +2.74 / BAC +2.39 / C +2.19 对 MU −0.04 / AMD +0.58 / AVGO +1.02 / NVDA +1.87 / TSM +2.01；cm365 MU 61.81→59.71（−2.10）、SNDK −1.61、INTC −1.01。起因＝美国银行 CEO 巴克莱会议：三季度交易收入持平、投行费用降一成<!--/verbatim--><br>Test: <!--verbatim-->09.16 决议后 MU cm30 抬过 62 而股价不反弹 ⇒ 保护市场补定价了那封信，收回。只引 每日恒定期限IV.csv 15:45 主枪<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.17 Settled</b><br><!--verbatim-->成立结清：MU cm30 09-17 57.86 &lt;62（09-16 58.43）；银行三天涨的保费 09-17 一天退光，改价方向对了、持久性没有<!--/verbatim--><br>Result: <!--verbatim-->成立<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.03</span><span class="j">Broadcom&#x27;s event premium did not clear with the print</span><span class="tp-badge done">Retired on its own test</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>Retired on its own test. The filing wrote both branches in advance; the one that fired was &quot;30-day moves below the one-year, so the call retires&quot;, not &quot;the gap widens, so it strengthens&quot;. Retired is not wrong: the reading on the filing day was real, it was simply cleared one session sooner than expected.</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>09.03 Filed</b> (confidence: Leaning)<br><!--verbatim-->博通的事件溢价没有随财报出清：09-03 盘前 30 天 48.72 仍高于一年期 45.88，倒挂 2.84，是全组 21 只里唯一一只倒挂的<!--/verbatim--><br>Test: <!--verbatim-->下一期盘前结构日报若 iv30 转到 leaps_iv 下方＝溢价出清、本判断到期作废；若继续走宽＝财报没消掉不确定性、本判断加强。只引结构日报盘前那一轮，不与盘中盘后混比<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.04 Settled</b> (confidence: Leaning)<br><!--verbatim-->事件溢价当天就出清了：09-04 盘前 iv30 36.12 已落到 leaps_iv 43.53 下方，倒挂由 +2.84 翻成 −7.41<!--/verbatim--><br>Test: <!--verbatim-->下一期盘前结构日报若 iv30 转到 leaps_iv 下方＝溢价出清、本判断到期作废；若继续走宽＝财报没消掉不确定性、本判断加强。只引结构日报盘前那一轮，不与盘中盘后混比<!--/verbatim--><br>Result: <!--verbatim-->按判据作废<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.02</span><span class="j">The fence around the earnings night was priced before the open at 343.16 to 396.20</span><span class="tp-badge done">Right</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>Right. The close finished 14.73 above the lower edge and 38.31 below the upper one, so the price the market asked for in advance was not too high. Note this was won by the range holding, not by calling a direction.</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>09.02 Filed</b> (confidence: Leaning)<br><!--verbatim-->财报夜的围栏在盘前就标好了价 343.16 到 396.20，盘后 37.53 点的来回没有出栏 ⇒ 市场事先要的那个价没有要多<!--/verbatim--><br>Test: <!--verbatim-->09.04 收盘落在 343.16-396.20 之内＝兜住，之外＝冲破。只认收盘价，盘中或盘后穿越不算。来源 每日收盘价.csv 的 close<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.04 Settled</b> (confidence: Leaning)<br><!--verbatim-->围栏兜住了：09.04 官方收盘 357.89，落在盘前标价的 343.16–396.20 之内<!--/verbatim--><br>Test: <!--verbatim-->09.04 收盘落在 343.16-396.20 之内＝兜住，之外＝冲破。只认收盘价，盘中或盘后穿越不算。来源 每日收盘价.csv 的 close<!--/verbatim--><br>Result: <!--verbatim-->对<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">09.02</span><span class="j">The inversion of 50.4 against 46.76 is an event premium, not a shift in the level</span><span class="tp-badge done">Partly</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>Partly. Protection did get cheaper: 30-day implied fell from 50.4 to 48.72 and from the 67.1st to the 54.4th percentile of its own year. But it did not clear: 48.72 still sits above the one-year 45.88, an inversion of 2.84 against 3.64 the day before, and Broadcom remains the only one of the 21 names trading inverted. Earnings are over and less than a quarter of the near-dated premium has come out.</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>09.02 Filed</b> (confidence: Leaning)<br><!--verbatim-->50.4 对 46.76 的倒挂是财报事件溢价而不是水平抬升，财报落地后这层溢价会塌，保护的价钱 09-03 比 09-02 便宜<!--/verbatim--><br>Test: <!--verbatim-->09-03 盘前结构日报 iv30 回到 leaps_iv 下方＝溢价出清、判断成立；继续倒挂＝财报没消掉不确定性、判断被削弱。只引结构日报盘前那一轮，不与盘中盘后混比<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>09.03 Settled</b> (confidence: Leaning)<br><!--verbatim-->50.4 对 46.76 的倒挂是财报事件溢价而不是水平抬升，财报落地后这层溢价会塌，保护的价钱 09-03 比 09-02 便宜——开奖<!--/verbatim--><br>Test: <!--verbatim-->09-03 盘前结构日报 iv30 回到 leaps_iv 下方＝溢价出清、判断成立；继续倒挂＝财报没消掉不确定性、判断被削弱。只引结构日报盘前那一轮<!--/verbatim--><br>Result: <!--verbatim-->部分。两半分开判：①**便宜了，这半对**——iv30 50.4→48.72（降 1.68），iv_pctl 67.1→54.4（退 12.7 个分位），iv_rank 53.17→48.22，EM ±26.52→±24.96。②**没出清，这半错**——iv30 48.72 仍高于 leaps_iv 45.88，倒挂 2.84（昨 3.64），一夜只收窄 0.80，且 **21 只里 AVGO 依然是唯一一只倒挂的**。⇒ 「财报落地溢价就塌」这个读法过强：财报开完了，市场对博通的近月不确定性只削掉不到四分之一。<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">08.19</span><span class="j">08-19 was not a risk-off day: the four hardest-hit names all traded lighter than usual , so the decline came from absent buyers rather than selling pr…<em>Also: SPY, QQQ, MSTR, COIN, INTC, AMD, NVDA</em></span><span class="tp-badge done">Right — neither falsifying condition triggered</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>Right — neither falsifying condition triggered. First: &quot;if 08-20 brings a comparable decline on 1.5x or more volume, the no-sellers half fails.&quot; On 08-20 the four hardest-hit names printed AVGO +0.43%, RDDT -0.92%, INTC -0.72% and AMD +0.65% — none came close to the 3.71% to 4.61% declines of 08-19, so the premise never appeared and that half stands. Second: &quot;if the high-beta group gives it all back, the long-end-and-weak-dollar half fails.&quot; MSTR rose 7.81%, COIN 7.58%, CVNA 1.53% and MARA 15.54%, while HOOD slipped 0.70% — four of five kept rising, which is not a full give-back, so that half stands as well.</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>08.19 Filed</b> (confidence: Leaning)<br><!--verbatim-->08-19 不是避险日：跌得最狠的四只全部缩量（0.68~0.94倍），下跌来自买盘缺席而非卖压；当天真正的定价事件是财政部扩大长债回购，不是 FOMC 纪要<!--/verbatim--><br>Test: <!--verbatim-->次日两条各自可推翻：①若 08-20 出现同等跌幅配 1.5 倍以上量能，则「没人卖」这半不成立；②若高贝塔（MSTR/COIN/CVNA/MARA/HOOD）次日全数回吐，则「长端下行与美元走弱驱动」这半不成立。只引 每日跳空.csv 的 chg_pct 与本线量能倍数（当日量÷前20日均量）<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>08.26 Settled</b> (confidence: Leaning)<br><!--verbatim-->08-19 不是避险日：跌得最狠的四只全部缩量（0.68~0.94倍），下跌来自买盘缺席而非卖压；当天真正的定价事件是财政部扩大长债回购，不是 FOMC 纪要——终审<!--/verbatim--><br>Test: <!--verbatim-->次日两条各自可推翻：①若 08-20 出现同等跌幅配 1.5 倍以上量能，则「没人卖」这半不成立；②若高贝塔（MSTR/COIN/CVNA/MARA/HOOD）次日全数回吐，则「长端下行与美元走弱驱动」这半不成立。只引 每日跳空.csv 的 chg_pct 与本线量能倍数（当日量÷前20日均量）<!--/verbatim--><br>Result: <!--verbatim-->对(两条推翻条件均未触发)。①「若 08-20 出现同等跌幅配 1.5 倍以上量能则『没人卖』半不成立」——08-19 跌最狠四只在 08-20 的表现为 AVGO +0.43%、RDDT -0.92%、INTC -0.72%、AMD +0.65%，无一只出现同等跌幅(08-19 为 -3.71~-4.61%)，前提未出现 ⇒ 该半未被推翻。②「若高贝塔全数回吐则『长端下行与美元走弱驱动』半不成立」——MSTR +7.81%、COIN +7.58%、CVNA +1.53%、MARA +15.54%、HOOD -0.70%，五只中四只继续上涨、仅 HOOD 微跌 ⇒ 非「全数回吐」，该半亦未被推翻。<!--/verbatim--></div>
+</div></details>
+<details class="tp-case">
+<summary><span class="dt">08.17</span><span class="j">The term-structure inversions in AVGO and SPCX have different origins<em>Also: SPCX</em></span><span class="tp-badge done">Partly</span></summary>
+<div class="body">
+<div class="ev"><b>Settlement</b><br>Partly. The SPCX half fails: the test triggered cleanly — the inversion went from +0.66 on 08-17 to -0.84 on 08-18, i.e. it was taken back, so under the filing&#x27;s own terms 08-17 counts as a single point. The AVGO half is not determinable: the weakening condition presupposed that the underlying stops falling, and that never happened before settlement — AVGO fell 3.17% on 08-18 and 4.61% on 08-19, so the condition never had a chance to trigger (the inversion ran 1.38, 1.44, 1.13 through that window).</div>
+<div class="h">Original filing and test, archived verbatim in Chinese</div>
+<div class="ev" lang="zh"><b>08.17 Filed</b> (confidence: Leaning)<br><!--verbatim-->博通与 SpaceX 的期限倒挂不同源：博通是连跌两日中被下跌推出来的被动定价，SpaceX 是上涨当日主动布置<!--/verbatim--><br>Test: <!--verbatim-->SpaceX 若次日倒挂收回（cm30−cm365 转负）则本判断中 SpaceX 那半不成立，08-17 记为单点；博通若在标的不再下跌时倒挂仍走宽，则被动定价那半被削弱<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>08.20 Settled</b> (confidence: Leaning)<br><!--verbatim-->博通与 SpaceX 期限倒挂不同源：博通被动定价、SpaceX 主动布置——终审<!--/verbatim--><br>Test: <!--verbatim-->SPCX 次日倒挂收回(cm30-cm365 转负)则 SPCX 半不成立、08-17 记单点；AVGO 若在标的不再下跌时倒挂仍走宽则被动定价半被削弱<!--/verbatim--><br>Result: <!--verbatim-->部分：①SPCX 半不成立——判据干净触发，08-17 倒挂+0.66 → 08-18 -0.84 转负＝倒挂收回，按立案条款 08-17 记为单点。②AVGO 半无法判定——削弱条件的前提「标的不再下跌」在开奖日从未出现：08-18 AVGO -3.17%、08-19 -4.61% 连续下跌，该条件没有被触发的机会（其间倒挂 1.38→1.44→1.13）<!--/verbatim--></div>
+<div class="ev" lang="zh"><b>08.20 Corrected</b> (confidence: Leaning)<br><!--verbatim-->开奖判定由「部分」改为「无法判定」——原判据是跨尺比较<!--/verbatim--><br>Test: <!--verbatim-->同上（立案条款不变）<!--/verbatim--><br>Result: <!--verbatim-->无法判定（推翻同日早些时候本会话所记的「部分」）<!--/verbatim--></div>
+</div></details>
+</div>
+<p class="tp-fresh">Cases for every name are in <a href="/options#op-ch3">Chapter III of the options page</a>. The ledger is append-only; a revision is a new row.</p>
+<div class="chapter-head"><span class="chapter-no">V</span><h2>Other names</h2></div>
+<p class="tp-more">Decades of Broadcom price history and drawdowns are in <a href="/tech">The Archive · Tech</a>.</p>
+<div class="tp-idx">
+<div class="row"><span class="g">Index · ETF</span><a href="/t/SPY.en"><img src="/logos/spy.png" alt="" loading="lazy" onerror="this.remove()">SPY</a><a href="/t/QQQ.en"><img src="/logos/qqq.png" alt="" loading="lazy" onerror="this.remove()">QQQ</a><a href="/t/IWM.en"><img src="/logos/iwm.png" alt="" loading="lazy" onerror="this.remove()">IWM</a><a href="/t/TLT.en"><img src="/logos/tlt.png" alt="" loading="lazy" onerror="this.remove()">TLT</a><a href="/t/SMH.en"><img src="/logos/smh.png" alt="" loading="lazy" onerror="this.remove()">SMH</a><a href="/t/XLF.en"><img src="/logos/xlf.png" alt="" loading="lazy" onerror="this.remove()">XLF</a><a href="/t/XLK.en"><img src="/logos/xlk.png" alt="" loading="lazy" onerror="this.remove()">XLK</a><a href="/t/XLV.en"><img src="/logos/xlv.png" alt="" loading="lazy" onerror="this.remove()">XLV</a><a href="/t/HYG.en"><img src="/logos/hyg.png" alt="" loading="lazy" onerror="this.remove()">HYG</a><a href="/t/LQD.en"><img src="/logos/lqd.png" alt="" loading="lazy" onerror="this.remove()">LQD</a></div>
+<div class="row"><span class="g">Mag 8</span><a href="/t/AAPL.en"><img src="/logos/aapl.png" alt="" loading="lazy" onerror="this.remove()">AAPL</a><a href="/t/AMZN.en"><img src="/logos/amzn.png" alt="" loading="lazy" onerror="this.remove()">AMZN</a><a href="/t/GOOG.en"><img src="/logos/goog.png" alt="" loading="lazy" onerror="this.remove()">GOOG</a><a href="/t/GOOGL.en"><img src="/logos/googl.png" alt="" loading="lazy" onerror="this.remove()">GOOGL</a><a href="/t/META.en"><img src="/logos/meta.png" alt="" loading="lazy" onerror="this.remove()">META</a><a href="/t/MSFT.en"><img src="/logos/msft.png" alt="" loading="lazy" onerror="this.remove()">MSFT</a><a href="/t/NVDA.en"><img src="/logos/nvda.png" alt="" loading="lazy" onerror="this.remove()">NVDA</a><a href="/t/TSLA.en"><img src="/logos/tsla.png" alt="" loading="lazy" onerror="this.remove()">TSLA</a><a href="/t/SPCX.en"><img src="/logos/spcx.png" alt="" loading="lazy" onerror="this.remove()">SPCX</a></div>
+<div class="row"><span class="g">Semis · Memory</span><a href="/t/AVGO.en" class=on aria-current=page><img src="/logos/avgo.png" alt="" loading="lazy" onerror="this.remove()">AVGO</a><a href="/t/TSM.en"><img src="/logos/tsm.png" alt="" loading="lazy" onerror="this.remove()">TSM</a><a href="/t/AMD.en"><img src="/logos/amd.png" alt="" loading="lazy" onerror="this.remove()">AMD</a><a href="/t/INTC.en"><img src="/logos/intc.png" alt="" loading="lazy" onerror="this.remove()">INTC</a><a href="/t/MU.en"><img src="/logos/mu.png" alt="" loading="lazy" onerror="this.remove()">MU</a><a href="/t/SNDK.en"><img src="/logos/sndk.png" alt="" loading="lazy" onerror="this.remove()">SNDK</a><a href="/t/MRVL.en"><img src="/logos/mrvl.png" alt="" loading="lazy" onerror="this.remove()">MRVL</a><a href="/t/QCOM.en"><img src="/logos/qcom.png" alt="" loading="lazy" onerror="this.remove()">QCOM</a><a href="/t/SKHY.en"><img src="/logos/skhy.png" alt="" loading="lazy" onerror="this.remove()">SKHY</a><a href="/t/SMCI.en"><img src="/logos/smci.png" alt="" loading="lazy" onerror="this.remove()">SMCI</a><a href="/t/DELL.en"><img src="/logos/dell.png" alt="" loading="lazy" onerror="this.remove()">DELL</a></div>
+<div class="row"><span class="g">Software · AI Cloud</span><a href="/t/ORCL.en"><img src="/logos/orcl.png" alt="" loading="lazy" onerror="this.remove()">ORCL</a><a href="/t/PLTR.en"><img src="/logos/pltr.png" alt="" loading="lazy" onerror="this.remove()">PLTR</a><a href="/t/CRWV.en"><img src="/logos/crwv.png" alt="" loading="lazy" onerror="this.remove()">CRWV</a><a href="/t/NBIS.en"><img src="/logos/nbis.png" alt="" loading="lazy" onerror="this.remove()">NBIS</a></div>
+<div class="row"><span class="g">Crypto · Brokers</span><a href="/t/COIN.en"><img src="/logos/coin.png" alt="" loading="lazy" onerror="this.remove()">COIN</a><a href="/t/HOOD.en"><img src="/logos/hood.png" alt="" loading="lazy" onerror="this.remove()">HOOD</a><a href="/t/MSTR.en"><img src="/logos/mstr.png" alt="" loading="lazy" onerror="this.remove()">MSTR</a><a href="/t/SOFI.en"><img src="/logos/sofi.png" alt="" loading="lazy" onerror="this.remove()">SOFI</a></div>
+<div class="row"><span class="g">Banks</span><a href="/t/JPM.en"><img src="/logos/jpm.png" alt="" loading="lazy" onerror="this.remove()">JPM</a><a href="/t/BAC.en"><img src="/logos/bac.png" alt="" loading="lazy" onerror="this.remove()">BAC</a><a href="/t/C.en"><img src="/logos/c.png" alt="" loading="lazy" onerror="this.remove()">C</a><a href="/t/WFC.en"><img src="/logos/wfc.png" alt="" loading="lazy" onerror="this.remove()">WFC</a><a href="/t/GS.en"><img src="/logos/gs.png" alt="" loading="lazy" onerror="this.remove()">GS</a><a href="/t/KRE.en"><img src="/logos/kre.png" alt="" loading="lazy" onerror="this.remove()">KRE</a></div>
+</div>
+<div class="tp-cal">
+<b>How to read this page</b><br>
+· The one-year percentile and the 30-day and one-year implied vols come from two different rulers; each is compared only with its own past.<br>
+· The 30-day and one-year vols are constant-maturity: interpolated between the two nearest expiries to exactly 30 and 365 days, read once before each close.<br>
+· A big-print row is one contract's full-day total, not a single trade. Without per-trade timestamps or aggressor side we state premium traded only.<br>
+· Every reading is cross-checked against two independent sources and updated once after the close. Raw data is not provided on this site.<br>
+· <b>Data and information only; not investment advice; no buy or sell recommendations.</b>
+</div>
+<p class="tp-more">Today's read on this name is in the <a href="/pricing">subscriber email</a>; <a href="/digest/">past issues</a> go public the next day.</p>
+</div>
+<footer class="site-footer"><div class="footer-main"><div class="footer-brand-col"><div class="footer-brand">Fear-Price<span>Fear-Price</span></div><div class="footer-tag">A self-updating archive of a century of US market charts, plus a public ledger of daily readings</div></div><div class="footer-colgroup"><div class="footer-col"><div class="footer-col-h">About</div><a href="/about">About us</a><a href="/methodology">Methodology</a><a href="/contact">Contact us</a></div><div class="footer-col"><div class="footer-col-h">Get Started</div><a href="/pricing">Pricing & plans</a><a href="https://github.com/klaywang24/fear-price/blob/main/data/README.md" target="_blank" rel="noopener">Data &amp; API</a><a href="/digest/">Weekly digest</a></div><div class="footer-col"><div class="footer-col-h">Legal</div><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/refunds">Refunds</a></div></div></div><div class="footer-note"><span class="footer-left">For information and education only; not investment advice</span><span class="footer-copy">© 2026 Fear-Price</span></div></footer>
+<script type="application/json" id="tp-data">{"lang":"en","fh":[{"date":"2026-08-14","flip":404.21,"close":392.99,"pw":410.0,"cw":420.0},{"date":"2026-08-17","flip":395.82,"close":392.43,"pw":380.0,"cw":410.0},{"date":"2026-08-18","flip":390.29,"close":380.0,"pw":380.0,"cw":400.0},{"date":"2026-08-19","flip":390.48,"close":362.48,"pw":370.0,"cw":400.0},{"date":"2026-08-20","flip":386.5,"close":364.03,"pw":360.0,"cw":400.0},{"date":"2026-08-21","flip":382.62,"close":368.45,"pw":360.0,"cw":400.0},{"date":"2026-08-24","flip":380.14,"close":358.76,"pw":360.0,"cw":400.0},{"date":"2026-08-25","flip":377.74,"close":356.74,"pw":350.0,"cw":400.0},{"date":"2026-08-26","flip":372.8,"close":355.59,"pw":350.0,"cw":400.0},{"date":"2026-08-27","flip":372.34,"close":371.54,"pw":350.0,"cw":400.0},{"date":"2026-08-28","flip":368.21,"close":368.79,"pw":360.0,"cw":380.0},{"date":"2026-08-31","flip":370.55,"close":370.34,"pw":350.0,"cw":400.0},{"date":"2026-09-01","flip":375.5,"close":369.68,"pw":350.0,"cw":400.0},{"date":"2026-09-02","flip":375.01,"close":367.24,"pw":350.0,"cw":400.0},{"date":"2026-09-03","flip":373.49,"close":357.16,"pw":350.0,"cw":400.0},{"date":"2026-09-04","flip":366.5,"close":357.89,"pw":350.0,"cw":370.0},{"date":"2026-09-08","flip":362.72,"close":368.56,"pw":350.0,"cw":370.0},{"date":"2026-09-09","flip":359.35,"close":364.38,"pw":350.0,"cw":370.0},{"date":"2026-09-10","flip":362.64,"close":360.83,"pw":350.0,"cw":370.0},{"date":"2026-09-11","flip":361.83,"close":361.99,"pw":350.0,"cw":370.0},{"date":"2026-09-14","flip":365.08,"close":344.72,"pw":350.0,"cw":370.0},{"date":"2026-09-15","flip":362.22,"close":339.27,"pw":340.0,"cw":360.0},{"date":"2026-09-16","flip":359.24,"close":339.51,"pw":330.0,"cw":350.0},{"date":"2026-09-17","flip":356.06,"close":347.3,"pw":330.0,"cw":350.0},{"date":"2026-09-18","flip":353.78,"close":357.61,"pw":340.0,"cw":350.0},{"date":"2026-09-21","flip":356.49,"close":362.66,"pw":350.0,"cw":360.0},{"date":"2026-09-22","flip":356.78,"close":364.54,"pw":350.0,"cw":370.0},{"date":"2026-09-23","flip":355.52,"close":354.99,"pw":350.0,"cw":370.0},{"date":"2026-09-24","flip":355.47,"close":350.36,"pw":350.0,"cw":360.0},{"date":"2026-09-25","flip":355.57,"close":352.81,"pw":350.0,"cw":360.0}],"cm":[{"date":"2026-08-14","iv30":49.38,"iv365":48.53},{"date":"2026-08-17"},{"date":"2026-08-18","iv30":49.55,"iv365":48.11},{"date":"2026-08-19","iv30":49.01,"iv365":47.88},{"date":"2026-08-20","iv30":49.93,"iv365":47.87},{"date":"2026-08-21","iv30":50.12,"iv365":47.67},{"date":"2026-08-24","iv30":49.22,"iv365":47.63},{"date":"2026-08-25","iv30":49.87,"iv365":47.18},{"date":"2026-08-26","iv30":50.24,"iv365":47.07},{"date":"2026-08-27","iv30":50.85,"iv365":47.15},{"date":"2026-08-28","iv30":48.87,"iv365":47.07},{"date":"2026-08-31","iv30":49.94,"iv365":47.01},{"date":"2026-09-01","iv30":50.01,"iv365":46.52},{"date":"2026-09-02","iv30":49.25,"iv365":45.6},{"date":"2026-09-03","iv30":36.61,"iv365":44.0},{"date":"2026-09-04","iv30":36.17,"iv365":43.82},{"date":"2026-09-08","iv30":39.29,"iv365":45.08},{"date":"2026-09-09","iv30":37.99,"iv365":44.48},{"date":"2026-09-10","iv30":37.47,"iv365":44.8},{"date":"2026-09-11","iv30":35.12,"iv365":44.08},{"date":"2026-09-14","iv30":36.14,"iv365":43.96},{"date":"2026-09-15","iv30":34.77,"iv365":43.08},{"date":"2026-09-16","iv30":35.66,"iv365":42.66},{"date":"2026-09-17","iv30":33.89,"iv365":42.77},{"date":"2026-09-18","iv30":34.3,"iv365":43.16},{"date":"2026-09-21","iv30":36.66,"iv365":44.32},{"date":"2026-09-22","iv30":36.58,"iv365":44.57},{"date":"2026-09-23","iv30":35.17,"iv365":44.03},{"date":"2026-09-24","iv30":34.52,"iv365":44.07},{"date":"2026-09-25","iv30":33.89,"iv365":43.75}]}</script>
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById("tp-theme");
+  btn.textContent=root.classList.contains("dark-mode")?"\u263e":"\u2600";
+  btn.addEventListener("click",function(){root.classList.toggle("dark-mode");
+    try{localStorage.setItem("mc-theme",root.classList.contains("dark-mode")?"dark":"light")}catch(e){}location.reload();});
+  var lb=document.querySelector(".tp-lang");
+  lb.addEventListener("click",function(){try{localStorage.setItem("mc-lang",lb.dataset.lang)}catch(e){}});
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+(function(){
+  if(!window.echarts)return;
+  var D=JSON.parse(document.getElementById("tp-data").textContent),EN=D.lang==="en";
+  var tr=function(z,e){return EN?e:z};
+  var dark=document.documentElement.classList.contains("dark-mode");
+  var INK=dark?"#e8e4dc":"#1a1a1a",MUTED=dark?"#8a867e":"#8a8a8a",BORDER=dark?"#3a3833":"#e5e0d8",
+      RED="#FF2400",GREEN=dark?"#34D96C":"#00A86B",GOLD="#B8893E";
+  var dot=function(d){return d.slice(5).replace("-",".")};
+  var ax={axisLine:{lineStyle:{color:BORDER}},axisLabel:{color:MUTED,fontSize:11},splitLine:{lineStyle:{color:BORDER,opacity:.5}}};
+  function mk(id){var el=document.getElementById(id);if(!el)return null;var c=echarts.init(el);
+    new ResizeObserver(function(){c.resize()}).observe(el);return c;}
+  var a=mk("ch-walls");
+  if(a){var h=D.fh;a.setOption({grid:{left:56,right:18,top:36,bottom:30},
+    legend:{top:4,textStyle:{color:MUTED}},tooltip:{trigger:"axis"},
+    xAxis:{type:"category",data:h.map(function(r){return dot(r.date)}),axisLine:ax.axisLine,axisLabel:ax.axisLabel},
+    yAxis:{type:"value",scale:true,axisLine:ax.axisLine,axisLabel:ax.axisLabel,splitLine:ax.splitLine},
+    series:[
+      {name:tr("收盘","Close"),type:"line",data:h.map(function(r){return r.close}),lineStyle:{color:INK,width:2.5},itemStyle:{color:INK},connectNulls:true,z:5},
+      {name:tr("多空分界","Flip"),type:"line",data:h.map(function(r){return r.flip}),lineStyle:{color:GOLD,width:1.5,type:"dashed"},itemStyle:{color:GOLD},connectNulls:true},
+      {name:tr("下墙","Put wall"),type:"line",step:"middle",data:h.map(function(r){return r.pw}),lineStyle:{color:RED,width:1.5},itemStyle:{color:RED},symbol:"none",connectNulls:true},
+      {name:tr("上墙","Call wall"),type:"line",step:"middle",data:h.map(function(r){return r.cw}),lineStyle:{color:GREEN,width:1.5},itemStyle:{color:GREEN},symbol:"none",connectNulls:true}]});}
+  var b=mk("ch-cm");
+  if(b){var k=D.cm;b.setOption({grid:{left:56,right:18,top:36,bottom:30},
+    legend:{top:4,textStyle:{color:MUTED}},tooltip:{trigger:"axis",valueFormatter:function(v){return v==null?"—":v+"%"}},
+    xAxis:{type:"category",data:k.map(function(r){return dot(r.date)}),axisLine:ax.axisLine,axisLabel:ax.axisLabel},
+    yAxis:{type:"value",scale:true,name:tr("隐含波动率 %","Implied vol %"),nameTextStyle:{color:MUTED},axisLine:ax.axisLine,axisLabel:ax.axisLabel,splitLine:ax.splitLine},
+    series:[
+      {name:tr("一年期","One-year"),type:"line",data:k.map(function(r){return r.iv365}),lineStyle:{color:INK,width:2.5},itemStyle:{color:INK},z:5},
+      {name:tr("30 天","30-day"),type:"line",data:k.map(function(r){return r.iv30}),lineStyle:{color:RED,width:1.5,type:"dashed"},itemStyle:{color:RED}}]});}
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "21badd8cf43d430e8b00d2fcad37a312"}'></script>
+</body>
+</html>
