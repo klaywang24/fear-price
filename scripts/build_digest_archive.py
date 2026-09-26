@@ -871,6 +871,11 @@ def main():
     entries = ([(f, parse) for f in sorted(glob.glob(os.path.join(SRC, "*.md")))] +
                [(f, parse_live) for f in live_files(a.live_cutover)])
     done, seen_slugs = [], {}
+    pending_pages = []          # (路径, 内容)：缩水闸放行后才写（见循环内注释）
+
+    def _flush_pages():
+        for path, content in pending_pages:
+            open(path, "w", encoding="utf-8").write(content)
     for f, parser in entries:
         # 日更的解析失败不许打死整条管线（2026-08-24 实测两次：08-18 标题块换式、
         # 08-19 缺「## ⚡」⇒ 全量跑在中途抛异常，后面所有期数含 08-21 周报全部进不了站，
@@ -956,7 +961,8 @@ def main():
             body_html = build_body(vbody, date, vslug, log)
             desc = re.sub(r"<[^>]+>", "", body_html)[:110].replace('"', "'").strip()
             other = (slug + ".en") if kind == "cn" else slug   # §77：站内互链与 hreflang 一律无扩展
-            open(os.path.join(OUT, f"{vslug}.html"), "w", encoding="utf-8").write(
+            # 2026-09-25（兜底审计）：先收进待写清单，缩水闸放行后再落盘（原先闸拦下时单篇页面已写，留在工作区里）
+            pending_pages.append((os.path.join(OUT, f"{vslug}.html"),
                 HEAD.format(
                     htmllang="zh-CN" if kind == "cn" else "en",
                     title=html.escape(vtitle), date=date, slug=vslug,
@@ -977,7 +983,7 @@ def main():
                               if kind == "cn" else
                               "Fear-Price · Archived issue. Figures and judgments are as of that day "
                               "and are never revised after the fact.<br>"
-                              "No investment advice. No direction calls. No market timing.")))
+                              "No investment advice. No direction calls. No market timing."))))
             imgs = [r for r in log if r[0] in ("精", "推")]
             inf = sum(1 for k, _, _ in imgs if k == "推")
             tag = "中" if kind == "cn" else "EN"
@@ -1004,8 +1010,11 @@ def main():
             sys.exit(2)
         if missing:
             print(f"  ⚠️ --allow-shrink：明知少 {len(missing)} 条仍写盘：" + "、".join(missing[:8]))
+        _flush_pages()
         ncn, nen = write_index(done, "cn"), write_index(done, "en")
         print(f"  索引页 中 {ncn} 条 / EN {nen} 条 · feed {write_feed(done)} 条 · 台账 {write_ledger(done)} 条")
+    else:
+        _flush_pages()              # --only：单期重出，不过缩水闸（不写 feed/索引/台账）
     return done
 
 if __name__ == "__main__":
