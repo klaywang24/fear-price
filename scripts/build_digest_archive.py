@@ -588,6 +588,21 @@ def ledger_special(folder_date):
     pref = next((r for r in hits if r.get("platform") in ("substack", "buttondown")), hits[0])
     return pref["title"].strip(), pref["date"]
 
+_DD_RE = re.compile(r"数据日\s*(\d{2})-?(\d{2})")
+
+
+def _row_dataday(r):
+    """台账这一行是哪个数据日的发布（MMDD），认不出返回 None。
+    🔴 2026-09-26：先看 content_type，再看 notes。09 月有 16 行只把数据日写在 notes 开头，且带横杠
+    （「数据日09-24（周四…」），原先只认 content_type 里不带横杠的「数据日0924」⇒ 全部认不出，
+    退回按发布日期窗口匹配 ⇒ 09-20～09-25 的页面顶着前一天（或别的平台）的标题，09-25 还没发就被判成已发。"""
+    for field in ("content_type", "notes"):
+        m = _DD_RE.search(r.get(field) or "")
+        if m:
+            return m.group(1) + m.group(2)
+    return None
+
+
 def ledger_daily(folder_date):
     """活源日更的**发布证明**（2026-08-25 日更上站随行加的闸，机理同 ledger_special）：
     台账里数据日起 2 天内、content_type 以「日更」开头的行＝发出去了；「浏览量回访·」
@@ -608,12 +623,12 @@ def ledger_daily(folder_date):
     # 🔴 2026-09-12：日更隔天早上发，2 天窗口会同时框进「昨天数据日」的发布行（台账 09-11 那天
     #   记的是数据日0910 的发布），09-10/09-11 两页因此顶着前一天的标题上了站。台账 09-09 起
     #   content_type 带「数据日MMDD」，有这个标签就只认标签；没标签的旧行才退回窗口匹配。
-    tag = "数据日" + folder_date[5:7] + folder_date[8:10]
-    tagged = [r for r in hits if tag in (r.get("content_type") or "")]
+    mmdd = folder_date[5:7] + folder_date[8:10]
+    tagged = [r for r in hits if _row_dataday(r) == mmdd]
     if tagged:
         hits = tagged
-    elif any("数据日" in (r.get("content_type") or "") for r in hits):
-        untagged = [r for r in hits if "数据日" not in (r.get("content_type") or "")]
+    elif any(_row_dataday(r) for r in hits):
+        untagged = [r for r in hits if not _row_dataday(r)]
         if not untagged:
             return None
         hits = untagged
@@ -747,9 +762,9 @@ def ledger_en(folder_date):
         rows = list(_csv.DictReader(open(LEDGER, encoding="utf-8")))
     except FileNotFoundError:
         return None
-    tag = "数据日" + folder_date[5:7] + folder_date[8:10]
+    mmdd = folder_date[5:7] + folder_date[8:10]
     for r in rows:
-        if r.get("platform") == "substack_en" and tag in (r.get("content_type") or "") and (r.get("title") or "").strip():
+        if r.get("platform") == "substack_en" and _row_dataday(r) == mmdd and (r.get("title") or "").strip():
             return r["title"].strip()
     return None
 
