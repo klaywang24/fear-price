@@ -23,6 +23,7 @@ jobs:
       - run: python scripts/test_pulse_refetch.py   # offline test first (no network, writes nothing); a failure stops this run
       - run: python scripts/test_gauge_yahoo_patch.py   # offline test first (no network, writes nothing); a failure stops this run
       - run: python scripts/test_vol_fallback.py   # offline test first (no network, writes nothing); a failure stops this run
+      - run: python scripts/test_notify_discord.py   # offline test first (no network, sends nothing); a failure stops this run
       - run: python scripts/build_data.py
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -46,71 +47,16 @@ jobs:
       #    剩下的照样验证通过；链把每天绑在前一天上，删任何一天其后 chain 全部对不上。
       - name: anchor hashes
         run: python scripts/anchor_hashes.py
-      # 图表溢出自检（2026-08-02 接线）。
-      # 起因：全站图表画到绘图区外面（恐惧的标价台账那张末点溢出 219px，多个面板同病），
-      # 根因是 ECharts 记的容器宽度是旧的（getWidth()=1086 而 clientWidth=867）。
-      # 已改用 ResizeObserver 由尺寸变化驱动 resize；这一步是那条修复的守门人。
-      # 🔑 之所以必须挂在 CI 而不是「记得手动跑」：同一天里已经吃过两次亏 ——
-      #    闸⑥ 建好却没写进 gate_all 的 run 行，于是十几次「六闸全绿」实际只跑了五闸。
-      #    **规矩没变成自动跑的动作，就等于没有。**
-      # 脚本自带临时 http server，只需要一个 Chrome。ubuntu-latest 预装 Google Chrome。
-      - name: verify chart overflow
-        run: python tools/check_chart_overflow.py
-        env:
-          CHROME_BIN: /usr/bin/google-chrome
-      # i18n 重复 key 自检（2026-08-06 接线）。
-      # 起因：词典 D 里 22 处重复 key（JS 后者静默覆盖前者），行业暴露图的 GICS 全名版
-      # 被旧短名版压了 18 天没人发现。已去重归零，这一步防复发。
-      # exit 2 = 测量失败（解析漂移），与红同样挡住流水线，绝不算绿。
-      - name: verify i18n no duplicate keys
-        run: python tools/check_i18n_dupes.py
-      # EN 态中文残留闸（2026-09-05 接线）。闸本体 2026-08-07 就建好了，但从未挂进流水线：
-      # 全仓 grep 零处 run，于是它在仓里躺了 29 天，一次也没拦过东西。
-      # 出身：09-05 发现英文站 12 处中文残留。根因是「标点四禁」把 HTML 里的引号与直角引号
-      # 清掉了，却没同步改 js/i18n.js 的查表 key —— applyTo 按整节点逐字精确匹配，key 差
-      # 一个字符就整句 fallback 成中文。check_site_punctuation 的提示里本就写着这条警告。
-      # 本闸自带负向自验：zh 态若扫不出 100 条以上即 exit 2 报量尺失效，防止假绿。
-      # 接线当天实测：en 态 exit 0（仅剩 5 条有意保留），zh 态扫出 824 条 —— 尺子是活的。
-      - name: verify no Chinese leaking into EN
-        run: python tools/check_i18n_leak.py
-        env:
-          CHROME_BIN: /usr/bin/google-chrome
-      # 禁词闸（2026-08-07 接线）。「恐慌指数」只允许作为 VIX 的归属性提及
-      # （前 4 字内须有 VIX），不用来指称本站任何指数。机器可判不靠自觉。
-      # 建闸当天已用负向样本实测报红（植入一处→exit 1→还原→复绿），不是只写不验。
-      - name: verify banned terms
-        run: python tools/check_banned_terms.py
-      # 路由页判重闸（2026-08-17 接线）。
-      # 07-30 路由页只换 head、正文 17 份相同 → 08-08 GSC 判重复拒收；本闸保证
-      # 每个路由页只含自己的 panel、canonical 自指、sitemap 与实际页面清单精确对账。
-      # 建闸当天先对修复前产物实测：166 条红 exit 1，修复后转绿 —— 负向已验，不是只写不验。
-      - name: verify route pages unique
-        run: python tools/check_route_pages.py
-      # JSON-LD 结构化数据闸（2026-08-23 接线）。
-      # 出身：08-20 c25a51e「去掉可见文本里的直引号」是全文替换，把 JSON-LD 的**结构引号**
-      # 也吃掉了（"name":"X" → "name":X）；index.html 一处坏 ⇒ 16 个路由页由它生成 ⇒
-      # 全站 19 页结构化数据全部非法，**三天无人发现**，直到 Google Search Console 发邮件
-      # 「值类型不正确·严重问题会导致您的网页无法显示在搜索结果中」。
-      # 那三天里 §63 做的判重/canonical/Dataset 标注，Google 一个字都没读进去。
-      # 判据：每个 ld+json 块必须 json.loads 通过；扫到 0 个块也判红（尺子没上膛≠仓里没有）。
-      # 自检：python tools/check_jsonld.py --selftest（一正两负三样本）
-      - name: verify JSON-LD parses
-        run: python tools/check_jsonld.py
-      # 🔴 2026-09-05 建（Klay 令做 llms.txt + openapi 那套）：机器可读层是**生成物**，
-      # 而 llms.txt 与 data/README.md 是手改的 —— 手改了不重出，llms-full.txt 与 openapi.json
-      # 就会静静地过期，且**过期的机器可读层比没有更坏**（模型会照着旧契约引用）。
-      # 判据＝生成器 --check：产物与「照当前源应生成的内容」不一致即红，逼人重出。
-      # 🚫 刻意不在 CI 里自动重写：那会让 CI 悄悄改站上的对外契约，改契约必须过人眼。
-      - name: verify machine-readable layer fresh
-        run: python scripts/build_machine_readable.py --check
       - name: commit data
         run: |
           git config user.name "klaywang24"
           git config user.email "klaywang24@users.noreply.github.com"
           git add data
-          git commit -m "data: daily update $(TZ=America/New_York date +%F)" || echo "no changes"
+          # 2026-09-25：原写 `git commit … || echo "no changes"`，真正的提交错误也被吞成「无变化」
+          git diff --cached --quiet || git commit -m "data: daily update $(TZ=America/New_York date +%F)"
           git pull --rebase origin main
           git push
+          echo "DATA_COMMITTED=1" >> "$GITHUB_ENV"   # 通知脚本据此区分「数据没更新」与「数据更新了、后面的步骤失败」
       # 锚定：把「公开可查」做成机制——git 日期本地可伪造，第三方存档不能。
       # 存当日 commit 的 GitHub 页（见证提交历史状态）+ 站点 + 两个台账 JSON。
       # Wayback 不稳定属常态：任何失败都不许影响管线与告警（continue-on-error + 逐条 || true）。
@@ -176,6 +122,66 @@ jobs:
             git push
           fi
 
+      # 🔴 2026-09-25 挪到这里（原在 commit data 之前）：下面这些只查网站 HTML/JS 与结构，不查当天数据内容；
+      #    排在提交之前时，任何一道失败都会让当天已算好的数据整班不提交（09-24 路由页、08-22/08-28 归档页实犯）。
+      #    现在数据先提交、存档与见证照跑，这些检查失败仍让 job 红、通知照发（措辞区分「数据已更新」）。
+      # 图表溢出自检（2026-08-02 接线）。
+      # 起因：全站图表画到绘图区外面（恐惧的标价台账那张末点溢出 219px，多个面板同病），
+      # 根因是 ECharts 记的容器宽度是旧的（getWidth()=1086 而 clientWidth=867）。
+      # 已改用 ResizeObserver 由尺寸变化驱动 resize；这一步是那条修复的守门人。
+      # 🔑 之所以必须挂在 CI 而不是「记得手动跑」：同一天里已经吃过两次亏 ——
+      #    闸⑥ 建好却没写进 gate_all 的 run 行，于是十几次「六闸全绿」实际只跑了五闸。
+      #    **规矩没变成自动跑的动作，就等于没有。**
+      # 脚本自带临时 http server，只需要一个 Chrome。ubuntu-latest 预装 Google Chrome。
+      - name: verify chart overflow
+        run: python tools/check_chart_overflow.py
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+      # i18n 重复 key 自检（2026-08-06 接线）。
+      # 起因：词典 D 里 22 处重复 key（JS 后者静默覆盖前者），行业暴露图的 GICS 全名版
+      # 被旧短名版压了 18 天没人发现。已去重归零，这一步防复发。
+      # exit 2 = 测量失败（解析漂移），与红同样挡住流水线，绝不算绿。
+      - name: verify i18n no duplicate keys
+        run: python tools/check_i18n_dupes.py
+      # EN 态中文残留闸（2026-09-05 接线）。闸本体 2026-08-07 就建好了，但从未挂进流水线：
+      # 全仓 grep 零处 run，于是它在仓里躺了 29 天，一次也没拦过东西。
+      # 出身：09-05 发现英文站 12 处中文残留。根因是「标点四禁」把 HTML 里的引号与直角引号
+      # 清掉了，却没同步改 js/i18n.js 的查表 key —— applyTo 按整节点逐字精确匹配，key 差
+      # 一个字符就整句 fallback 成中文。check_site_punctuation 的提示里本就写着这条警告。
+      # 本闸自带负向自验：zh 态若扫不出 100 条以上即 exit 2 报量尺失效，防止假绿。
+      # 接线当天实测：en 态 exit 0（仅剩 5 条有意保留），zh 态扫出 824 条 —— 尺子是活的。
+      - name: verify no Chinese leaking into EN
+        run: python tools/check_i18n_leak.py
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+      # 禁词闸（2026-08-07 接线）。「恐慌指数」只允许作为 VIX 的归属性提及
+      # （前 4 字内须有 VIX），不用来指称本站任何指数。机器可判不靠自觉。
+      # 建闸当天已用负向样本实测报红（植入一处→exit 1→还原→复绿），不是只写不验。
+      - name: verify banned terms
+        run: python tools/check_banned_terms.py
+      # 路由页判重闸（2026-08-17 接线）。
+      # 07-30 路由页只换 head、正文 17 份相同 → 08-08 GSC 判重复拒收；本闸保证
+      # 每个路由页只含自己的 panel、canonical 自指、sitemap 与实际页面清单精确对账。
+      # 建闸当天先对修复前产物实测：166 条红 exit 1，修复后转绿 —— 负向已验，不是只写不验。
+      - name: verify route pages unique
+        run: python tools/check_route_pages.py
+      # JSON-LD 结构化数据闸（2026-08-23 接线）。
+      # 出身：08-20 c25a51e「去掉可见文本里的直引号」是全文替换，把 JSON-LD 的**结构引号**
+      # 也吃掉了（"name":"X" → "name":X）；index.html 一处坏 ⇒ 16 个路由页由它生成 ⇒
+      # 全站 19 页结构化数据全部非法，**三天无人发现**，直到 Google Search Console 发邮件
+      # 「值类型不正确·严重问题会导致您的网页无法显示在搜索结果中」。
+      # 那三天里 §63 做的判重/canonical/Dataset 标注，Google 一个字都没读进去。
+      # 判据：每个 ld+json 块必须 json.loads 通过；扫到 0 个块也判红（尺子没上膛≠仓里没有）。
+      # 自检：python tools/check_jsonld.py --selftest（一正两负三样本）
+      - name: verify JSON-LD parses
+        run: python tools/check_jsonld.py
+      # 🔴 2026-09-05 建（Klay 令做 llms.txt + openapi 那套）：机器可读层是**生成物**，
+      # 而 llms.txt 与 data/README.md 是手改的 —— 手改了不重出，llms-full.txt 与 openapi.json
+      # 就会静静地过期，且**过期的机器可读层比没有更坏**（模型会照着旧契约引用）。
+      # 判据＝生成器 --check：产物与「照当前源应生成的内容」不一致即红，逼人重出。
+      # 🚫 刻意不在 CI 里自动重写：那会让 CI 悄悄改站上的对外契约，改契约必须过人眼。
+      - name: verify machine-readable layer fresh
+        run: python scripts/build_machine_readable.py --check
       - name: notify Discord
         if: always()
         run: python scripts/notify_discord.py
@@ -189,3 +195,4 @@ jobs:
           LEDGER_RELIABLE: ${{ steps.verify.outputs.reliable }}
           # 空值（gaugemath 步骤没跑成）→ 不发这条告警也不谎报正常，JOB_STATUS 闸先响
           GAUGE_MATH_OK: ${{ steps.gaugemath.outputs.ok }}
+          DATA_COMMITTED: ${{ env.DATA_COMMITTED }}

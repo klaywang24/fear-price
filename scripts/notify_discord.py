@@ -6,6 +6,8 @@ import datetime as dt
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 
 SITE = "https://chronicle.klay-wang.com/"
@@ -23,19 +25,37 @@ def pct(v):
     return ("+" if v > 0 else "") + f"{v:.2f}%"
 
 
-def post(url, payload):
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode(), method="POST",
-        headers={"Content-Type": "application/json",
-                 # Cloudflare 会 403 掉默认的 python-urllib UA
-                 "User-Agent": "Mozilla/5.0 (market-chronicle daily bot)"})
-    urllib.request.urlopen(req, timeout=20)
+def post(url, payload, tries=3, sleep=time.sleep):
+    """发一条；Discord 429 按 retry_after 等了再发（2026-09-25：原先不接，连发几条告警撞 429 抛 HTTPError，
+    后面的告警和日报卡全丢）。其余错误原样抛给 alert 去接。"""
+    body = json.dumps(payload).encode()
+    for i in range(tries):
+        req = urllib.request.Request(
+            url, data=body, method="POST",
+            headers={"Content-Type": "application/json",
+                     # Cloudflare 会 403 掉默认的 python-urllib UA
+                     "User-Agent": "Mozilla/5.0 (market-chronicle daily bot)"})
+        try:
+            urllib.request.urlopen(req, timeout=20)
+            return
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or i == tries - 1:
+                raise
+            try:
+                wait = float(json.loads(e.read().decode() or "{}").get("retry_after", 2))
+            except Exception:
+                wait = 2.0
+            sleep(min(max(wait, 0.5), 30))
 
 
 def alert(url, title, desc):
-    """管线出事时发红色告警。宁可吵，也不要静默——2026-07-12→14 就是被静默掉的。"""
-    post(url, {"embeds": [{"title": title, "description": desc, "color": 0xD93025}]})
-    print(f"已发告警: {title}")
+    """管线出事时发红色告警。宁可吵，也不要静默——2026-07-12→14 就是被静默掉的。
+    每条单独接住（2026-09-25）：一条发不出去不许连累后面的告警与日报卡。"""
+    try:
+        post(url, {"embeds": [{"title": title, "description": desc, "color": 0xD93025}]})
+        print(f"已发告警: {title}")
+    except Exception as e:  # noqa: BLE001
+        print(f"告警发送失败（{type(e).__name__}: {e}）：{title}", file=sys.stderr)
 
 
 def main():
@@ -49,8 +69,13 @@ def main():
 
     # ① job 本身失败 → 立刻红色告警，绝不发正常播报（旧 JSON 会让它看起来一切正常）
     if status and status != "success":
-        alert(url, f"🔴 daily-update 失败（{status}）",
-              f"站上数据**没有更新**，仍是上一次成功时的值。\n请查日志：{run_url}")
+        # 2026-09-25：站点 HTML 检查挪到了数据提交之后 ⇒ job 失败不再等于数据没更新；按提交步骤留的标记分开说
+        if os.environ.get("DATA_COMMITTED") == "1":
+            alert(url, f"🟠 daily-update 部分失败（{status}）",
+                  f"今天的数据**已更新并提交**；之后的步骤（站点检查／存档／见证）有失败，站点代码或存档需要看一眼。\n日志：{run_url}")
+        else:
+            alert(url, f"🔴 daily-update 失败（{status}）",
+                  f"站上数据**没有更新**，仍是上一次成功时的值。\n请查日志：{run_url}")
         sys.exit(0)
 
     d = load("pulse")
