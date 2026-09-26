@@ -44,6 +44,9 @@ jobs:
       #      ③判据从 JSON 里读 overall，不靠 $?（它已被 || true 吃掉）
       - name: witness health check
         id: health
+        # 2026-09-25：check_daily_dispatched 调 Actions API；原先没传 token ⇒ 匿名请求（共享 IP 易撞限流误报），actions: read 白申请
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/check_witness_health.py --json > /tmp/health.json 2>/dev/null || true
           python scripts/check_witness_health.py      > /tmp/health.txt  2>&1 || true

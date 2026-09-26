@@ -5,6 +5,7 @@ on:
   workflow_dispatch: {}
 permissions:
   contents: write
+  actions: read    # 2026-09-25：witness health 的 check_daily_dispatched 读 Actions 运行历史（写了 permissions 块，未列的即为无）
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -110,6 +111,8 @@ jobs:
           node scripts/test_witness_fixtures.js      # 看板判据同一份样本（runner 自带 node）
       - name: witness health
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # 2026-09-25：Actions API 走认证，不撞匿名限流
         run: |
           set +e
           python scripts/check_witness_health.py --record
