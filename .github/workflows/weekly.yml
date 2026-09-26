@@ -25,3 +25,6 @@ jobs:
           git commit -m "data: weekly fundamentals $(date -u +%F)" || echo "no changes"
           git pull --rebase origin main
           git push
+      # 2026-09-25: after the commit, so a macrotrends outage never blocks the week's data; fails the job when
+      # more than 5 tickers had to carry last week's history (09-24 wiped all 35 and the job still passed).
+      - run: python scripts/build_fundamentals.py --check-carried 5

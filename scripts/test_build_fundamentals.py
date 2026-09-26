@@ -63,6 +63,7 @@ def run(ticker_cls, fx):
     written = {}
     bf.write_json = lambda name, obj: written.__setitem__(name, obj)
     bf.mt_fetch = lambda *a, **k: []
+    bf.previous_fund = lambda ticker: {}
     bf.time.sleep = lambda s: None
     bf.yf.Ticker = ticker_cls
     bf._fx_to_usd = lambda cur: fx.get(cur)
@@ -128,6 +129,22 @@ def main():
     check("TWD filer: market cap uses the quote currency", snap.get("market_cap") == 1_000_000_000 and snap.get("market_cap_currency") == "USD")
     check("nothing written to disk (only the intercepted writer was called)", set(w) == {"s_test_fund.json"})
 
+    # 2026-09-25: a macrotrends page that comes back empty must not wipe the published history
+    prev = {"pe": {"dates": ["2025-12-31"], "values": [30.1]}, "eps": {"dates": ["2025-12-31"], "values": [6.0]},
+            "driver": [{"year": 2025}], "roe": {"dates": ["2025"], "values": [1.5]}, "history_as_of": "2026-09-19"}
+    fund = {"ticker": "T"}
+    carried = bf.carry_history(fund, {p: [] for p in bf.PAGE_KEYS}, prev, "2026-09-26")
+    check("empty macrotrends pages keep the last published history (09-24 wiped 35/35)",
+          fund.get("pe") == prev["pe"] and fund.get("roe") == prev["roe"] and set(carried) == {"pe", "eps", "driver", "roe"})
+    check("carried history says where it came from, and is not re-dated to today",
+          fund["history_carried"]["from"] == "2026-09-19" and fund["history_as_of"] == "2026-09-19")
+    fund = {"ticker": "T", "roe": {"dates": ["2026"], "values": [9.9]}}
+    carried = bf.carry_history(fund, {"roe": [["2026", "x"]], "pe-ratio": []}, prev, "2026-09-26")
+    check("a page that did return rows is never overwritten by the old file",
+          fund["roe"]["values"] == [9.9] and "roe" not in carried and fund["history_as_of"] == "2026-09-26")
+    fund = {"ticker": "T"}
+    bf.carry_history(fund, {p: [] for p in bf.PAGE_KEYS}, {}, "2026-09-26")
+    check("nothing to carry and nothing fetched: keys stay absent (never invented)", "pe" not in fund and "history_carried" not in fund)
     print("pass" if not FAILS else f"FAIL {len(FAILS)}")
     return 1 if FAILS else 0
 

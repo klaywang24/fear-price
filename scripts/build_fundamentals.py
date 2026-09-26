@@ -9,8 +9,10 @@
 拉取失败的字段留空，前端按可用性渲染；绝不伪造数字。
 """
 import json
+import os
 import re
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -130,6 +132,44 @@ def previous_snapshot(ticker: str):
         return None
 
 
+# Which published keys each macrotrends page feeds (2026-09-25). When a page comes back empty this run,
+# its keys are carried from the last published file instead of vanishing from the site.
+PAGE_KEYS = {"pe-ratio": ("pe", "eps", "driver"), "ps-ratio": ("ps",), "price-book": ("pb_hist",),
+             "roe": ("roe",), "roic": ("roic",), "free-cash-flow": ("fcf",)}
+CARRIED = {}   # ticker -> keys carried this run (read by main for the run report)
+
+
+def previous_fund(ticker: str) -> dict:
+    """The fundamentals file last published for this ticker (committed data file), or {}."""
+    try:
+        return json.loads((DATA / f"s_{safe_ticker(ticker)}_fund.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001  no previous file, or unreadable
+        return {}
+
+
+def carry_history(fund: dict, mt: dict, prev: dict, today: str) -> list:
+    """Fill keys whose macrotrends page came back empty from the previous file; mark provenance.
+
+    2026-09-25: a macrotrends outage on 09-24 wrote every s_*_fund.json without pe/eps/driver/pb_hist/
+    roe/roic/fcf (35/35) and the job still passed; the site's history charts went blank. Returns the keys
+    carried. Never invents values: a key absent from the previous file stays absent."""
+    carried = []
+    for page, keys in PAGE_KEYS.items():
+        if mt.get(page):
+            continue
+        for k in keys:
+            if k not in fund and prev.get(k):
+                fund[k] = prev[k]
+                carried.append(k)
+    fresh = any(mt.get(p) for p in PAGE_KEYS)
+    fund["history_as_of"] = today if fresh else (prev.get("history_as_of") or prev.get("history_carried", {}).get("from"))
+    if carried:
+        fund["history_carried"] = {"keys": carried,
+                                   "from": (prev.get("history_carried", {}).get("from") if not fresh and prev.get("history_carried")
+                                            else prev.get("history_as_of")) or "previous build"}
+    return carried
+
+
 def build_stock_fund(ticker: str):
     sym = MT_SYMBOL.get(ticker, ticker)
     fund = {"ticker": ticker, "mt_symbol": sym}
@@ -180,6 +220,11 @@ def build_stock_fund(ticker: str):
         annual = [r for r in rows if r[0].endswith("12-31")] or rows
         fund["fcf"] = {"dates": [r[0][:4] for r in annual],
                        "values": [num(r[1]) for r in annual]}
+
+    _c = carry_history(fund, mt, previous_fund(ticker), datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    if _c:
+        CARRIED[ticker] = _c
+        print(f"  {ticker} history carried from the last published file: {', '.join(_c)}")
 
     # ---- yfinance：快照 / 近4年报表 / 分红史 ----
     # 美股含点代码（BRK.B）Yahoo 用连字符；欧股（MC.PA）带点有效，靠 marketCap 判空回退
@@ -282,8 +327,32 @@ def main():
             "rows": peers,
             "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         })
+    report = os.path.join(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir(), "fund_carried.json")
+    with open(report, "w", encoding="utf-8") as f:
+        json.dump(CARRIED, f, ensure_ascii=False)
+    if CARRIED:
+        print(f"history carried for {len(CARRIED)} ticker(s): {sorted(CARRIED)}")
     print("done.")
 
 
+def check_carried(limit: int) -> int:
+    """Run after the data is committed: fail the job (so it is noticed) when more than `limit` tickers had
+    to carry history. Kept out of the build step so a macrotrends outage never blocks the week's commit."""
+    report = os.path.join(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir(), "fund_carried.json")
+    try:
+        carried = json.load(open(report, encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"::error::no build report ({type(e).__name__}); the build step did not finish")
+        return 1
+    if len(carried) > limit:
+        print(f"::error::macrotrends history came back empty for {len(carried)} tickers (> {limit}); "
+              f"the site shows the last published history for: {sorted(carried)}")
+        return 1
+    print(f"history carried for {len(carried)} ticker(s) (limit {limit}) — ok")
+    return 0
+
+
 if __name__ == "__main__":
+    if "--check-carried" in sys.argv:
+        sys.exit(check_carried(int(sys.argv[sys.argv.index("--check-carried") + 1])))
     main()
