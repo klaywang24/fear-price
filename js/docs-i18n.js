@@ -102,7 +102,7 @@
     refunds: {
       en: { kicker: "REFUNDS", h1: "Refund Policy", dek: "Last updated: 2026-07-14",
         body: `<h3>Scope</h3>
-<p>This policy covers the site's paid subscription: <strong>Standard — the daily pre-market data digest</strong> ($29 / month, or $290 / year). Everything on the website itself — all charts, ledgers and methodology — is <strong>free, permanently</strong>, and no refunds apply to it.</p>
+<p>This policy covers the site's paid subscriptions: <strong>Standard — the daily pre-market data digest</strong> ($29 / month, or $290 / year) and <strong>Pro</strong> ($590 / year, annual only). Everything on the website itself — all charts, ledgers and methodology — is <strong>free, permanently</strong>, and no refunds apply to it.</p>
 <h3>Terms</h3>
 <ul>
 <li><strong>14-day no-questions refund</strong>: if you're not satisfied within 14 days of subscribing, you get a full refund, no reason needed;</li>
@@ -165,13 +165,14 @@
       <li>No ads · no paywall · no sign-up</li>
     </ul>
 <!-- 2026-07-26 用户裁：免费名单入口恢复（中英同改，EN 定价面板由本文件整块替换）。 -->
-    <form class="ledger-sub" action="https://buttondown.com/api/emails/embed-subscribe/klay24" method="post">
+<!-- 2026-09-25 修：EN 这里仍是 Buttondown 表单（该账号 08-11 已终止，POST 返回 400＝英文访客的邮箱掉进虚空）；
+     中文版 08-11 已改为直跳 /subscribe（Substack），EN 当时漏改。与中文同构。 -->
+    <div class="ledger-sub">
       <div class="sub-row">
-        <input class="sub-input" type="email" name="email" required placeholder="you@email.com" aria-label="Email">
-        <button class="sub-btn" type="submit">Subscribe free</button>
+        <a class="sub-btn" href="/subscribe" style="display:inline-block;text-align:center;text-decoration:none">Subscribe free</a>
       </div>
       <div class="sub-note">Free · triggered by readings, not the calendar · unsubscribe anytime, no ads</div>
-    </form>
+    </div>
   </div>
   <div class="ptier featured">
     <div class="ptier-name">Standard</div>
@@ -192,24 +193,32 @@
   </div>
   <div class="ptier t-pro">
     <div class="ptier-name">Pro</div>
-    <div class="ptier-price"><span class="p-m">$99<i class="u">/ mo</i></span><span class="p-y">$990<i class="u">/ yr</i></span></div>
-    <div class="ptier-tag"><span class="p-m">For professionals · data autonomy</span><span class="p-y">≈ $82.5 / mo · annual = 10 months' price</span></div>
+<!-- 2026-09-25 与中文同步：Pro 仅年付 $590；只写现在能交付的，提醒与 API 标 planned。 -->
+    <div class="ptier-price"><span class="p-m">$590<i class="u">/ yr</i></span><span class="p-y">$590<i class="u">/ yr</i></span></div>
+    <div class="ptier-tag"><span class="p-m">Annual only · use the ruler yourself</span><span class="p-y">≈ $49 / mo · annual only</span></div>
     <ul class="ptier-list">
       <li>Everything in Standard</li>
-      <li>CSV / data export + full-history downloads</li>
-      <li>Email notice when a reading crosses your threshold</li>
-      <li>API (later)</li>
+      <li>Full-history download (CSV) for every ruler: one method, from the start to today</li>
+      <li>Component series, including the macro transmission chain (rates, credit, equities)</li>
+      <li>Custom threshold alerts, API (planned)</li>
     </ul>
     <div class="ptier-foot">
-      <div class="ptier-soon">Opens 3–6 months after Standard launches</div>
+      <a class="ptier-cta" href="contact" id="pro-btn"><span class="p-m">Get Pro $590 / yr</span><span class="p-y">Get Pro $590 / yr</span></a>
     </div>
   </div>
 </div>
 <p class="pay-methods"><span class="pay-label"><strong>Payment methods</strong>: </span><span class="pay-body"><img class="pay-ico" src="icons/pay/visa.svg" alt="" loading="lazy">Visa / <img class="pay-ico" src="icons/pay/mastercard.svg" alt="" loading="lazy">Mastercard / <img class="pay-ico" src="icons/pay/paypal.svg" alt="" loading="lazy">PayPal / <img class="pay-ico" src="icons/pay/applepay.svg" alt="" loading="lazy">Apple Pay / <img class="pay-ico" src="icons/pay/unionpay.svg" alt="" loading="lazy">UnionPay credit cards.<br><img class="pay-ico" src="icons/pay/alipay.svg" alt="" loading="lazy">Alipay / <img class="pay-ico" src="icons/pay/wechatpay.svg" alt="" loading="lazy">WeChat Pay / <img class="pay-ico" src="icons/pay/unionpay.svg" alt="" loading="lazy">UnionPay debit cards are not supported.</span></p>
 <p><strong>The numbers are everywhere, free forever.</strong> The archive earns its keep on every selloff that comes after: that morning, you are already holding a reading whose method has not changed in fifteen years.</p>
-<p class="pricing-inst"><strong>Institutional / data licensing</strong> (series licensing, index licensing, redistribution) — <a href="contact">contact us</a>; unpriced.</p>
-<p>Annual = 10 months' price ($290 / $990). Payment is handled by Paddle; this site provides data and information only, and is not investment advice or any buy or sell recommendation.</p>
-<p class="doc-fineprint">Pro and API are later plans; email us if you need them.</p>` },
+<div class="pricing-inst">
+  <p><strong>Institutional / data licensing</strong>: for funds, RIAs, family offices, broker research and financial media.</p>
+  <ul>
+    <li><b>What is licensed</b>: commercial use; the right to cite and redistribute in research and client materials; full history plus daily updates.</li>
+    <li><b>Verifiable</b>: every daily reading carries a public timestamp (Git commit history, hash chain, third-party archives and a DOI); every change of method is logged in public.</li>
+    <li><b>Scope</b>: series computed by this site whose upstream data terms allow redistribution, confirmed use by use.</li>
+    <li><b>How</b>: <a href="contact">contact us</a> with your use and scope; priced by use, delivered under a license agreement.</li>
+  </ul>
+</div>
+<p>Standard annual = 10 months' price ($290); Pro is annual only at $590. Payment is handled by Paddle; this site provides data and information only, and is not investment advice or any buy or sell recommendation.</p>` },
     },
   };
 

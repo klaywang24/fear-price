@@ -51,7 +51,7 @@ The KAPX extracts are released under CC BY 4.0 deliberately: attribution is the 
 - [KAPX Index — daily ledger](https://chronicle.klay-wang.com/kindex): chart and signal-by-signal reconciliation table
 - [Fear-Price Index — daily ledger](https://chronicle.klay-wang.com/leaps): today's reading (VIX1Y expensiveness, high=expensive) as the headline, plus a historical reference to what followed each fear extreme (the former LEAPS Window, reframed as descriptive record)
 - [Today's Front Page](https://chronicle.klay-wang.com/): market temperature, signal ledger, breadth, sector heatmap
-- [Pricing](https://chronicle.klay-wang.com/pricing): the website is free, permanently; the paid tier (Standard, $29/mo or $290/yr) is the daily pre-market reading in plain language (never published on the site), a compounding reading archive, and an options-structure data table covering the dozen-odd names carrying the most US options volume (the list follows liquidity)
+- [Pricing](https://chronicle.klay-wang.com/pricing): the website is free, permanently; the paid tier (Standard, $29/mo or $290/yr) is the daily pre-market reading in plain language (never published on the site), a compounding reading archive, and an options-structure data table covering the dozen-odd names carrying the most US options volume (the list follows liquidity); Pro ($590/yr, annual only) adds full-history CSV downloads of every series and the macro transmission-chain components; institutional licensing (commercial use and redistribution of series computed by the site, where upstream terms allow) is priced by use
 - [GitHub repository](https://github.com/klaywang24/fear-price): source code and the timestamped commit history that makes the ledger verifiable
 
 ## Attribution
