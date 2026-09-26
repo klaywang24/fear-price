@@ -892,7 +892,7 @@ def build_macro():
         "tga": ("WTREGEN", lambda s: _weekly(s / 1e3, 1)),          # 财政部一般账户·百万→十亿美元
         "reserves": ("WRESBAL", lambda s: _weekly(s / 1e6, 3)),     # 银行准备金·百万→万亿美元
         # 期限溢价：长端「额外要的补偿」，与 dgs10 的水平是两回事（水平涨可能只是短端预期涨）。
-        "term_premium": ("THREEFYTP10", lambda s: _weekly(s, 3)),   # ACM 10 年期限溢价·%
+        "term_premium": ("THREEFYTP10", lambda s: _weekly(s, 3)),   # 10 年期限溢价·%（美联储理事会 Kim-Wright，不是纽约联储 ACM）
         # 准备金余额利率：与已在拉的 sofr 配对才能算 SOFR-IORB 融资压力价差。
         # 🚫 价差本身**不在这里算**——存两条原始腿，派生值留给读的人（存派生值＝立第二把尺子）。
         "iorb": ("IORB", lambda s: _weekly(s, 2)),                  # 准备金余额利率·%
