@@ -80,7 +80,7 @@
      阻塞加载会白屏数秒；display=swap 保证先用系统字渲染，字体到达再替换） -->
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="css/style.css?v=20260924a">
+<link rel="stylesheet" href="css/style.css?v=20260926b">
 <script>
 // 主题先于渲染应用，避免闪白
 (function () {
@@ -363,11 +363,24 @@ if (window.Paddle) {
   const PADDLE_PRICES = {
     m: "pri_01kxgfsayca5nv3re1103pzvew", // Standard $29 / Monthly
     y: "pri_01kxgg3h87b5e9rzd9gmky685g", // Standard $290 / Yearly
+    pro: "pri_01m3dy38cqph260rq2r8kr5dhs", // Pro $590 / Yearly（2026-09-26 建，仅年付，数量上限 1）
   };
   // 创始价带码链接（2026-07-17）：?code=XXX 时结账自动挂码：「我亲手给你开的价」，
   // 收礼的人连码都不用输。有码时强制按年价：创始价定义就是按年 $99（$290−$191），
   // 且 $191 的 flat 折扣绝不能落在 $29 月价上（负价/清零边界）。
   const FOUNDING_CODE = new URLSearchParams(location.search).get("code");
+  // Pro 只有年付，不看月付/年付切换，也不挂创始码（创始码 restrict_to 只指向 Standard 的价格）。
+  // 付完落到 welcome/?plan=pro：那页多一条全史 CSV 的交付说明，Standard 买家看不到。
+  // 用捕获阶段（第三个参数 true）：#pro-btn 的 href=contact 是站内路由链接，app.js 在 document
+  // 冒泡阶段先注册了路由拦截；不抢在它前面 preventDefault，结账弹出的同时背后页面会被切到 /contact。
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#pro-btn")) return;
+    e.preventDefault();
+    Paddle.Checkout.open({
+      items: [{ priceId: PADDLE_PRICES.pro, quantity: 1 }],
+      settings: { successUrl: "https://chronicle.klay-wang.com/welcome/?plan=pro" },
+    });
+  }, true);
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#pay-btn")) return;
     e.preventDefault();

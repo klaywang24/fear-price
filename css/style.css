@@ -1917,6 +1917,19 @@ html:not([lang^="zh"]) .jt-en { display: block; }
 .ptier > .ledger-sub,
 .ptier > .ptier-foot { margin-top: auto; }
 .ptier .sub-note { position: absolute; left: 20px; right: 20px; bottom: 16px; margin-top: 0; }
+/* 🔴 2026-09-26 Klay 令「单字换行、三个框间隔拉大」。实测 1440 宽下病因有两个：
+   ① `.doc-body ul { padding-left: 22px }` 比 `.ptier-list { padding: 0 }` 更具体，把 22px 缩进盖了回来；
+   ② 整排卡片被 .doc-page 限死在 760px，每卡 243px，扣掉内边距、缩进、箭头后文字只剩 179px。
+   修法：缩进归零；宽屏上**只让卡片这一排**撑出正文栏（正文、小字、机构块仍是 760，不动全站阅读宽度），
+   间距 16→28px；列表项 text-wrap: balance 把一条里的各行均分，末行不会只剩一两个字。
+   ⚠️ 不用 pretty：实测它只防末行单字，900/860 宽下仍落「分布」「温度）」两字；Klay 圈的「越厚」正是两字。
+   balance 对超过 6 行的段落不生效（Chrome 限制），本处每条最多 5 行。不支持的浏览器照旧折行，无副作用。
+   三卡等宽仍由上面的 minmax(0, 1fr) 保证，这里只改外框宽度。 */
+.doc-body .ptier-list { padding-left: 0; }
+.ptier-list li { text-wrap: balance; }
+@media (min-width: 900px) {
+  .pricing-tiers { --tiers-w: min(1040px, calc(100vw - 80px)); width: var(--tiers-w); margin-left: calc(50% - var(--tiers-w) / 2); gap: 28px; }
+}
 .ledger-sub { margin-top: 12px; }
 .sub-row { display: flex; flex-direction: column; gap: 8px; }
 .sub-input {

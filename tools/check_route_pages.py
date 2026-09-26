@@ -28,7 +28,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from build_route_pages import BASE, ROUTES, expected_sitemap_urls  # noqa: E402
+from build_route_pages import BASE, ROUTES, expected_sitemap_urls, patch  # noqa: E402
 
 NOINDEX_PAGES = ["pay", "welcome", "check-inbox", "confirmed"]
 errors = []
@@ -42,6 +42,8 @@ def err(msg):
 def panel_ids(html):
     return re.findall(r'id="panel-([a-z]+)"', html)
 
+
+INDEX_SRC = (ROOT / "index.html").read_text(encoding="utf-8")
 
 # ① ② 每个路由页：只含自己的 panel + canonical 自指
 for route in ROUTES:
@@ -61,6 +63,13 @@ for route in ROUTES:
         err(f"{route}.html：canonical 不自指（找不到 {want}）")
     if f'<meta property="og:url" content="{BASE}/{route}">' not in html:
         err(f"{route}.html：og:url 不自指")
+    # ①b 2026-09-26 补：路由页必须与「用当前 index.html 重新生成」逐字一致。
+    #    实撞：改了 index.html 文末的结账脚本后只跑了 `build_route_pages.py pricing refunds`，
+    #    其余 14 个路由页的页尾脚本停在旧版，本闸原来只查 panel 与 canonical，照样全绿。
+    #    生成函数直接调 build_route_pages.patch（一处判据一个实现），不在这里另写一份。
+    title, desc = ROUTES[route]
+    if html != patch(INDEX_SRC, route, title, desc):
+        err(f"{route}.html 与 index.html 重新生成的结果不一致（改了 index 只重建了部分路由页？跑 `python3 scripts/build_route_pages.py` 全量）")
 
 # ③ 任意两页 body 不得相同（index 也参与：路由页不许和首页正文一模一样）
 bodies = {}
