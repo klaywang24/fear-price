@@ -122,5 +122,38 @@ check("3d all healthy: nothing stale, carried_forward empty",
       not any(x.get("stale") for x in doc["members"]) and doc["meta"]["carried_forward"] == []
       and not any(r.get("stale") for r in doc["ratios"].values()))
 
+# ---- 4. vol_family (2026-09-25): same two fixes as vol_indices ----
+import json as _json
+import tempfile as _tf
+from pathlib import Path as _P
+_tmp = _P(_tf.mkdtemp())
+bd.DATA = _tmp
+(_tmp / "vol_family.json").write_text(_json.dumps({"members": [
+    {"symbol": s, "label": s, "current": 30.0, "date": "2026-09-22"} for s in bd.VOL_FAMILY]}), encoding="utf-8")
+stale_cboe = good[good.index <= pd.Timestamp("2026-09-23")]
+bd._yahoo_close = lambda sym: pd.Series([31.5], index=pd.to_datetime(["2026-09-24"]))
+
+
+def fam(failing):
+    def fake(sym):
+        if sym in failing:
+            raise ConnectionError("cboe down")
+        return stale_cboe.copy()
+    bd._cboe_close = fake
+    captured.clear()
+    bd.build_vol_family(good.copy())
+    return captured["vol_family.json"]
+
+
+doc = fam(set())
+m = {x["symbol"]: x for x in doc["members"]}
+check("4 vol_family: Cboe stale at 09-23, Yahoo has 09-24 => topped up and recorded",
+      m["VXAPL"]["date"] == "2026-09-24" and m["VXAPL"]["current"] == 31.5
+      and doc["meta"]["yahoo_patched"].get("VXAPL") == ["2026-09-24"])
+doc = fam({"VXGS"})
+m = {x["symbol"]: x for x in doc["members"]}
+check("4 vol_family: Cboe down for VXGS => carried with old date, stale, named in meta",
+      m["VXGS"]["stale"] is True and m["VXGS"]["date"] == "2026-09-22" and doc["meta"]["carried_forward"] == ["VXGS"])
+
 print("\n" + ("all passed" if not FAILS else f"{len(FAILS)} failed"))
 sys.exit(1 if FAILS else 0)

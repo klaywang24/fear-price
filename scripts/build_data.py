@@ -1883,13 +1883,36 @@ MIN_PCTILE_DAYS = 250   # 与 _roll_pctile 的 min_periods 一致；不足就报
 def build_vol_family(vix_close: pd.Series):
     """个股/板块 30 天波动率的贵贱百分位 → data/vol_family.json。拉挂了留旧文件。"""
     print("== 波动率家族（个股与板块）")
-    members, series_cache = [], {}
+    members, series_cache, patched, carried = [], {}, {}, []
+    try:
+        prev_members = {m.get("symbol"): m for m in
+                        json.loads((DATA / "vol_family.json").read_text(encoding="utf-8")).get("members") or []}
+    except Exception:
+        prev_members = {}
     for sym, label in VOL_FAMILY.items():
         try:
             s = _cboe_close(sym).dropna()
+            if s.empty:
+                raise ValueError("Cboe 返回空序列")
         except Exception as e:
-            print(f"  {sym} 拉取失败，跳过: {e}")
+            # 🔴 2026-09-25（与 vol_indices 同一修法·§398）：原先 Cboe 一挂这只就从页面消失。沿用上一份并标 stale。
+            old = prev_members.get(sym)
+            if old:
+                members.append(dict(old, stale=True, stale_reason=f"Cboe 拉取失败（{type(e).__name__}），沿用上一份已发布读数"))
+                carried.append(sym)
+                print(f"  ⚠️ {sym} Cboe 拉取失败，沿用上一份已发布读数（{old.get('date')}）: {str(e)[:60]}")
+            else:
+                print(f"  ⚠️ {sym} Cboe 拉取失败且无旧读数可沿用，本轮缺: {str(e)[:60]}")
             continue
+        # 🔴 2026-09-25：Cboe 停更（09-22/09-23 实犯）时雅虎补更新的日期。雅虎 ^<代码> 与 Cboe 同日同值
+        #    （09-25 七只逐只核对 7/7 一致），只补 Cboe 没有的新日期、16:30 前不收当日（同 _vol_yahoo_topup）。
+        try:
+            s, got = _vol_yahoo_topup(sym, s, ysym="^" + sym)
+        except Exception as e:
+            print(f"  ⚠️ {sym}: 雅虎补新日期出错（{type(e).__name__}），按 Cboe 原样用")
+            got = []
+        if got:
+            patched[sym] = got
         series_cache[sym] = s
         enough = len(s) >= MIN_PCTILE_DAYS
         members.append({
@@ -1933,6 +1956,7 @@ def build_vol_family(vix_close: pd.Series):
             "nature": "描述性温度计，非交易信号/非预测；仅为数据，非投资建议。",
             "comparability": "绝对 IV 不可横向比（个股天然高于指数）；可横向比的只有百分位——它是各自跟自己的历史比。",
             "roster_note": "Cboe 个股 VIX 仅 5 只，2011-01-07 同批上市后未再扩容，是当年期权流量王的名单，不含 NVDA/TSLA/META。",
+            "yahoo_patched": patched, "carried_forward": carried,
         },
         "members": members,
         "dispersion": dispersion,
@@ -2108,7 +2132,7 @@ VOL_INDICES = {
 VOL_INDEX_YAHOO = {"VIX": "^VIX", "VXN": "^VXN", "VXD": "^VXD", "VVIX": "^VVIX"}
 
 
-def _vol_yahoo_topup(sym: str, s: pd.Series):
+def _vol_yahoo_topup(sym: str, s: pd.Series, ysym: str = None):
     """Cboe 末日落后于雅虎 ⇒ 只把雅虎更新的日期接到末尾。返回 (序列, 补上的日期列表)。
 
     🔴 今天这一行不收，除非已过 16:30 ET：VIX 在美东凌晨 3 点就开盘（全球交易时段），
@@ -2116,7 +2140,7 @@ def _vol_yahoo_topup(sym: str, s: pd.Series):
        云端 00:05 那班若照收，就会把盘前实时值当收盘入账。
     与温度计的 _patch_stale_with_yahoo 分开写：那个把补过的日期记进全局 _YAHOO_PATCHED、写进 leaps_gauge 的 meta，
     复用会把本家族的日期混进温度计的来源记录。"""
-    ysym = VOL_INDEX_YAHOO.get(sym)
+    ysym = ysym or VOL_INDEX_YAHOO.get(sym)
     if not ysym or s.empty:
         return s, []
     try:

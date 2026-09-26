@@ -3197,7 +3197,8 @@
       grid: { left: 118, right: 44, top: 22, bottom: 34 },
       // 轴名去掉：卡片标题已写「贵贱百分位」，放轴末尾会跟「100」刻度重叠（2026-07-20 用户指出）
       xAxis: Object.assign({ type: "value", min: 0, max: 100 }, baseAxis(p)),
-      yAxis: Object.assign({ type: "category", data: rows.map((r) => r.label) },
+      // 2026-09-25：Cboe 挂时沿用上一份读数（stale）⇒ 标签带旧日期，不冒充今天的数（同 vol_indices）
+      yAxis: Object.assign({ type: "category", data: rows.map((r) => r.label + (r.stale ? " · " + String(r.date).slice(5) : "")) },
         baseAxis(p), { axisLabel: { color: p.muted, fontSize: 11 } }),
       // 配色沿用 VRP 四格的定案：由浅到深猩红（#E8735A→#A0392F），纯视觉层级、不编码含义。
       // 全都 ≥60 时若一律用 danger，六根同色的墙会让 86.6 和 98.7 除了长度毫无区别。
