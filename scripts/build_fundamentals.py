@@ -2,7 +2,7 @@
 """个股基本面管线（每周更新，与每日价格管线分离）。
 
 数据源：
-- 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：SEC EDGAR 原始申报值 + 雅虎复权价，本站自算，见 edgar_history.py
+- 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：SEC EDGAR 原始申报值 + 雅虎收盘价（拆股已调），本站自算，见 edgar_history.py
   （2026-09-26 起替代 macrotrends：其 09-24 起整站 Cloudflare 人机验证，自动访问一律 403。ROIC 暂无同定义替代，沿用上一版；
    台积电/法拉利/LVMH/爱马仕/Visa/Circle 冻结沿用（闪迪 09-26 解冻），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
 - yfinance：当前快照指标、近 4 年报表、完整分红史
@@ -26,7 +26,7 @@ import yfinance as yf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_data import BASKETS, DATA, safe_ticker, write_json, UA
 
-from edgar_history import history_rows, FROZEN_TICKERS, ROIC_NOT_APPLICABLE  # noqa: E402  长历史：SEC 原始申报 + 雅虎复权价（2026-09-26 起）
+from edgar_history import history_rows, FROZEN_TICKERS, ROIC_NOT_APPLICABLE  # noqa: E402  长历史：SEC 原始申报 + 雅虎收盘价（拆股已调）（2026-09-26 起）
 
 HISTORY_PAGES = ("pe-ratio", "ps-ratio", "price-book", "roe", "roic", "free-cash-flow")   # 与旧源同名，下游不改
 
@@ -158,7 +158,7 @@ def carry_history(fund: dict, mt: dict, prev: dict, today: str) -> list:
 def build_stock_fund(ticker: str):
     fund = {"ticker": ticker}
 
-    # ---- 长历史：SEC 原始申报 + 雅虎复权价（edgar_history.py）。冻结票返回空页；任何失败留空 → carry_history 沿用上一版并标记，绝不伪造 ----
+    # ---- 长历史：SEC 原始申报 + 雅虎收盘价（拆股已调）（edgar_history.py）。冻结票返回空页；任何失败留空 → carry_history 沿用上一版并标记，绝不伪造 ----
     try:
         hist = history_rows(ticker, previous_fund(ticker))
     except Exception as e:  # noqa: BLE001

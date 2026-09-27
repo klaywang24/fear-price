@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""个股长历史（PE / EPS / PB / ROE / FCF）：SEC EDGAR 原始申报值 + 雅虎复权价，自建；2026-09-26 起替代 macrotrends（09-24 起整站 Cloudflare 人机验证，自动访问一律 403）。
+"""个股长历史（PE / EPS / PB / ROE / FCF）：SEC EDGAR 原始申报值 + 雅虎收盘价（拆股已调），自建；2026-09-26 起替代 macrotrends（09-24 起整站 Cloudflare 人机验证，自动访问一律 403）。
 
 产出与旧源同形状，build_fundamentals.py 下游（series_from / driver / carry_history）不改：
   {"pe-ratio": [[date, price, eps_ttm, pe], …], "ps-ratio": […], "price-book": […], "roe": […], "roic": [], "free-cash-flow": [[yyyy-12-31, fcf_$M], …]}
 
 口径（2026-09-26 与旧源 27 只逐季对过，PE/EPS/PB 差异 ≤1.1%、ROE ≤0.9 点；对账脚本与基线见工作区 ops/）：
-· 价格＝雅虎 Adj Close 月末（旧源即此口径：七个年份隐含价÷Adj Close 全部＝1.000）；日期标签＝财季末所在月的月末（英伟达 1/4/7/10、美光 2/5/8/11）。
+· 价格＝雅虎月末收盘价（Close，只做拆股调整、不做除息调整）；2026-09-27 Klay 定与专业终端看齐：估值比率用当天真实价。
+  旧源用的是除息调整价（Adj Close），越早越低估（KO 1995 年 12 月两者差 119%），已发布的旧值按当日 Close÷Adj Close 换算过。
+  日期标签＝财季末所在月的月末（英伟达 1/4/7/10、美光 2/5/8/11）。
 · EPS_TTM＝四个单季之和；财报从不单独给第四季，Q4＝全年−前三季 YTD。每期取**当时原始申报值**（点时间口径），
   重述不回写：微软 2016–18 ASC 606 期与旧源有差（旧源把重述后全年减重述前 YTD 造出 0.86 的幻影季度）。
-· 拆股：SEC 存原始申报值，按申报日之后发生的拆股逐条回调（每股÷、股数×），与复权价对齐。
+· 拆股：SEC 存原始申报值，按申报日之后发生的拆股逐条回调（每股÷、股数×），与拆股调整后的收盘价对齐。
 · PB＝价÷(总权益÷流通股)，总权益含少数股东（旧源口径；可口可乐 6.8%→0.4%、盈透 283%→0.7%）。
 · ROE＝母公司净利 TTM ÷ 构成 TTM 的四个季末总权益均值（苹果五个时点精确相等）。
 · FCF＝财年 OCF − 资本开支（净额，扣处置回款；只认 10-K，亚马逊每份 10-Q 也报 12 个月滚动值）。
@@ -192,14 +194,14 @@ def _yf(ticker):
     return yf.Ticker("BRK-B" if ticker == "BRK.B" else ticker)
 
 def get_prices_me(ticker):
-    """月末 Adj Close（旧源口径：除息调整价）→ {yyyy-mm-dd: adj}；另返回最新交易日与价。"""
+    """月末收盘价 Close（拆股已调、分红未调＝当天真实价）→ {yyyy-mm-dd: close}；另返回最新交易日与价。"""
     import pandas as pd
     h = _yf(ticker).history(period="max", interval="1d", auto_adjust=False)
     if h.empty: raise RuntimeError(f"{ticker}: 雅虎无价格")
     if h.index.tz is not None: h.index = h.index.tz_localize(None)
-    me = h["Adj Close"].resample("ME").last().dropna()
+    me = h["Close"].resample("ME").last().dropna()
     prices = {d.date().isoformat(): round(float(v), 4) for d, v in me.items()}
-    latest = {"last_date": h.index[-1].date().isoformat(), "last_adj": round(float(h["Adj Close"].iloc[-1]), 4)}
+    latest = {"last_date": h.index[-1].date().isoformat(), "last_close": round(float(h["Close"].iloc[-1]), 4)}
     return prices, latest
 
 def get_shares_history(ticker):
@@ -419,7 +421,7 @@ def build(t, prev, src, do_stitch=True):
             ic.append(eqk + debt_at(k) - (near(CASH, k) or 0))
         if ROIC_EMIT and t not in ROIC_NOT_APPLICABLE and ic and st.mean(ic) > 0: rows["roic"].append([L, round(nopat / 1e6, 1), round(st.mean(ic) / 1e6, 1), round(nopat / st.mean(ic) * 100, 2)])
     if rows["pe-ratio"] and latest and last_eps:
-        rows["pe-ratio"].append([latest["last_date"], latest["last_adj"], "", round(latest["last_adj"] / last_eps, 2) if last_eps > 0 else 0.0])
+        rows["pe-ratio"].append([latest["last_date"], latest["last_close"], "", round(latest["last_close"] / last_eps, 2) if last_eps > 0 else 0.0])
     for fe, v in OCFa.items():
         if fe < FIRST: continue
         cx = CXa.get(fe)
@@ -475,7 +477,7 @@ class CacheSource:
     def prices(self, t):
         out = {}
         for r in csv.reader(open(f"{self.d}/prices_me/{t}.csv")):
-            if r and r[0][:1].isdigit(): out[r[0][:10]] = float(r[2])
+            if r and r[0][:1].isdigit(): out[r[0][:10]] = float(r[1])      # 列：Date,close,adj —— 用 close
         return out, json.load(open(f"{self.d}/prices/_latest.json")).get(t)
     def splits(self, t): return [tuple(x) for x in json.load(open(f"{self.d}/prices/_splits.json")).get(t, [])]
     def fx(self, cur):
@@ -579,7 +581,7 @@ def frozen_rows(t, prev, src):
         except Exception as ex:
             print(f"  {t} annual: {type(ex).__name__}: {str(ex)[:80]}")
     if last_eps and last_eps > 0 and latest:
-        pe_rows.append([latest["last_date"], latest["last_adj"], "", round(latest["last_adj"] / (pe_rows[-1][2] if pe_rows[-1][2] != "" else last_eps), 2)])
+        pe_rows.append([latest["last_date"], latest["last_close"], "", round(latest["last_close"] / (pe_rows[-1][2] if pe_rows[-1][2] != "" else last_eps), 2)])
     rows["pe-ratio"] = pe_rows
     return rows
 
