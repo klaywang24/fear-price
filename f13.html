@@ -318,7 +318,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
           const _tk = TKMAP[iss];
           const _lg = _tk ? '<img class="f13-logo" src="logos/' + _tk + '.png" alt="" onerror="this.remove()">' : '';
           h += '<div class="f13-srow"><div class="lbl">' + _lg + iss + '</div><div class="f13-mini">' +
-            ss.map((v, i) => '<div class="b" style="height:' + Math.max(3, v / m2 * 100) + '%" title="' + ps[i] + " " + N(v) + ' 股"></div>').join("") + "</div></div>";
+            ss.map((v, i) => '<div class="b" style="height:' + Math.max(3, v / m2 * 100) + '%" title="' + ps[i] + " " + N(v) + (_EN ? ' shares' : ' 股') + '"></div>')   /* 2026-09-27：原写死「股」，EN 态悬停漏中文 */.join("") + "</div></div>";
         }
       }
     } else if (c.solid) {
