@@ -3346,6 +3346,26 @@
     return g.filter((x) => x[1].length);
   }
   let crossMode = "dtc", crossGrp = "八巨头";
+  // 某只票在当前这一档有没有分位（补仓天数/持仓股数读 si.pctl，流量读 short_flow.current）
+  const hasCross = (si, sf, tk) => (crossMode === "flow" ? ((sf.current || {})[tk] || {}).pctile
+    : ((si.pctl || {})[tk] || {})[crossMode === "dtc" ? "cur_dtc" : "cur_si"]) != null;
+  /* 2026-09-27 Klay 定（选项 b）：切到流量档时，本档没有任何分位的组按钮变灰、点不了；当前组若整组没数，
+     自动跳到第一个有数的组。数据不动。流量档目前只有原 20 只里攒满三年的那些（新增 30 只与 09-23 加的 7 只 ETF 没有）。 */
+  async function syncGrpSeg() {
+    const box = document.getElementById("seg-sigrp");
+    if (!box || !box.children.length) return;
+    const [si, sf] = await Promise.all([load("short_interest"), load("short_flow")]);
+    const groups = siGroups(Object.keys(si.pctl || {}));
+    const n = Object.fromEntries(groups.map(([g, ts]) => [g, ts.filter((t) => hasCross(si, sf, t)).length]));
+    if (!n[crossGrp]) crossGrp = (groups.find(([g]) => n[g]) || groups[0])[0];
+    [...box.children].forEach((b) => {
+      const off = !n[b.dataset.k];
+      b.disabled = off;
+      b.style.opacity = off ? "0.35" : "";
+      b.style.cursor = off ? "not-allowed" : "";
+      b.setAttribute("aria-selected", String(b.dataset.k === crossGrp));
+    });
+  }
   function buildGrpSeg() {
     const box = document.getElementById("seg-sigrp");
     if (!box || box.children.length) return;
@@ -3357,6 +3377,7 @@
         b.setAttribute("aria-selected", String(n === crossGrp));
         box.appendChild(b);
       });
+      syncGrpSeg();
     });
   }
   buildGrpSeg();
@@ -3382,10 +3403,19 @@
         (crossMode === "flow" ? T("当日做空成交占比在自身三年历史中的位置。这是流量，与另外两档的存量口径不同。")
          : crossMode === "dtc" ? T("补仓天数 = 做空持仓 ÷ 日均成交量，除掉了规模，读的是相对拥挤度。")
          : T("持仓股数的分位。注意它有非平稳问题：多数票同时逼近高位，多半是尺子的问题不是市场的问题。"))
-        + (miss.length ? wideGap() + T("未显示：") + joinList(miss)
-           + (crossMode === "flow" && miss.some((t) => newOnly.has(t))
-              ? T("（流量档只有原 20 只：每日做空占比要攒满三年才给分位）")
-              : T("（历史不足，不给百分位：宁可不出数，也不出假数）")) : "")
+        // 未显示的票按原因分两段：新增 30 只在流量档没有数据源；其余是历史不足（SPCX 换发行人、SKHY 刚上市等）
+        + (() => {
+          const noSrc = crossMode === "flow" ? miss.filter((t) => newOnly.has(t)) : [];
+          const short = miss.filter((t) => !noSrc.includes(t));
+          return (noSrc.length ? wideGap() + T("未显示：") + joinList(noSrc)
+                    + T("（流量档只有原 20 只：每日做空占比要攒满三年才给分位）") : "")
+               + (short.length ? wideGap() + T("未显示：") + joinList(short)
+                    + T("（历史不足，不给百分位：宁可不出数，也不出假数）") : "");
+        })()
+        + (crossMode === "flow"
+           ? wideGap() + T("流量档目前覆盖") + " " + Object.keys(si.pctl || {}).filter((t) => hasCross(si, sf, t)).length
+             + " / " + Object.keys(si.pctl || {}).length + " " + T("只，没有数据的组已变灰。")
+           : "")
         + wideGap() + T("2026-09-26 起扩到 50 只；新增 30 只只发分位，不发原始持仓。");
     }
     if (!rows.length) {
@@ -3419,7 +3449,7 @@
       }],
     };
   });
-  segBind("seg-cross", (k) => { crossMode = k; rebuild("ch-short-interest"); });
+  segBind("seg-cross", async (k) => { crossMode = k; await syncGrpSeg(); rebuild("ch-short-interest"); });
   segBind("seg-sigrp", (k) => { crossGrp = k; rebuild("ch-short-interest"); });
 
   /* 叁 · 单票下钻：两把尺的分位逐期（2026-09-26 起，50 只同一口径；原先是持仓股数柱＋补仓天数线的原值图） */

@@ -23,7 +23,8 @@
 // 2026-09-26 → mc-v37：个股页 /t/ 上线，/t/ 改为先走网络。
 // 2026-09-27 → mc-v38：做空页扩到 50 只并分组、标签只写分位、单票下钻改分位线（外壳换了，回访者不能停在旧版）。
 // 2026-09-27 → mc-v39：做空页分组条窄屏改横排独占一行（mc-v38 上线后 800px 宽两条胶囊并排纵向堆叠）。
-const CACHE = "mc-v39";
+// 2026-09-27 → mc-v40：做空页流量档无数据的组变灰、自动跳到有数的组（Klay 选项 b）。
+const CACHE = "mc-v40";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());

@@ -327,6 +327,8 @@
     "（流量档只有原 20 只：每日做空占比要攒满三年才给分位）": [" (the flow measure covers only the original 20: daily short-volume share needs three full years before a percentile is given)", "", "", ""],
     "2026-09-26 起扩到 50 只；新增 30 只只发分位，不发原始持仓。": ["Expanded to 50 names on 2026-09-26; the 30 new names publish percentiles only, not raw short interest.", "", "", ""],
     "历史不足 24 期，不给百分位": ["Fewer than 24 periods of history; no percentile given", "", "", ""],
+    "流量档目前覆盖": ["The flow measure currently covers", "", "", ""],
+    "只，没有数据的组已变灰。": ["names; groups with no data are greyed out.", "", "", ""],
     "代码换过发行人，切断点": ["ticker changed issuer; history cut at", "", "", ""],
     "（历史不足，不给百分位：宁可不出数，也不出假数）": [" (insufficient history — no percentile is given; better no figure than a false one)", "", "", ""],
     "持仓": ["short interest", "", "", ""],
