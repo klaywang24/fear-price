@@ -46,13 +46,14 @@
     },
 
     privacy: {
-      en: { kicker: "PRIVACY", h1: "Privacy Policy", dek: "Last updated: 2026-07-05",
+      en: { kicker: "PRIVACY", h1: "Privacy Policy", dek: "Last updated: 2026-09-27",
         body: `<p class="doc-fineprint">This page is a compliance notice, not legal advice.</p>
 <h3>Overview &amp; operator</h3>
 <p>This is a pure static website hosted on Cloudflare Pages, with no accounts and no server backend. It is operated by an individual (the data controller). For any privacy request, email <a href="mailto:${EMAIL}">${EMAIL}</a>.</p>
 <h3>What we process, and on what basis</h3>
-<p>We do not collect personal information you submit. The only data that may be involved is:</p>
+<p>Apart from what you choose to provide when you subscribe or pay, we do not collect your personal information. The data that may be involved is:</p>
 <ul>
+<li><strong>Subscriptions and payments</strong>: email subscriptions and payments are handled by third-party providers, and the information you give them is processed under their own privacy policies. We receive only what we need to provide the service (such as your email address) and do not store your payment card details (basis: performing the service you requested).</li>
 <li><strong>Server access logs</strong>: when serving pages to you, the host (Cloudflare) may record technical information such as your IP and browser user-agent (basis: legitimate interest in providing the service). These logs are held and controlled by Cloudflare; we cannot access their details.</li>
 <li><strong>Browser local storage</strong>: used only to remember your day/night theme and interface language — functionally necessary, stored on your own device, never uploaded, and containing no personally identifying information.</li>
 </ul>
@@ -65,12 +66,13 @@
 <!-- 2026-07-26 §45: TradingView heatmap removed; entry deleted with it. -->
 <li>parqet (assets.parqet.com) — company logo icons;</li>
 <li>Cloudflare Web Analytics (cloudflareinsights.com) — cookie-less aggregated visit statistics (pageviews, referrers, country); it sets no cookies and does no cross-site tracking, and we never see any individual visitor's identity or IP;</li>
+<li>the payment provider's checkout component — for payments;</li>
 <li>Cloudflare Pages (pages.dev) — the website host.</li>
 </ul>
 <h3>What we don't do</h3>
 <p>We <strong>do not sell, rent or trade your personal information</strong> (including any sale and sharing as defined by California's CCPA), and we run no targeted advertising.</p>
 <h3>Your rights</h3>
-<p>Under applicable law (such as the EU GDPR, UK GDPR, and California CCPA/CPRA) you may have rights to access, correct, delete, restrict or object to processing, and to data portability. Because we hold almost no data that identifies you, most requests can be fulfilled simply by clearing your browser data; if you need our help, email us and we will respond within a reasonable time. You also have the right to complain to your local data protection authority.</p>
+<p>Under applicable law (such as the EU GDPR, UK GDPR, and California CCPA/CPRA) you may have rights to access, correct, delete, restrict or object to processing, and to data portability. Preferences stored in your browser can be cleared at any time; for requests about your subscription or payment information, email us and we will respond within a reasonable time. You also have the right to complain to your local data protection authority.</p>
 <h3>Children</h3>
 <p>This site is not directed at children under 13, and we do not knowingly collect their information.</p>
 <h3>Changes &amp; contact</h3>
