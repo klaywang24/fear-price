@@ -15,8 +15,9 @@
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
 · ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自证监会数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
-· 冻结名单 FROZEN_TICKERS（7 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、Visa（股数按类别申报，接口无汇总，雅虎只给 A 类差 6–13%）、闪迪/Circle（上市不足两年）。
+· 冻结名单 FROZEN_TICKERS（6 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、Visa（EPS 按股份类别申报，汇总接口无；官方 A 类口径比旧线高 7–12%，待定）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
 · 证监会汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
+· 台积电（QUARTERLY_FOREIGN）2026-09-26 起季度往后接：雅虎季报（每 ADR、新台币，近 5 季）按期末月末汇率折美元，追加晚于旧线末点的季度；追加前用台湾证交所开放接口的官方累计 EPS 核对（差 >1% 或接口不通则不追加，下周自动补）；2026-03/06 两季与旧源对照 EPS -1.6%/-0.6%、PE ≈1%、ROE ≈0.5 点。年报此后只补 FCF。
 · 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
 · 伯克希尔：证监会 EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
 证监会要求 UA 带联系方式、≤10 请求/秒。"""
@@ -207,6 +208,24 @@ def get_fx_me(cur):
     if cur == "TWD": me = 1 / me
     return {d.date().isoformat(): float(v) for d, v in me.items()}
 
+def get_yahoo_quarterly(ticker):
+    """雅虎季报（外国票，报表币种）：{"eps":{季末:每ADR EPS}, "ni":{}, "eq":{}, "sh":{}}；只有最近约 5 季。"""
+    import pandas as pd
+    t = _yf(ticker); q, b = t.quarterly_income_stmt, t.quarterly_balance_sheet
+    def row(df, name): return {str(c.date()): float(v) for c, v in df.loc[name].items() if pd.notna(v)} if name in df.index else {}
+    return {"eps": row(q, "Diluted EPS"), "ni": row(q, "Net Income Common Stockholders") or row(q, "Net Income"),
+            "eq": row(b, "Stockholders Equity"), "sh": row(b, "Ordinary Shares Number")}
+
+def get_twse_latest(code):
+    """台湾证交所开放接口（官方）：该公司最新一季的累计基本 EPS（每普通股、新台币）→ (期末日, eps)；拿不到返回 None。"""
+    UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+    r = requests.get("https://openapi.twse.com.tw/v1/opendata/t187ap14_L", headers=UA, timeout=30); r.raise_for_status()
+    row = next((x for x in r.json() if x.get("公司代號") == code), None)
+    if not row: return None
+    y = int(row["年度"]) + 1911; qn = int(row["季別"])
+    end = {1: f"{y}-03-31", 2: f"{y}-06-30", 3: f"{y}-09-30", 4: f"{y}-12-31"}[qn]
+    return end, float(row["基本每股盈餘(元)"])
+
 def get_splits(ticker):
     s = _yf(ticker).splits
     return [(d.date().isoformat(), float(r)) for d, r in s.items() if d.year >= 2000 and float(r) > 0]
@@ -228,10 +247,11 @@ DEBT_TOT = ["LongTermDebt"]; STB = ["ShortTermBorrowings","CommercialPaper"]
 ROIC_EMIT = True    # 2026-09-26 Klay 定：按本站公开定义自算，不追旧源；整条自证监会数据起算，不与旧线缝合
 FROZEN_PRICE_TICKER = {"MC.PA": "LVMUY", "RMS.PA": "HESAY"}   # 旧源用 ADR（美元）算的，刷新末点也用 ADR 价
 ANNUAL_IFRS = {"TSM": ("TWD", 5), "RACE": ("EUR", 1)}            # 20-F 年报：报表币种、每 ADR 对应普通股数
+QUARTERLY_FOREIGN = {"TSM": {"cur": "TWD", "ratio": 5, "twse": "2330"}}   # 2026-09-26 Klay 定：台积电季度往后接（雅虎季报＋台湾证交所官方累计 EPS 核对）
 PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
 SHARES_FROM_YAHOO = {"BRK.B"}   # 证监会接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
-FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","SNDK","CRCL","V"}   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL","V"}   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "2005-01-01"
 
 # ───────── 构建 ─────────
@@ -360,6 +380,8 @@ class NetSource:
     def facts(self, t): return get_facts(t)
     def shares(self, t): return get_shares_history(t)
     def fx(self, cur): return get_fx_me(cur)
+    def yq(self, t): return get_yahoo_quarterly(t)
+    def twse(self, code): return get_twse_latest(code)
     def prices(self, t): return get_prices_me(t)
     def splits(self, t): return get_splits(t)
 
@@ -378,6 +400,8 @@ class CacheSource:
     def splits(self, t): return [tuple(x) for x in json.load(open(f"{self.d}/prices/_splits.json")).get(t, [])]
     def fx(self, cur):
         return {r[0][:10]: float(r[1]) for r in csv.reader(open(f"{self.d}/prices/_fx_{cur}.csv")) if r and r[0][:1].isdigit()}
+    def yq(self, t): return get_yahoo_quarterly(t)       # 本地复算也现拉（雅虎只给近 5 季，缓存意义不大）
+    def twse(self, code): return get_twse_latest(code)
     def shares(self, t):
         p = f"{self.d}/prices/_shares_{t}.csv"
         if not os.path.exists(p): return {}
@@ -406,6 +430,38 @@ def annual_ifrs_rows(t, src, F):
             out["free-cash-flow"].append([f"{fe[:4]}-12-31", round((ocf - cx) * st.mean(fx[k] for k in months) / 1e6, 1)])
     return out
 
+def foreign_quarterly_rows(t, src, after):
+    """台积电：雅虎季报 → 季度点（每 ADR 美元口径），只返回晚于 after[页] 的行。
+    TTM EPS＝四季每 ADR EPS 之和 × 期末月末汇率（与旧源对照：-1.6%、-0.6%，三种折算法里最贴）；PB＝月末价 ÷（母公司权益 ÷ 普通股 × 每ADR股数 × 汇率）；ROE＝四季净利 ÷ 四季末权益均值。
+    追加前用台湾证交所官方累计 EPS 核对当年各季之和（差 >1% 或接口不通则本周不追加，下周自动补）。"""
+    cfg = QUARTERLY_FOREIGN[t]; Y = src.yq(t); fx = src.fx(cfg["cur"]); prices, _ = src.prices(t)
+    qs = sorted(Y["eps"]); out = {"pe-ratio": [], "price-book": [], "roe": []}
+    if len(qs) < 4: return out, "雅虎季报不足 4 季"
+    try: tw = src.twse(cfg["twse"])
+    except Exception as ex: return out, f"台湾证交所接口不通（{type(ex).__name__}），本周不追加"
+    if not tw: return out, "台湾证交所无此代码"
+    tw_end, tw_eps = tw
+    ytd = [k for k in qs if k[:4] == tw_end[:4] and k <= tw_end]
+    if tw_end in Y["eps"]:
+        mine = sum(Y["eps"][k] for k in ytd) / cfg["ratio"]
+        if abs(mine - tw_eps) / abs(tw_eps) > 0.01: return out, f"雅虎与台湾证交所不符（{mine:.2f} vs 官方 {tw_eps:.2f}），本周不追加"
+        check = f"官方核对通过 {tw_end} 累计 EPS {tw_eps}"
+    else:
+        check = f"雅虎最新季 {qs[-1]} 尚无官方累计数（官方最新 {tw_end}），只追加已核对过的季度"
+    for i in range(3, len(qs)):
+        e = qs[i]
+        if e > max(tw_end, qs[0]) : continue            # 只追加官方已公布（核对过）的季度
+        four = qs[i - 3:i + 1]; L = month_end_label(e); p = prices.get(L); f = near(fx, e, 10, 5)
+        if not p or not f: continue
+        eps_usd = sum(Y["eps"][k] for k in four) * f
+        if L > after.get("pe-ratio", ""): out["pe-ratio"].append([L, round(p, 2), round(eps_usd, 2), round(p / eps_usd, 2) if eps_usd > 0 else 0.0])
+        if e in Y["eq"] and e in Y["sh"] and L > after.get("price-book", ""):
+            bvps = Y["eq"][e] / Y["sh"][e] * cfg["ratio"] * f; out["price-book"].append([L, round(p, 2), round(bvps, 2), round(p / bvps, 2)])
+        if all(k in Y["ni"] and k in Y["eq"] for k in four) and L > after.get("roe", ""):
+            ni = sum(Y["ni"][k] for k in four); eqa = st.mean(Y["eq"][k] for k in four)
+            out["roe"].append([L, ni, eqa, round(ni / eqa * 100, 2)])
+    return out, check
+
 def frozen_rows(t, prev, src):
     """冻结票：长历史沿用上一版（其它页留空由 carry_history 打标）；PE 末点按最新价 ÷ 最后一期 EPS 刷新；台积电/法拉利另追加晚于旧序列末点的年报行。"""
     rows = {}
@@ -415,9 +471,22 @@ def frozen_rows(t, prev, src):
     if not (isinstance(last_eps, (int, float)) and last_eps > 0): return {}     # LVMH/爱马仕旧序列 EPS 为空或 0：原样沿用，不动
     _, latest = src.prices(FROZEN_PRICE_TICKER.get(t, t))
     pe_rows = list(real)
+    if t in QUARTERLY_FOREIGN:
+        after = {"pe-ratio": real[-1][0], "price-book": ((prev.get("pb_hist") or {}).get("dates") or [""])[-1][:10], "roe": ((prev.get("roe") or {}).get("dates") or [""])[-1]}
+        after["price-book"] = max([d for d in ((prev.get("pb_hist") or {}).get("dates") or [""]) if d[5:7] in ("03", "06", "09", "12") and d[8:] in ("30", "31")] or [""])
+        try:
+            qrows, msg = foreign_quarterly_rows(t, src, after); print(f"  {t} 季度: {msg}；新增 PE {len(qrows['pe-ratio'])} / PB {len(qrows['price-book'])} / ROE {len(qrows['roe'])}")
+            pe_rows += qrows["pe-ratio"]
+            if qrows["price-book"]: rows["price-book"] = [r for r in prev_rows(prev, "pb_hist") if r[0] <= after["price-book"]] + qrows["price-book"]
+            if qrows["roe"]: rows["roe"] = prev_rows(prev, "roe") + qrows["roe"]
+            if qrows["pe-ratio"]: rows["_fresh"] = True
+        except Exception as ex:
+            print(f"  {t} 季度: {type(ex).__name__}: {str(ex)[:80]}（本周不追加）")
     if t in ANNUAL_IFRS:
         try:
             ann = annual_ifrs_rows(t, src, src.facts(t)); last_pe = real[-1][0]
+            if t in QUARTERLY_FOREIGN:     # 季度源在，年报只补 FCF
+                ann = {"pe-ratio": [], "price-book": [], "roe": [], "free-cash-flow": ann["free-cash-flow"]}
             pe_rows += [r for r in ann["pe-ratio"] if r[0] > last_pe]
             for page, key in (("price-book", "pb_hist"), ("roe", "roe")):
                 lastd = (prev.get(key) or {}).get("dates", [""])[-1]
@@ -438,7 +507,7 @@ def history_rows(ticker, prev=None, src=None):
     """给 build_fundamentals 用：返回与旧源同形状的六页行；冻结票只刷新 PE 末点（及台积电/法拉利年报追加），其余页留空由 carry_history 沿用上一版。"""
     if ticker in FROZEN_TICKERS:
         rows = frozen_rows(ticker, prev, src or NetSource())
-        return {k: v for k, v in rows.items() if not k.startswith("_")}
+        return {k: v for k, v in rows.items() if not k.startswith("_") or k == "_fresh"}
     rows, flags = build(ticker, prev, src or NetSource())
     if flags: print(f"  {ticker} history: {' '.join(flags)}")
     return {k: v for k, v in rows.items() if not k.startswith("_")}

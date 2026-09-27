@@ -4,7 +4,7 @@
 数据源：
 - 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：证监会 EDGAR 原始申报值 + 雅虎复权价，本站自算，见 edgar_history.py
   （2026-09-26 起替代 macrotrends：其 09-24 起整站 Cloudflare 人机验证，自动访问一律 403。ROIC 暂无同定义替代，沿用上一版；
-   台积电/法拉利/LVMH/爱马仕/Visa/闪迪/Circle 冻结沿用，名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
+   台积电/法拉利/LVMH/爱马仕/Visa/Circle 冻结沿用（闪迪 09-26 解冻），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
 - yfinance：当前快照指标、近 4 年报表、完整分红史
 
 输出：data/s_{ticker}_fund.json（逐股）+ data/{basket}_peers.json（同业对比快照）。
@@ -164,6 +164,7 @@ def build_stock_fund(ticker: str):
     except Exception as e:  # noqa: BLE001
         print(f"  {ticker} history: {type(e).__name__}: {e}")
         hist = {}
+    fresh = bool(hist.pop("_fresh", False))   # 冻结票本周若按季度源追加了新点（台积电），数据日期写本次
     mt = {page: hist.get(page) or [] for page in HISTORY_PAGES}
 
     pe_rows = mt["pe-ratio"]  # [date, price, eps_ttm, pe]
@@ -205,10 +206,12 @@ def build_stock_fund(ticker: str):
 
     _c = carry_history(fund, mt, previous_fund(ticker), datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     if ticker in FROZEN_TICKERS:        # 2026-09-26：冻结票只刷新 PE 末点（及年报追加），长历史仍是上一版；日期与说明如实标
-        _prev_asof = (previous_fund(ticker) or {}).get("history_as_of")
-        if _prev_asof: fund["history_as_of"] = _prev_asof
-        fund["history_note"] = (f"长历史冻结于 {_prev_asof or '上一版'}（该票在证监会无季频可用序列）；PE 末点按最新价与最后一期 EPS 刷新；"
-                                "台积电/法拉利另按 20-F 年报逐年追加")
+        _prev = previous_fund(ticker) or {}
+        _prev_asof = _prev.get("history_as_of")
+        if _prev_asof and not fresh: fund["history_as_of"] = _prev_asof
+        _base = (_prev.get("history_note") or "").split("长历史冻结于 ")[-1][:10] if _prev.get("history_note") else (_prev_asof or "上一版")
+        fund["history_note"] = (f"长历史冻结于 {_base}（该票在证监会无季频可用序列）；PE 末点按最新价与最后一期 EPS 刷新；"
+                                "台积电此后季度按雅虎季报追加并以台湾证交所官方累计 EPS 核对；台积电/法拉利另按 20-F 年报补 FCF")
     if ticker in ROIC_NOT_APPLICABLE:   # 2026-09-26：银行/券商类不显示 ROIC（本站定义对其不适用），也不沿用旧源的那条
         fund.pop("roic", None)
         _c = [k for k in _c if k != "roic"]
