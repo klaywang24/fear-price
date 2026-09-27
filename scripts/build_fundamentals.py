@@ -4,7 +4,7 @@
 数据源：
 - 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：SEC EDGAR 原始申报值 + 雅虎收盘价（拆股已调），本站自算，见 edgar_history.py
   （2026-09-26 起替代 macrotrends：其 09-24 起整站 Cloudflare 人机验证，自动访问一律 403。ROIC 暂无同定义替代，沿用上一版；
-   台积电/法拉利/LVMH/爱马仕/Circle 冻结沿用（闪迪 09-26、Visa 09-27 解冻），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
+   LVMH/爱马仕/Circle 冻结沿用（闪迪 09-26、Visa 09-27 解冻；台积电/法拉利 09-27 改为 20-F 年报逐年自算），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
 - yfinance：当前快照指标、近 4 年报表、完整分红史
 
 输出：data/s_{ticker}_fund.json（逐股）+ data/{basket}_peers.json（同业对比快照）。
@@ -216,8 +216,7 @@ def build_stock_fund(ticker: str):
         _prev_asof = _prev.get("history_as_of")
         if _prev_asof and not fresh: fund["history_as_of"] = _prev_asof
         _base = (_prev.get("history_note") or "").split("长历史冻结于 ")[-1][:10] if _prev.get("history_note") else (_prev_asof or "上一版")
-        fund["history_note"] = (f"长历史冻结于 {_base}（该票在 SEC 无季频可用序列）；PE 末点按最新价与最后一期 EPS 刷新；"
-                                "台积电此后季度按雅虎季报追加并以台湾证交所官方累计 EPS 核对；台积电/法拉利另按 20-F 年报补 FCF")
+        fund["history_note"] = f"长历史冻结于 {_base}（该票在 SEC 无季频可用序列）；PE 末点按最新价与最后一期 EPS 刷新"
     if ticker in ROIC_NOT_APPLICABLE:   # 2026-09-26：银行/券商类不显示 ROIC（本站定义对其不适用），也不沿用旧源的那条
         fund.pop("roic", None)
         _c = [k for k in _c if k != "roic"]

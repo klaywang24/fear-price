@@ -172,6 +172,18 @@ def main():
           [(r["end"], r["val"]) for r in cs.get("CommonStockSharesOutstandingSumOfClasses", [])] == [("2024-12-31", 884000000.0)])
     check("instance shares: an undimensioned cover total is used as is",
           [(r["end"], r["val"]) for r in cs.get("EntityCommonStockSharesOutstanding", [])] == [("2025-02-10", 885000000.0)])
+    # 2026-09-27：20-F 原件（台积电 2025 年报汇总层漏收）只取报表币种；同一 EPS 另附的美元便利折算要剔掉；股数单位不带 xbrli: 前缀也认
+    x = ('<context id="c-1"><entity></entity><period><startDate>2025-01-01</startDate><endDate>2025-12-31</endDate></period></context>'
+         '<context id="c-9"><entity><segment><xbrldi:explicitMember dimension="ifrs-full:SegmentsAxis">x:A</xbrldi:explicitMember></segment></entity><period><startDate>2025-01-01</startDate><endDate>2025-12-31</endDate></period></context>'
+         '<unit id="twdPerShare"><divide><unitNumerator><measure>iso4217:TWD</measure></unitNumerator><unitDenominator><measure>shares</measure></unitDenominator></divide></unit>'
+         '<unit id="usdPerShare"><divide><unitNumerator><measure>iso4217:USD</measure></unitNumerator><unitDenominator><measure>shares</measure></unitDenominator></divide></unit>'
+         '<ifrs-full:DilutedEarningsLossPerShare contextRef="c-1" unitRef="twdPerShare" decimals="2">65.47</ifrs-full:DilutedEarningsLossPerShare>'
+         '<ifrs-full:DilutedEarningsLossPerShare contextRef="c-1" unitRef="usdPerShare" decimals="2">2.09</ifrs-full:DilutedEarningsLossPerShare>'
+         '<ifrs-full:DilutedEarningsLossPerShare contextRef="c-9" unitRef="twdPerShare" decimals="2">1.00</ifrs-full:DilutedEarningsLossPerShare>')
+    f = eh.ifrs_from_instance(x, "TWD", "20-F", "2026-04-16")
+    got = [(r["start"], r["end"], r["val"]) for r in f.get("ifrs-full", {}).get("DilutedEarningsLossPerShare", {}).get("units", {}).get("TWD/shares", [])]
+    check("20-F instance: only the reporting-currency, undimensioned EPS is read (USD convenience and segment values dropped)",
+          got == [("2025-01-01", "2025-12-31", 65.47)] and len(f["ifrs-full"]["DilutedEarningsLossPerShare"]["units"]) == 1)
     # 2026-09-27：旧源退役后中间可能整年没数，估值拆分只比相邻两年
     dv = bf.valuation_driver([["2006-12-31", 10, 1, 10], ["2007-09-30", 12, 1.2, 10], ["2010-12-31", 20, 2, 10], ["2011-12-31", 22, 2, 11]])
     check("driver: a multi-year gap is skipped, never booked as one year", [d["year"] for d in dv] == [2007, 2011])

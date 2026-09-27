@@ -17,10 +17,11 @@
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
 · ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自 SEC 数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
-· 冻结名单 FROZEN_TICKERS（5 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向 SEC 申报）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
+· 冻结名单 FROZEN_TICKERS（3 只）：LVMH/爱马仕（不向 SEC 申报）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻；台积电/法拉利 2026-09-27 改为 IFRS_OWN。
+· 台积电/法拉利（IFRS_OWN，2026-09-27）：旧源退役，全部本站自算——20-F 年报 IFRS 结构化数据（2015 起）逐年一个点：EPS＝稀释 EPS×每 ADR 股数×年末汇率，PB 用母公司权益÷封面股数（缺年用母公司净利÷基本 EPS），ROE＝净利÷期初期末权益均值，ROIC 年度版（投入资本取期初期末平均；债券＋长短期借款，不含租赁），FCF 同前；台积电最新年报之后按季度往后接（下条）。
 · Visa（CLASS_A_EPS，2026-09-27 解冻）：每股口径＝公司公布的 A 类稀释 EPS，读每份 10-Q/10-K 原件实例里 StatementClassOfStockAxis＝ClassA 的那条；股数＝单季净利÷单季 A 类 EPS（即公司把 B/C 按转换比例折成 A 类的分母）；财年末 EPS 与年报逐年相等（FY2024 9.73、FY2025 10.20）。每周现读约 70 份原件。
 · SEC 汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
-· 台积电（QUARTERLY_FOREIGN）2026-09-26 起季度往后接：雅虎季报（每 ADR、新台币，近 5 季）按期末月末汇率折美元，追加晚于旧线末点的季度；追加前用台湾证交所开放接口的官方累计 EPS 核对（差 >1% 或接口不通则不追加，下周自动补）；2026-03/06 两季与旧源对照 EPS -1.6%/-0.6%、PE ≈1%、ROE ≈0.5 点。年报此后只补 FCF。
+· 台积电（QUARTERLY_FOREIGN）2026-09-26 起季度往后接：雅虎季报（每 ADR、新台币，近 5 季）按期末月末汇率折美元，追加晚于最新年报的季度；追加前用台湾证交所开放接口的官方累计 EPS 核对（差 >1% 或接口不通则不追加，下周自动补）；2026-03/06 两季与旧源对照 EPS -1.6%/-0.6%、PE ≈1%、ROE ≈0.5 点。年报此后只补 FCF。
 · 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
 · 伯克希尔：SEC EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
 SEC 要求 UA 带联系方式、≤10 请求/秒。"""
@@ -184,7 +185,7 @@ def supplement_latest(ticker, F, cik):
 
 CLASS_A_EPS = {"V"}   # 2026-09-27 Klay 定：Visa 每股口径＝公司公布的 A 类稀释 EPS（B/C 类已按转换比例折进分母）；汇总接口按股份类别申报、汇总层为空，只能读报告原件
 
-def _periodic_filings(cik, since="2009-01-01"):
+def _periodic_filings(cik, since="2009-01-01", forms=("10-Q", "10-K")):
     """submissions（含翻页）里全部 10-Q/10-K：[(期末, 报送日, 表格, accession)]，按报送日排序。"""
     r = requests.get(f"https://data.sec.gov/submissions/CIK{cik:010d}.json", headers=SEC_UA, timeout=60); time.sleep(0.15); r.raise_for_status()
     j = r.json(); blocks = [j["filings"]["recent"]]
@@ -193,7 +194,7 @@ def _periodic_filings(cik, since="2009-01-01"):
     out = set()
     for b in blocks:
         for f, rp, fd, acc in zip(b["form"], b["reportDate"], b["filingDate"], b["accessionNumber"]):
-            if f in ("10-Q", "10-K") and fd >= since: out.add((rp, fd, f, acc))
+            if f in forms and fd >= since: out.add((rp, fd, f, acc))
     return sorted(out, key=lambda x: x[1])
 
 def _instance_xml(cik, acc):
@@ -282,6 +283,46 @@ def instance_fill_facts(t, fetch):
     if cov.get("EntityCommonStockSharesOutstanding"): g["dei"] = {"EntityCommonStockSharesOutstanding": {"units": {"shares": cov["EntityCommonStockSharesOutstanding"]}}}
     return {"facts": g}
 
+IFRS_TAGS = ["DilutedEarningsLossPerShare", "BasicEarningsLossPerShare", "ProfitLoss", "ProfitLossAttributableToOwnersOfParent", "Equity",
+             "EquityAttributableToOwnersOfParent", "CashFlowsFromUsedInOperatingActivities", "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
+             "ProfitLossFromOperatingActivities", "IncomeTaxExpenseContinuingOperations", "CashAndCashEquivalents", "Borrowings",
+             "NoncurrentPortionOfNoncurrentBondsIssued", "CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued", "LongtermBorrowings",
+             "CurrentPortionOfLongtermBorrowings", "ShorttermBorrowings"]
+def ifrs_from_instance(x, cur, form, filed):
+    """20-F 实例 → companyfacts 形状（只取无维度、报表币种的值；同一数常另附美元便利折算，按计量单位剔掉）。"""
+    import re as _re
+    ctx, units = {}, {}
+    for m in _re.finditer(r'<(?:xbrli:)?context id="([^"]+)">(.*?)</(?:xbrli:)?context>', x, _re.S):
+        body = m.group(2)
+        if "explicitMember" in body or "typedMember" in body: continue
+        s_ = _re.search(r'<(?:xbrli:)?startDate>([^<]+)<', body); e_ = _re.search(r'<(?:xbrli:)?endDate>([^<]+)<', body); i_ = _re.search(r'<(?:xbrli:)?instant>([^<]+)<', body)
+        ctx[m.group(1)] = (s_.group(1), e_.group(1)) if s_ and e_ else ((None, i_.group(1)) if i_ else None)
+    for m in _re.finditer(r'<(?:xbrli:)?unit id="([^"]+)">(.*?)</(?:xbrli:)?unit>', x, _re.S):
+        ms = [v.replace("xbrli:", "") for v in _re.findall(r'<(?:xbrli:)?measure>([^<]+)<', m.group(2))]   # 股数单位有的带 xbrli: 前缀、有的不带（台积电 2025 年报）
+        units[m.group(1)] = f"{cur}/shares" if ms == [f"iso4217:{cur}", "shares"] else (cur if ms == [f"iso4217:{cur}"] else ("shares" if ms == ["shares"] else None))
+    out = {"ifrs-full": {}, "dei": {}}
+    for m in _re.finditer(r'<(ifrs-full|dei):([A-Za-z]+)\b([^>]*)>([^<]+)</\1:\2>', x):
+        ns, tag, attrs, val = m.groups()
+        if (ns == "ifrs-full" and tag not in IFRS_TAGS) or (ns == "dei" and tag != "EntityCommonStockSharesOutstanding"): continue
+        c = _re.search(r'contextRef="([^"]+)"', attrs); u = _re.search(r'unitRef="([^"]+)"', attrs)
+        if not c or not u or not ctx.get(c.group(1)) or not units.get(u.group(1)): continue
+        try: v = float(val)
+        except ValueError: continue
+        start, end = ctx[c.group(1)]; unit = units[u.group(1)]
+        rec = {"end": end, "val": v, "form": form, "filed": filed, "src": "instance-ifrs"}
+        if start: rec["start"] = start
+        out[ns].setdefault(tag, {"units": {}})["units"].setdefault(unit, []).append(rec)
+    return {k: v for k, v in out.items() if v}
+def ifrs_supplement(t, F, cik, fetch):
+    """IFRS_OWN：SEC 汇总接口漏收最新 20-F 时（2026-09-27 实证：台积电 2025 年报 04-16 报送仍不在 companyfacts）读那份原件补上。"""
+    cur = ANNUAL_IFRS[t][0]
+    have = max((a["end"] for a in _tag_recs(F, "DilutedEarningsLossPerShare", f"{cur}/shares") if "start" in a), default="")
+    for rp, fd, form, acc in sorted(_periodic_filings(cik, forms=("20-F",)), key=lambda r: r[0])[-2:]:
+        if rp > have:
+            x = fetch(cik, acc)
+            if x: F = merge_facts(F, {"facts": ifrs_from_instance(x, cur, form, fd)}); print(f"  {t} 补读原件 20-F 期末{rp}")
+    return F
+
 def class_a_facts(cik, fetch=None):
     """全部 10-Q/10-K 原件读 A 类口径；fetch(acc) 可换成本地缓存。"""
     F = {"facts": {"us-gaap": {}}}
@@ -297,7 +338,10 @@ def get_facts(ticker):
     for old in EXTRA_CIK.get(ticker, []): F = merge_facts(companyfacts(old), F)
     if ticker in CLASS_A_EPS: F = merge_facts(F, class_a_facts(cik))
     if ticker in INSTANCE_FILL: F = merge_facts(F, instance_fill_facts(ticker, _instance_xml))
-    if ticker not in FROZEN_TICKERS:
+    if ticker in IFRS_OWN:
+        try: F = ifrs_supplement(ticker, F, cik, _instance_xml)
+        except Exception as ex: print(f"  {ticker} 补读 20-F 原件失败（不影响本次，沿用汇总接口）：{type(ex).__name__}: {str(ex)[:80]}")
+    if ticker not in FROZEN_TICKERS and ticker not in IFRS_OWN:
         try:
             F, note = supplement_latest(ticker, F, cik)
             if note: print(f"  {ticker} {note}")
@@ -384,7 +428,8 @@ QUARTERLY_FOREIGN = {"TSM": {"cur": "TWD", "ratio": 5, "twse": "2330"}}   # 2026
 PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
 SHARES_FROM_YAHOO = {"BRK.B"}   # SEC 接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
-FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL"}   # 2026-09-27 Visa 解冻（CLASS_A_EPS 读原件 A 类口径）   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+IFRS_OWN = {"TSM", "RACE"}   # 2026-09-27 Klay 定：旧源退役，改为 20-F 年报（IFRS 结构化数据，2015 起）逐年自算，每年一个点；台积电年报之后按季度往后接
+FROZEN_TICKERS = {"MC.PA","RMS.PA","CRCL"}   # 2026-09-27 Visa 解冻（CLASS_A_EPS 读原件 A 类口径）   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "1994-01-01"   # 2026-09-26：老报告（附件 27 与正文表格）补到 1995 年起
 
 # ───────── 构建 ─────────
@@ -626,6 +671,13 @@ class CacheSource:
                 if not os.path.exists(p): open(p, "w", encoding="utf-8").write(_instance_xml(cik, acc))
                 return open(p, encoding="utf-8").read()
             F = merge_facts(F, instance_fill_facts(t, fetch2))
+        if t in IFRS_OWN:
+            d = f"{self.d}/instance_fill"; os.makedirs(d, exist_ok=True)
+            def fetch3(cik, acc):
+                p = f"{d}/{acc}.xml"
+                if not os.path.exists(p): open(p, "w", encoding="utf-8").write(_instance_xml(cik, acc))
+                return open(p, encoding="utf-8").read()
+            F = ifrs_supplement(t, F, cik_for(t), fetch3)
         return F
     def legacy(self, t):
         """老报告（2009 年前）解析结果；目录由环境变量 LEGACY_DIR 指定，未指定则不用。标签改名进 legacy 命名空间，只补缺不改选择。"""
@@ -655,16 +707,33 @@ def annual_ifrs_rows(t, src, F):
     EQ = instant(F, ["Equity", "EquityAttributableToOwnersOfParent"], cur); OCF = annual(F, ["CashFlowsFromUsedInOperatingActivities"], cur)
     CX = annual(F, ["PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"], cur)
     SH = instant(F, ["EntityCommonStockSharesOutstanding"], "shares")   # 只用封面股数；法拉利 NumberOfSharesOutstanding 含库存股，PB 会偏三成
-    out = {"pe-ratio": [], "price-book": [], "roe": [], "free-cash-flow": []}
+    BEPS = annual(F, ["BasicEarningsLossPerShare"], f"{cur}/shares"); NIo = annual(F, ["ProfitLossAttributableToOwnersOfParent"], cur)
+    OPI = annual(F, ["ProfitLossFromOperatingActivities"], cur); TAX = annual(F, ["IncomeTaxExpenseContinuingOperations"], cur)
+    CASH = instant(F, ["CashAndCashEquivalents"], cur)
+    DEBT_PARTS = ["NoncurrentPortionOfNoncurrentBondsIssued", "CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued", "LongtermBorrowings", "CurrentPortionOfLongtermBorrowings", "ShorttermBorrowings"]
+    DEBT_ALL = instant(F, ["Borrowings"], cur); PARTS = {k: instant(F, [k], cur) for k in DEBT_PARTS}
+    def debt(fe):                          # 有「借款合计」用合计（法拉利），否则债券＋长短期借款逐项相加（台积电）；租赁负债不算（与美股口径一致）
+        v = near(DEBT_ALL, fe, 10)
+        return v if v is not None else sum(near(PARTS[k], fe, 10) or 0 for k in DEBT_PARTS)
+    def shares(fe):                        # 封面股数缺的年份（台积电 2015–16、法拉利 2021 起）：母公司净利 ÷ 基本 EPS＝全年加权流通股
+        v = near(SH, fe, 45, 120)
+        if v is None and NIo.get(fe) and BEPS.get(fe): v = NIo[fe] / BEPS[fe]
+        return v
+    out = {"pe-ratio": [], "price-book": [], "roe": [], "roic": [], "free-cash-flow": []}
     for fe, eps in EPS.items():
         L = month_end_label(fe); p = prices.get(L); r_fx = near(fx, L, 40)
         if not p or not r_fx: continue
         eps_usd = eps * ratio * r_fx
         out["pe-ratio"].append([L, round(p, 2), round(eps_usd, 2), round(p / eps_usd, 2) if eps_usd > 0 else 0.0])
-        eq, sh = near(EQ, fe), near(SH, fe, 45, 120)
+        eq, sh = near(EQ, fe), shares(fe)
         if eq and sh: bvps = eq / sh * ratio * r_fx; out["price-book"].append([L, round(p, 2), round(bvps, 2), round(p / bvps, 2)])
         ni = NI.get(fe); eq_prev = near(EQ, (_d(fe) - dt.timedelta(days=365)).isoformat(), 45)
         if ni and eq and eq_prev: out["roe"].append([L, ni, (eq + eq_prev) / 2, round(ni / ((eq + eq_prev) / 2) * 100, 2)])
+        opi, tax, fe0 = OPI.get(fe), TAX.get(fe), (_d(fe) - dt.timedelta(days=365)).isoformat()
+        if ni and eq and eq_prev and near(CASH, fe) is not None and near(CASH, fe0, 45) is not None:   # ROIC 年度版：本站定义，投入资本取期初期末平均（美股取四个季末平均）
+            nopat = opi * (1 - tax / (ni + tax)) if (opi is not None and tax is not None and (ni + tax) > 0 and opi > 0) else ni
+            ic = ((eq + debt(fe) - near(CASH, fe)) + (eq_prev + debt(fe0) - near(CASH, fe0, 45))) / 2
+            if ic > 0: out["roic"].append([L, round(nopat / 1e6, 1), round(ic / 1e6, 1), round(nopat / ic * 100, 2)])
         ocf, cx = OCF.get(fe), CX.get(fe)
         months = [k for k in fx if (_d(fe) - dt.timedelta(days=365)) < _d(k) <= _d(fe)]
         if ocf is not None and cx is not None and months:
@@ -744,8 +813,28 @@ def frozen_rows(t, prev, src):
     rows["pe-ratio"] = pe_rows
     return rows
 
+def ifrs_own_rows(t, src):
+    """台积电/法拉利（IFRS_OWN）：全部本站自算。20-F 年报逐年一个点（PE/EPS/PB/ROE/ROIC/FCF）；台积电在最新年报之后按季度往后接
+    （雅虎季报＋台湾证交所官方累计 EPS 核对，见 foreign_quarterly_rows）；PE 末点＝最新价 ÷ 最后一期 EPS。不沿用任何上一版数据。"""
+    rows = annual_ifrs_rows(t, src, src.facts(t))
+    if t in QUARTERLY_FOREIGN:
+        after = {pg: (rows[pg][-1][0] if rows[pg] else "") for pg in ("pe-ratio", "price-book", "roe")}
+        try:
+            q, msg = foreign_quarterly_rows(t, src, after); print(f"  {t} 季度: {msg}；新增 PE {len(q['pe-ratio'])} / PB {len(q['price-book'])} / ROE {len(q['roe'])}")
+            for pg in ("pe-ratio", "price-book", "roe"): rows[pg] = rows[pg] + q[pg]
+        except Exception as ex:
+            print(f"  {t} 季度: {type(ex).__name__}: {str(ex)[:80]}（本周不追加）")
+    _, latest = src.prices(t)
+    if rows["pe-ratio"] and latest and rows["pe-ratio"][-1][2] > 0:
+        rows["pe-ratio"].append([latest["last_date"], latest["last_close"], "", round(latest["last_close"] / rows["pe-ratio"][-1][2], 2)])
+    rows["_fresh"] = True
+    return rows
+
 def history_rows(ticker, prev=None, src=None):
     """给 build_fundamentals 用：返回与旧源同形状的六页行；冻结票只刷新 PE 末点（及台积电/法拉利年报追加），其余页留空由 carry_history 沿用上一版。"""
+    if ticker in IFRS_OWN:
+        rows = ifrs_own_rows(ticker, src or NetSource())
+        return {k: v for k, v in rows.items() if not k.startswith("_") or k == "_fresh"}
     if ticker in FROZEN_TICKERS:
         rows = frozen_rows(ticker, prev, src or NetSource())
         return {k: v for k, v in rows.items() if not k.startswith("_") or k == "_fresh"}
