@@ -110,9 +110,9 @@
 <p>This policy covers the site's paid subscriptions: <strong>Standard — the daily pre-market data digest</strong> ($29 / month, or $290 / year) and <strong>Pro</strong> ($590 / year, annual only). Everything on the website itself — all charts, ledgers and methodology — is <strong>free, permanently</strong>, and no refunds apply to it.</p>
 <h3>Terms</h3>
 <ul>
-<li><strong>14-day no-questions refund</strong>: if you're not satisfied within 14 days of subscribing, you get a full refund, no reason needed;</li>
-<li><strong>Pro exception</strong>: the full-history data is sent when you ask for it by email. Asking for it means you agree to immediate delivery and give up the 14-day refund above; if you have not asked for it, the 14-day full refund still applies;</li>
-<li>refunds are processed by the payment provider Paddle, returned via the original method;</li>
+<li><strong>14-day no-questions-asked refund</strong>: if you're not satisfied within 14 days of subscribing, you get a full refund, no reason needed;</li>
+<li><strong>Pro exception</strong>: the full-history data is sent when you ask for it by email. Requesting it means you consent to immediate delivery and waive the 14-day refund above; if you have not asked for it, the 14-day full refund still applies;</li>
+<li>refunds are processed by the payment provider Paddle and returned to the original payment method;</li>
 <li>how to request: email <a href="mailto:${EMAIL}">${EMAIL}</a> with your order details.</li>
 </ul>
 <p>This policy is effective from 2026-07-14. Where your local consumer protection law grants stronger rights (such as a longer unconditional withdrawal period), those rights apply.</p>` },
