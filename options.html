@@ -303,7 +303,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   · 本页一行 = 一个合约<b>当天的累计</b>，不是一笔交易。我们没有逐笔时间戳，也没有主动买卖方向，所以权利金只说<b>换手额</b>，不说买入额或卖出额：谁买谁卖，我们看不见，也不猜。<br>
   · 所有读数来自<b>两把独立的尺子</b>逐字核对，收盘后更新一次。<br>
   · 归因只做算术：量至少两倍于持仓记<b>更像新增</b>，量超过持仓记<b>倾向新增</b>，量小于存量记<b>无法归因</b>。不猜方向，不讲故事。<br>
-  · 现价口径：官方收盘价为唯一真源；当日尚未收盘时用盘前快照并明确标注。<br>
+  · 现价口径：官方收盘价为唯一真源；当日尚未收盘时用盘前或盘中快照并明确标注。<br>
   · 大单榜只列我们复核后的 A 级，不是全量数据，原始数据不在本页提供。<br>
   · 跳空章口径：跳空＝开盘对昨收，盘中＝收盘对开盘；真缺口＝当日最低高于前日最高（或反之），比开盘价跳空严格。金融五只为参照系，不参与排行。<br>
   · <b>仅为数据与信息，不构成投资建议，不含任何买卖推荐。</b>
@@ -341,24 +341,24 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       "今天，谁贴着自己的墙": "Who is hugging their wall today",
       "一根轴 ·": "One axis ·",
       "昨天的钱，今天还在不在": "Is yesterday's money still there",
-      "大单榜：今天最贵的注": "The big board: today's priciest bets",
+      "大单榜：今天最贵的注": "The leaderboard: today's priciest bets",
       "墙在动 ·": "Walls in motion ·",
       "一只票的两条命": "One name, two lives",
       "一年期的保费，逐日 ·": "One-year premium, daily ·",
       "墙 = 期权持仓最厚的价位：下方的厚 put 是别人付过保费的保护层，上方的厚 call 是别人付过定金的目标价。价格离墙越近，那笔已经付出去的钱越有话语权。圆点 = 现价在两墙之间的位置。":
-        "A wall is the strike carrying the heaviest open interest: the thick puts below are protection someone already paid premium for; the thick calls above are targets someone already put a deposit on. The closer price sits to a wall, the louder that money speaks. Dot = where spot sits between the two walls.",
+        "A wall is the strike carrying the heaviest open interest: the thick puts below are protection someone already paid premium for; the thick calls above are upside targets someone has already made a down payment on. The closer price sits to a wall, the louder that money speaks. Dot = where spot sits between the two walls.",
       "一只票的所有关键价位钉在同一根价格轴上：两面墙、多空分界、期权定价的本周波动区间、现价。点票切换，悬停看读数。":
         "Every key level of one name, pinned on a single price axis: both walls, the flip level, the option-implied range for this week, and spot. Click a ticker to switch; hover for readings.",
       "只列我们逐条复核后的 A 级异动，按权利金换手额排序。我们看不见每一笔是谁买谁卖，所以只说换手了多少钱、落在哪个价位、以及一条纯算术的归因。":
-        "Only A-grade anomalies that survived our line-by-line recheck, ranked by premium traded. We cannot see who bought or sold, so we state only how much money changed hands, at which strike, plus one purely arithmetic attribution.",
+        "Only A-grade unusual activity that survived our line-by-line recheck, ranked by premium traded. We cannot see who bought or sold, so we state only how much money changed hands, at which strike, plus one purely arithmetic attribution.",
       "同一天按标的汇总，call 与 put 各自的权利金换手额：":
         "Same day, summed by ticker: premium traded on calls vs puts.",
       "四条线放在一起：官方收盘价、多空分界、下墙与上墙的逐日位置。每天打开一眼看到：价格在墙上方还是下方，墙自己有没有搬家。用第二章的票签切换。记录只会越攒越长。":
         "Four lines together: official close, flip level, put wall and call wall, day by day. One glance answers: is price above or below the walls, and have the walls themselves moved. Switch tickers with the chips. The record only grows longer.",
       "同一只票，30 天期权和一年期权各有一个保费水平。短命的那条为眼前的事件定价，长命的那条为整段故事定价。两条差得越远，越是只有眼前这件事在涨价。":
-        "One name, two premium levels: 30-day options price the event in front of them; one-year options price the whole story. The wider the gap, the more it is only the immediate that is being repriced.",
+        "One name, two premium levels: 30-day options price the event in front of them; one-year options price the whole story. The wider the gap, the more the repricing is confined to the near-term event.",
       "同一只票的一年期保费逐日连成线，读的是贵贱不是金额；短期的 30 天保费放在旁边对照。事件来了短线跳、长线不动 = 只有眼前这件事在涨价；长线也抬头 = 涨价的不再是这一件事，而是整段故事。恒定期限口径自 07.28 起记录，每天加长一格。用第二章的票签切换。":
-        "One name's one-year premium, day by day — read it as dearness, not as a dollar amount — with the 30-day premium alongside. When an event hits and the short line jumps while the long line stays flat, only the immediate is being repriced; when the long line rises too, what is being repriced is no longer one event but the whole story. Constant-maturity series recorded since 07.28, one notch longer per day.",
+        "One name's one-year premium, day by day — read it as how rich or cheap it is, not as a dollar amount — with the 30-day premium alongside. When an event hits and the short line jumps while the long line stays flat, only the immediate is being repriced; when the long line rises too, what is being repriced is no longer one event but the whole story. Constant-maturity series recorded since 07.28, one point added per day.",
       "这页的读数与判断，每个交易日盘前送进邮箱 →": "These readings and judgments land in subscriber inboxes before every open →",
       "盘前数据简报": "The pre-market brief",
     
@@ -391,15 +391,15 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     opWalk(document.body);
     new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && opWalk(n))))
       .observe(document.body, { childList: true, subtree: true });
-    $("op-dek").textContent = "An option is an opinion with money behind it: protection costs premium, upside costs a deposit, and neither is refundable. Talk is free; positions are not. This page never counts how many names rose or fell. It watches three things: where real money landed today, how far those strikes sit from spot, and whether the judgments we filed yesterday have been settled. Updated after each trading day's close.";
-    $("op-n3").innerHTML = "This is the page's source of credit: why believe Chapter IV's attributions? Because every judgment we make is <b>filed first, settled by pre-agreed conditions, and left standing when wrong</b>. The ledger only grows thicker; it is never rewritten. Click any row for the settlement and the original filing; filings and verification terms are archived verbatim in Chinese.";
-    $("op-cal").innerHTML = "<b>How to read this page (calibration first)</b><br>" +
+    $("op-dek").textContent = "An option is an opinion with money behind it: protection costs a premium, upside costs a down payment, and neither is refundable. Talk is free; positions are not. This page never counts how many names rose or fell. It watches three things: where real money landed today, how far those strikes sit from spot, and whether the judgments we filed yesterday have been settled. Updated after each trading day's close.";
+    $("op-n3").innerHTML = "This is where the page earns its credibility: why believe Chapter IV's attributions? Because every judgment we make is <b>filed first, settled by pre-agreed conditions, and left standing when wrong</b>. The ledger only grows thicker; it is never rewritten. Click any row for the settlement and the original filing; filings and verification terms are archived verbatim in Chinese.";
+    $("op-cal").innerHTML = "<b>How to read this page (read before the numbers)</b><br>" +
       "· One row = one contract's <b>full-day total</b>, not a single trade. We have no per-trade timestamps and no aggressor side, so premium is stated as <b>traded</b>, never as bought or sold: who bought and who sold, we cannot see and do not guess.<br>" +
       "· Every reading is cross-checked verbatim against <b>two independent sources</b> and updated once after the close.<br>" +
       "· Attribution is arithmetic only: volume at least twice the open interest reads <b>likely new</b>; volume above OI reads <b>leans new</b>; volume below OI reads <b>inconclusive</b>. No direction-guessing, no storytelling.<br>" +
-      "· Spot: the official close is the only source of truth; before the close we show an intraday snapshot, clearly labeled.<br>" +
+      "· Spot: the official close is the only source of truth; before the close we show a pre-market or intraday snapshot, clearly labeled.<br>" +
       "· The big board lists only rechecked A-grade rows. It is not the full dataset, and raw data is not provided on this page.<br>" +
-      "· Gap chapter: gap = open vs prior close; intraday = close vs open; a true gap = today's low above yesterday's high (or the reverse), stricter than the opening print. The five financials are reference only.<br>"+
+      "· Gap chapter: gap = open vs prior close; intraday = close vs open; a true gap = today's low above yesterday's high (or the reverse), stricter than the opening print. The five financials are reference only and excluded from the ranking.<br>"+
       "· <b>Data and information only; not investment advice; no buy or sell recommendations.</b>";
 })();
 </script>
@@ -446,7 +446,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     if (!r.ok) throw 0;
     D = await r.json();
   } catch (e) {
-    $("op-loading").textContent = tr("数据读取失败。本页每个交易日收盘后更新，稍后再试。", "Failed to load. This page updates after each trading day close; try again later.");
+    $("op-loading").textContent = tr("数据读取失败。本页每个交易日收盘后更新，稍后再试。", "Couldn't load the data. This page updates after each trading day's close; please try again later.");
     return;
   }
 
@@ -516,7 +516,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       fr3: tr("<b>不是每日更新</b>，也不该是：它只在两种时候变 —— 有新判断立案，或旧判断到了约定的开奖日。"
               + "累计 <b>" + D.ledger.length + "</b> 案（自 " + dot(D.meta.ledger_since) + "）"
               + (filed ? "，最近一次立案 " + dot(filed) : "") + "。已写下的从不改写。",
-              "<b>Not a daily feed</b>, by design: it changes only when a new call is filed, or a filed call reaches its agreed settlement date. "
+              "<b>Not a daily feed</b>, by design: it changes only when a new judgment is filed, or a filed judgment reaches its agreed settlement date. "
               + "<b>" + D.ledger.length + "</b> cases since " + dot(D.meta.ledger_since)
               + (filed ? ", last filed " + dot(filed) : "") + ". Nothing already written is ever rewritten."),
       fr4: daily,
@@ -528,7 +528,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       fr7: grow(cm) + _creditNote(),
       fr8: (D.gaps && D.gaps.date)
         ? tr("每个交易日收盘后加一天，已记 <b>" + D.gaps.days + "</b> 个交易日（本栏 " + dot(D.gaps.date) + " 起步）。跳空宇宙比期权宇宙宽：多了一批高波票与四只点名票，金融五只只当参照系、不参与排行。",
-             "One more day per session; <b>" + D.gaps.days + "</b> session(s) recorded (this section starts " + dot(D.gaps.date) + "). The gap universe is wider than the options universe: extra high-beta names plus four watchlist names; the five financials serve as reference only and are excluded from the ranking.")
+             "One more session added after each close; <b>" + D.gaps.days + "</b> session(s) recorded (this section starts " + dot(D.gaps.date) + "). The gap universe is wider than the options universe: extra high-volatility names plus four watchlist names; the five financials serve as reference only and are excluded from the ranking.")
         : "",
     };
     Object.entries(txt).forEach(([id, v]) => { const el = $(id); if (el) el.innerHTML = v; });
@@ -548,7 +548,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
   /* ── Ⅰ 墙位总览 ── */
   const S = D.structure.filter(t => t.put_wall && t.call_wall && t.spot);
   $("op-walls").innerHTML =
-    `<tr><th>${tr("标的","Name")}</th><th class=n>${tr("现价","Spot")}</th><th class=n>${tr("下墙(put)","Put wall")}</th><th class=n>${tr("上墙(call)","Call wall")}</th><th class=n>${tr("距下墙","To put")}</th><th class=n>${tr("距上墙","To call")}</th><th>${tr("位置","Position")}</th></tr>` +
+    `<tr><th>${tr("标的","Name")}</th><th class=n>${tr("现价","Spot")}</th><th class=n>${tr("下墙(put)","Put wall")}</th><th class=n>${tr("上墙(call)","Call wall")}</th><th class=n>${tr("距下墙","To put wall")}</th><th class=n>${tr("距上墙","To call wall")}</th><th>${tr("位置","Position")}</th></tr>` +
     S.map(t => {
       const lo = (t.spot - t.put_wall) / t.spot * 100, hi = (t.call_wall - t.spot) / t.spot * 100;
       const pos = Math.max(2, Math.min(98, (t.spot - t.put_wall) / (t.call_wall - t.put_wall) * 100));
@@ -808,7 +808,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     `已开奖 ${done.length} 案按结论分四项，输赢都在账上。` +
       (nPart || nOther ? "另有 " + [nPart ? `${nPart} 案部分成立` : "", nOther ? `${nOther} 案只记了结果没写对错` : ""].filter(Boolean).join("，") + "，都不计入这四项。" : ""),
     `${done.length} settled cases, sorted into four by their verdicts, wins and losses alike.` +
-      (nPart || nOther ? ` Another${nPart ? ` ${nPart} partly held` : ""}${nPart && nOther ? " and" : ""}${nOther ? ` ${nOther} recorded an outcome without a right-or-wrong call` : ""}; they are not counted in the four.` : ""));
+      (nPart || nOther ? ` Another${nPart ? ` ${nPart} cases partly held` : ""}${nPart && nOther ? " and" : ""}${nOther ? ` ${nOther} recorded an outcome without a right-or-wrong call` : ""}; they are not counted in the four.` : ""));
   // 过滤 + 渲染：待开奖排前（它们是「还没完的事」），已开奖按日期倒序归档
   let lf = "all";
   const order = c => (c.status === "待开奖" ? "0" : "1") + c.events[0].date;
@@ -909,7 +909,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
       tr("以下为立案原文与验证条件 · 原样存证不改", "Original filing and verification terms, archived verbatim in Chinese") +
       `</div>` + c.events.map(ev =>
       `<div class="ev zh"><b>${dot(ev.date)} ${L === "en" ? (EV_EN[ev.type] || ev.type) : ev.type}</b>${L === "en" ? " (" : "（"}${tr("置信度","confidence")}${L === "en" ? ": " : "："}${(L === "en" ? (CONF_EN[ev.confidence] || ev.confidence) : ev.confidence) || "—"}${L === "en" ? ")" : "）"}<br>` +
-      `${ev.judgment}<br>${tr("验证条件","Verify")}${L === "en" ? ": " : "："}${ev.verify || "—"}${ev.result ? "<br>" + tr("结果","Result") + (L === "en" ? ": " : "：") + ev.result : ""}</div>`).join("") + `</div>`;
+      `${ev.judgment}<br>${tr("验证条件","Verification terms")}${L === "en" ? ": " : "："}${ev.verify || "—"}${ev.result ? "<br>" + tr("结果","Result") + (L === "en" ? ": " : "：") + ev.result : ""}</div>`).join("") + `</div>`;
     row.insertAdjacentHTML("afterend", `<tr class="op-detail"><td colspan="4">${settle + orig}</td></tr>`);
   });
   // 深链：/options#08-01 → 滚到台账并高亮当日立案
@@ -971,7 +971,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     const G = D.gaps.rows;
     $("op-ch8-note").innerHTML = tr(
       "当天涨跌拆成两段：<b>跳空</b>＝开盘对昨收（隔夜共识的重定价），<b>盘中</b>＝收盘对开盘（开盘后真金白银打出来的）。同样的收盘涨幅，可以是三种完全不同的下场：<b>跳空后被吞</b>（高开被卖）、<b>跳空后延续</b>（真有新钱进来）、<b>零跳空硬涨</b>（全靠盘中买上去）。标记 ▲/▼ 的是<b>真缺口</b>（当日最低高于前日最高，或反之）：比开盘价跳空严得多的口径。",
-      "Each day's move splits in two: the <b>gap</b> (open vs prior close — overnight repricing) and the <b>intraday</b> leg (close vs open — money actually traded after the bell). The same daily gain can meet three different fates: <b>gap swallowed</b> (opened high, sold all day), <b>gap extended</b> (new money kept coming), or <b>no gap at all</b> (the whole move built intraday). ▲/▼ marks a <b>true gap</b> — today's low above yesterday's high (or the reverse) — a far stricter test than the opening print.");
+      "Each day's move splits in two: the <b>gap</b> (open vs prior close — overnight repricing) and the <b>intraday</b> leg (close vs open — money actually traded after the opening bell). The same daily gain can meet three different fates: <b>gap faded</b> (opened higher, then sold off), <b>gap extended</b> (new money kept coming), or <b>no gap at all</b> (the whole move built intraday). ▲/▼ marks a <b>true gap</b> — today's low above yesterday's high (or the reverse) — a far stricter test than the opening print.");
     const tg = r => r.true_gap === "向上" ? " ▲" : (r.true_gap === "向下" ? " ▼" : "");
     /* 横向排行 + 胶囊分组切换（Klay 08-13 定：照做空页那套 UI —— 横条·logo·条尾数值·分组 tab）。
        分组沿用第Ⅶ章 GROUPS 的措辞并扩到 47 只宇宙；🔑 不在任何组里的票自动落「其他」——
@@ -1063,7 +1063,7 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
         "<b>金融参照组</b>（半年里单日 ±10% 天数为零的五只，不参与排行）：" + fx +
         "。它们的用途只有一个：当这五只<b>同一天</b>一起跳空，那不是个股新闻，是系统性事件。",
         "<b>Financial reference group</b> (five names with zero ±10% days in six months; excluded from the ranking): " + fx +
-        ". They serve one purpose: when all five gap on the <b>same day</b>, that is not stock news — it is systemic.");
+        ". They serve one purpose: when all five gap on the <b>same day</b>, that is not company-specific news — it is a systemic event.");
     }
   } else {
     $("op-ch8-note").textContent = tr("本栏起步中，首个交易日数据落库后显示。",
