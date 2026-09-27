@@ -34,29 +34,39 @@ def _pick(cur, a):
     fa, fc = a.get("filed", ""), cur.get("filed", "")
     return (a if fa < fc else cur) if PREFER == "earliest" else (a if fa >= fc else cur)
 def _tag_recs(facts, tag, unit):
-    for ns in ("us-gaap", "ifrs-full", "dei"):
+    for ns in ("us-gaap", "ifrs-full", "dei", "legacy"):
         f = facts["facts"].get(ns, {})
         if tag in f:
             units = f[tag]["units"]; u = unit if unit in units else next(iter(units)); return units[u]
     return []
 def quarterly(facts, tags, unit=None, derive=True):
-    single, ytd9, fy = {}, {}, {}
+    """单季流量，键＝财季末。先收 80–100 天单季；再按同一财年起点的累计数（半年/九个月/全年）相邻相减补缺季。均值类（加权股数）须 derive=False。"""
+    single, cum = {}, {}
     for tag in tags:
-        s1, y1, f1 = {}, {}, {}
+        s1, c1 = {}, {}
         for a in _tag_recs(facts, tag, unit):
             if "start" not in a: continue
             d = _dur(a)
             if 80 <= d <= 100: s1[a["end"]] = _pick(s1.get(a["end"]), a)
-            elif 260 <= d <= 290: y1[(a["start"], a["end"])] = _pick(y1.get((a["start"], a["end"])), a)
-            elif 350 <= d <= 380: f1[(a["start"], a["end"])] = _pick(f1.get((a["start"], a["end"])), a)
-        single.update({k: v["val"] for k, v in s1.items()}); ytd9.update({k: v["val"] for k, v in y1.items()}); fy.update({k: v["val"] for k, v in f1.items()})
+            elif 170 <= d <= 190 or 260 <= d <= 290 or 350 <= d <= 380: c1[(a["start"], a["end"])] = _pick(c1.get((a["start"], a["end"])), a)
+        for k, v in s1.items(): single.setdefault(k, v["val"])
+        for k, v in c1.items(): cum.setdefault(k, v["val"])
     if derive:
-        for (s, e), v in fy.items():
-            if e in single: continue
-            y = [vv for (ss, ee), vv in ytd9.items() if ss == s]
-            if y: single[e] = v - y[-1]; continue
-            qs = [vv for ee, vv in single.items() if s < ee < e]
-            if len(qs) == 3: single[e] = v - sum(qs)
+        starts = {}
+        for (s0, e), v in cum.items(): starts.setdefault(s0, {})[e] = v
+        for s0, ends in starts.items():
+            pts = []
+            q1 = [e for e in single if 80 <= (_d(e) - _d(s0)).days <= 100]
+            if q1: pts.append((min(q1), single[min(q1)]))
+            pts += sorted(ends.items())
+            pts = sorted(dict(pts).items())
+            for (e0, c0), (e1, c1_) in zip(pts, pts[1:]):
+                if e1 not in single and 80 <= (_d(e1) - _d(e0)).days <= 100: single[e1] = c1_ - c0
+            fy = [(e, v) for e, v in ends.items() if 350 <= (_d(e) - _d(s0)).days <= 380]
+            for e, v in fy:
+                if e in single: continue
+                qs = [vv for ee, vv in single.items() if s0 < ee < e]
+                if len(qs) == 3: single[e] = v - sum(qs)
     return dict(sorted(single.items()))
 def annual(facts, tags, unit=None):
     out = {}
@@ -93,7 +103,7 @@ def month_end_label(e):
 import json, time, os, io, csv
 import requests
 SEC_UA = {"User-Agent": "fear-price.klay-wang.com research contact klaywang24@gmail.com", "Accept-Encoding": "gzip"}
-EXTRA_CIK = {"BLK": [1364742]}          # 贝莱德 2022 换注册主体，旧主体另拉一份合并（旧在前、新覆盖）
+EXTRA_CIK = {"BLK": [1364742], "GOOGL": [1288776], "AVGO": [1441634, 1649338]}   # 前身主体：贝莱德 2022 换主体；谷歌 2015 改组 Alphabet；博通前身 Avago(2009–15)、Broadcom Ltd(2016–18)          # 贝莱德 2022 换注册主体，旧主体另拉一份合并（旧在前、新覆盖）
 _TICKERS = None
 
 def cik_for(ticker):
@@ -228,7 +238,7 @@ def get_twse_latest(code):
 
 def get_splits(ticker):
     s = _yf(ticker).splits
-    return [(d.date().isoformat(), float(r)) for d, r in s.items() if d.year >= 2000 and float(r) > 0]
+    return [(d.date().isoformat(), float(r)) for d, r in s.items() if d.year >= 1985 and float(r) > 0]
 
 # ───────── 标签族与冻结名单 ─────────
 # 标签族。择一类（EPS/NI/权益）按列表顺序取第一个覆盖达标者；改名换代类（营收/资本开支/现金流/现金/债务）按顺序合并、后者覆盖。
@@ -252,7 +262,7 @@ PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未
 SHARES_FROM_YAHOO = {"BRK.B"}   # 证监会接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
 FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL","V"}   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
-FIRST = "2005-01-01"
+FIRST = "1994-01-01"   # 2026-09-26：老报告（附件 27 与正文表格）补到 1995 年起
 
 # ───────── 构建 ─────────
 def split_adjust(F, splits):
@@ -263,10 +273,10 @@ def split_adjust(F, splits):
         for d, r in splits:
             if d > filed: c *= r
         return c
-    for ns in ("us-gaap","ifrs-full","dei"):
+    for ns in ("us-gaap","ifrs-full","dei","legacy"):
         for tag, body in F["facts"].get(ns, {}).items():
             per_share = tag in EPS_TAGS or "PerShare" in tag
-            shares = tag in SH_INST or tag in SH_DUR
+            shares = tag in SH_INST or tag in SH_DUR or (tag.startswith("Legacy") and "Shares" in tag and "PerShare" not in tag)
             if not (per_share or shares): continue
             for u, arr in body["units"].items():
                 for a in arr:
@@ -283,12 +293,18 @@ def prev_rows(B, key, with_price=False):
     return [[d, "", "", v] for d, v in zip(s["dates"], s["values"])]
 
 def stitch(prev, new):
-    """新序列首日之前沿用旧数据；新源若没接到旧序列末端一年内（如伯克希尔 2015 后断档）则整段沿用旧数据。"""
+    """新数优先；旧数只填新数没覆盖到的日期（前 60 天内无新点的空档，含新序列起点之前）。
+    新源若没接到旧序列末端一年内（如伯克希尔 2015 后断档）则整段沿用旧数据。"""
     if not new: return prev
     real_prev = [r for r in prev if r[2] != "" or r[3] != ""]
     if prev and new[-1][0] < (max(r[0] for r in real_prev)[:4] + "-01-01" if real_prev else "0000"): return prev
-    first = new[0][0]
-    return [r for r in prev if r[0] < first] + new
+    nd = sorted(_d(r[0]) for r in new)
+    import bisect
+    def covered(x):
+        dx = _d(x); i = bisect.bisect_left(nd, dx)
+        return any(0 <= j < len(nd) and abs((nd[j] - dx).days) <= 60 for j in (i - 1, i))
+    keep = [r for r in prev if not covered(r[0]) and r[0] <= new[-1][0]]
+    return sorted(keep + new, key=lambda r: r[0])
 
 def pick_one(F, tags, unit, kind="q", prefer_last=False):
     """同类替代标签择一：取覆盖最全的；prefer_last=True 时若最后一个标签覆盖≥其他的 80% 则优先它（总权益）。"""
@@ -303,12 +319,53 @@ def pick_one(F, tags, unit, kind="q", prefer_last=False):
 
 def build(t, prev, src, do_stitch=True):
     B = prev or {}; flags = []
-    F = split_adjust(src.facts(t), src.splits(t))
+    F = src.facts(t)
+    LEG = src.legacy(t) if hasattr(src, "legacy") else {}
+    if LEG: F = merge_facts(F, {"facts": {"legacy": LEG}})
+    F = split_adjust(F, src.splits(t))
     Q = lambda tags, u="USD": quarterly(F, tags, u); I = lambda tags, u="USD": instant(F, tags, u)
     EPS, eps_tag = pick_one(F, EPS_TAGS, "USD/shares"); NI, ni_tag = pick_one(F, NI_TAGS, "USD"); REV = Q(REV_TAGS); OPI = Q(OPI_TAGS); TAX = Q(TAX_TAGS)
     OCF = Q(OCF_TAGS); CX = Q(CX_TAGS); OCFa = annual(F, OCF_TAGS, "USD"); CXa = annual(F, CX_TAGS, "USD"); PRa = annual(F, PROC_TAGS, "USD")
     EQ, eq_tag = pick_one(F, ["StockholdersEquity","StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], "USD", "i", prefer_last=True)
     SHi = I(SH_INST, "shares"); SHd = quarterly(F, SH_DUR, "shares", derive=False); CASH = I(CASH_TAGS)
+    def fill(base, extra, tol=None):
+        """base 优先；extra 只补 base 缺的季度。tol：两者重叠季中位偏差超过 tol 就不补（口径不同，如含少数股东损益）。"""
+        if not extra: return base
+        if tol is not None:
+            ov = [abs(extra[k] / base[k] - 1) for k in base if k in extra and base[k]]
+            if ov and st.median(ov) > tol: return base
+        out = dict(extra); out.update(base); return dict(sorted(out.items()))
+    for tg in EPS_TAGS:
+        if tg != eps_tag: EPS = fill(EPS, quarterly(F, [tg], "USD/shares"), 0.02)
+    for tg in NI_TAGS:
+        if tg != ni_tag: NI = fill(NI, quarterly(F, [tg], "USD"), 0.02)
+    for tg in ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]:
+        if tg != eq_tag: EQ = fill(EQ, instant(F, [tg], "USD"), 0.02)
+    # XBRL 起点：该公司第一份带结构化数据的定期报告的本期末。之前的期在 XBRL 里只是后来年报的比较数（可能已重述）。
+    cur = [a["end"] for tg in ("NetIncomeLoss", "ProfitLoss", "EarningsPerShareDiluted") for a in _tag_recs(F, tg, "USD" if tg != "EarningsPerShareDiluted" else "USD/shares")
+           if "start" in a and a.get("form", "").startswith(("10-Q", "10-K")) and "filed" in a and 0 <= (_d(a["filed"]) - _d(a["end"])).days <= 120]
+    cutoff = min(cur) if cur else "0000"
+    if LEG:
+        def prefer(base, extra):
+            out = dict(base); bk = sorted(base)
+            for k, v in extra.items():
+                near_k = [b for b in bk if abs((_d(b) - _d(k)).days) <= 20]
+                if near_k:
+                    if k < cutoff: out[near_k[0]] = v        # 同一期：XBRL 之前以原件为准
+                else: out[k] = v                               # 缺的期：补上
+            ek = sorted(extra)
+            for b in bk:                                       # 换财年的公司（MS 2009 改日历季）：XBRL 比较数落在另一套季度网格上，老报告已覆盖的那段不混进来
+                gap = min((abs((_d(b) - _d(k)).days) for k in ek), default=999)
+                if b < cutoff and 20 < gap < 70 and any(0 < (_d(b) - _d(k)).days <= 100 for k in ek) and any(0 < (_d(k) - _d(b)).days <= 100 for k in ek):
+                    out.pop(b, None)                           # 离老报告季末 20–70 天＝夹在两套网格之间；离 90 天左右＝老报告缺的那季，留着
+            return dict(sorted(out.items()))
+        n0 = len(NI)
+        EPS = prefer(EPS, quarterly(F, ["LegacyEarningsPerShareDiluted"], "USD/shares"))
+        NI = prefer(NI, quarterly(F, ["LegacyNetIncomeLoss"], "USD"))
+        EQ = prefer(EQ, instant(F, ["LegacyStockholdersEquity"], "USD"))
+        REV = prefer(REV, quarterly(F, ["LegacyRevenues"], "USD"))
+        SHd = prefer(SHd, quarterly(F, ["LegacyWeightedAverageNumberOfDilutedSharesOutstanding"], "shares", derive=False))
+        flags.append(f"老报告补{len(NI) - n0}季·原件优先至{cutoff}")
     if ni_tag and ni_tag != "NetIncomeLoss": flags.append("NI=" + ni_tag[:14])
     if eq_tag == "StockholdersEquity": flags.append("EQ=母")
     Dnc, Dc, Dt, Sb = I(DEBT_NC), I(DEBT_C), I(DEBT_TOT), I(STB)
@@ -334,18 +391,23 @@ def build(t, prev, src, do_stitch=True):
         return d + (near(Sb, k) or 0)
     rows = {"pe-ratio": [], "ps-ratio": [], "price-book": [], "roe": [], "roic": [], "free-cash-flow": []}
     last_eps = None
-    for e in [k for k in EPS if k >= FIRST]:
-        eps, ni = ttm(EPS, e), ttm(NI, e)
-        if eps is None: continue
-        L = month_end_label(e); p = prices.get(L)
-        if p is None: continue
-        ks = [k for k in EPS if k <= e][-4:]
-        rows["pe-ratio"].append([L, round(p, 2), round(eps, 2), round(p / eps, 2) if eps > 0 else 0.0]); last_eps = eps
+    byL = {}
+    for e in sorted(set(EPS) | set(NI)):
+        if e >= FIRST: byL[month_end_label(e)] = e          # 同一月末标签取最后那个财季末
+    rows["_ttm"] = {}                                      # 内部用（上线闸算隐含股数）：未四舍五入的 TTM 净利/每股收益
+    for L, e in sorted(byL.items()):
+        p = prices.get(L)
+        eps = ttm(EPS, e) if e in EPS else None
+        rows["_ttm"][L] = (ttm(NI, e) if e in NI else None, eps)
+        if eps is not None and p is not None:
+            rows["pe-ratio"].append([L, round(p, 2), round(eps, 2), round(p / eps, 2) if eps > 0 else 0.0]); last_eps = eps
         sh = shares_at(e); eq = near(EQ, e)
-        if eq and sh: rows["price-book"].append([L, round(p, 2), round(eq / sh, 2), round(p / (eq / sh), 2)])
+        if p is not None and eq and sh: rows["price-book"].append([L, round(p, 2), round(eq / sh, 2), round(p / (eq / sh), 2)])
         rev = ttm(REV, e)
-        if rev and sh and rev > 0: rows["ps-ratio"].append([L, round(p, 2), round(rev / sh, 2), round(p / (rev / sh), 2)])
+        if p is not None and rev and sh and rev > 0: rows["ps-ratio"].append([L, round(p, 2), round(rev / sh, 2), round(p / (rev / sh), 2)])
+        ni = ttm(NI, e) if e in NI else None
         if ni is None: continue
+        ks = [k for k in NI if k <= e][-4:]
         eqs = [near(EQ, k) for k in ks]
         if all(eqs) and st.mean(eqs) != 0: rows["roe"].append([L, ni, st.mean(eqs), round(ni / st.mean(eqs) * 100, 2)])
         opi, tax = ttm(OPI, e), ttm(TAX, e)
@@ -367,8 +429,17 @@ def build(t, prev, src, do_stitch=True):
     if not Dnc and not Dt: flags.append("无债务标签")
     if not ROIC_EMIT: flags.append("roic沿用上一版")
     if rows["pe-ratio"] and rows["pe-ratio"][0][0] > "2012-01-01": flags.append(f"起{rows['pe-ratio'][0][0][:4]}")
-    rows["_n_new"] = len(rows["pe-ratio"])
+    rows["_n_new"] = len(rows["pe-ratio"]); rows["_cutoff"] = cutoff
+    def keep_published_before(prev, new):
+        """XBRL 起点之前：已发布的值是历史记录（原件或已核对的老报告），每周更新不改写；只在已发布没有的日期用新算的补。"""
+        if LEG or not prev: return new
+        pv = {r[0]: r for r in prev if r[0] < cutoff}
+        out = [r for r in new if r[0] >= cutoff or not any(abs((_d(r[0]) - _d(k)).days) <= 20 for k in pv)]
+        return sorted(out + list(pv.values()), key=lambda r: r[0])
     if do_stitch and B:
+        rows["pe-ratio"] = keep_published_before(prev_rows(B, "pe", True), rows["pe-ratio"])
+        rows["price-book"] = keep_published_before(prev_rows(B, "pb_hist"), rows["price-book"])
+        rows["roe"] = keep_published_before(prev_rows(B, "roe"), rows["roe"])
         rows["pe-ratio"]   = stitch(prev_rows(B, "pe", True), rows["pe-ratio"])
         rows["price-book"] = rows["price-book"] if t in PB_NO_STITCH else stitch(prev_rows(B, "pb_hist"), rows["price-book"])
         rows["roe"]        = stitch(prev_rows(B, "roe"), rows["roe"])
@@ -391,7 +462,16 @@ class CacheSource:
     def facts(self, t):
         F = json.load(open(f"{self.d}/facts/{t}.json", encoding="utf-8"))
         if t == "BLK" and os.path.exists(f"{self.d}/facts/BLK_old.json"): F = merge_facts(json.load(open(f"{self.d}/facts/BLK_old.json", encoding="utf-8")), F)
+        for cik in EXTRA_CIK.get(t, []):
+            p = f"{self.d}/facts/{t}__{cik}.json"
+            if os.path.exists(p): F = merge_facts(json.load(open(p, encoding="utf-8")), F)
         return F
+    def legacy(self, t):
+        """老报告（2009 年前）解析结果；目录由环境变量 LEGACY_DIR 指定，未指定则不用。标签改名进 legacy 命名空间，只补缺不改选择。"""
+        d = os.environ.get("LEGACY_DIR")
+        if not d or not os.path.exists(f"{d}/{t}.json"): return {}
+        g = json.load(open(f"{d}/{t}.json", encoding="utf-8"))["facts"].get("us-gaap", {})
+        return {"Legacy" + k: v for k, v in g.items()}
     def prices(self, t):
         out = {}
         for r in csv.reader(open(f"{self.d}/prices_me/{t}.csv")):
