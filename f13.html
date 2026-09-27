@@ -322,7 +322,8 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
         }
       }
     } else if (c.solid) {
-      h += '<p class="f13-sub">时间轴回补中：全史逐期数据正在从 EDGAR 补齐，补到即显示。</p>';
+      h += '<p class="f13-sub">' + (_EN ? "Timeline being backfilled: the full quarter-by-quarter history is still being pulled from EDGAR and will appear once complete."
+                                        : "时间轴回补中：全史逐期数据正在从 EDGAR 补齐，补到即显示。") + '</p>';   /* 2026-09-27：原无 EN 分支 */
     }
     $("#panel").innerHTML = '<div class="f13-panel">' + h + "</div>";
 
