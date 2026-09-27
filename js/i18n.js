@@ -125,7 +125,8 @@
     // ---- 头版 · 情绪仪表盘 ----
     "情绪仪表盘 · 恐惧的分解": ["Sentiment Dashboard · fear, decomposed", "", "", ""],
     "保护费拆成四块": ["Premium, in four", "", "", ""],
-    "怕，是能拆开读的：有多少人在买保护、纳指比大盘多付多少保费、多少只股票还站在自己的长期均线上、恐贪指数的七个零件各指向哪。": ["Fear can be read in parts: how many are buying protection, how much extra premium the Nasdaq pays over the broad market, how many stocks still stand above their own long-term average, and where each of the seven parts of the Fear & Greed machine is pointing.", "", "", ""],
+    // 2026-09-27：中文正文开头已改为「买保护的钱」，键未跟 ⇒ EN 态整段漏成中文。键与 index.html 逐字对齐。
+    "买保护的钱，是能拆开读的：有多少人在买保护、纳指比大盘多付多少保费、多少只股票还站在自己的长期均线上、恐贪指数的七个零件各指向哪。": ["What investors pay for protection can be broken down: how many are buying it, how much more premium the Nasdaq commands than the broad market, how many stocks still trade above their long-term moving average, and which way each of the seven Fear & Greed components is pointing.", "", "", ""],
     "15 年台账与全部输赢（包括跑输的那部分）→": ["The full 15-year ledger, every win and loss (including where it trailed) →", "", "", ""],
     "极端读数出现的那天，一封免费邮件 →": ["On days of extreme readings, one free email →", "", "", ""],
     "全市场 · 5 日均值": ["all-market · 5-day average", "", "", ""],
