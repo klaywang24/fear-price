@@ -251,6 +251,8 @@
     "各走各的 · 100": ["each on its own · 100", "", "", ""],
     "历史中位": ["historical median", "médiane", "Median", "mediana"],
     "标普500成分股": ["S&P 500 constituents", "", "", ""],
+    // 2026-09-27：波动率家族横条图的纵轴标签（build_data.VOL_FAMILY["VXSMH"]），此前漏收 ⇒ EN 态纵轴显示中文。
+    "半导体 ETF": ["Semiconductor ETF", "ETF semi-conducteurs", "Halbleiter-ETF", "ETF de semiconductores"],
     "百分位": ["percentile", "", "", ""],
     "当前": ["current", "", "", ""],
     // ---- 做空成交结构（2026-07-18）----
