@@ -223,7 +223,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
   try {
     const r = await fetch("data/f13_page.json", { cache: "no-store" });
     D = await r.json();
-  } catch (e) { $("#fresh").textContent = "数据加载失败，请刷新重试。"; return; }
+  } catch (e) { $("#fresh").textContent = localStorage.getItem("mc-lang") === "en" ? "Failed to load data. Please refresh." : "数据加载失败，请刷新重试。"; return; }
   const _EN = localStorage.getItem("mc-lang") === "en";
   const NM = (c) => _EN ? (c.en || c.cn) : c.cn;
   const DT = (c) => _EN ? (c.decision_type_en || c.decision_type) : c.decision_type;
@@ -269,7 +269,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
       (d.accession ? " · acc " + d.accession : "") + "</div>";
     if (!c.solid) {
       h += _EN
-        ? '<p class="f13-sub">This is a ' + c.decision_type + ' filer: the table is the sum of hundreds of separate strategy books, so no single position reads as a house judgement. Size only here (' +
+        ? '<p class="f13-sub">This is a ' + DT(c) + ' filer: the table is the sum of hundreds of separate strategy books, so no single position reads as a house judgement. Size only here (' +
           (c.entries ? c.entries.toLocaleString() : "\u00b7") + ' rows · ' + B(c.value_usd) + ').</p>'
         : '<p class="f13-sub">这家是' + DT(c) + '：持仓表是几百个策略各自仓位的加总，单只持仓读不出机构判断，所以本页对它只报规模（' +
           (c.entries ? c.entries.toLocaleString() : "·") + ' 条持仓 · ' + B(c.value_usd) + '）。</p>';
@@ -342,7 +342,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
     const TR = {
       "恐惧的标价": "Fear-Price", "订阅": "Subscribe",
       "今日": "Today", "K 指数 · 台账": "KAPX · Ledger",
-      "K 指数": "KAPX", "恐惧的标价": "Fear-Price Index",
+      "K 指数": "KAPX",
       "恐惧的标价 · 台账": "Fear-Price Index · Ledger",
       "期权异动": "Options", "13F 开奖": "13F", "百年档案": "The Archive",
       "宏观": "Macro",
