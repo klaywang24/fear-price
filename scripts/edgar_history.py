@@ -448,6 +448,9 @@ def build(t, prev, src, do_stitch=True):
         EQ = prefer(EQ, instant(F, ["LegacyStockholdersEquity"], "USD"))
         REV = prefer(REV, quarterly(F, ["LegacyRevenues"], "USD"))
         SHd = prefer(SHd, quarterly(F, ["LegacyWeightedAverageNumberOfDilutedSharesOutstanding"], "shares", derive=False))
+        e1 = quarterly(F, ["LegacyEarningsPerShareDiluted"], "USD/shares", derive=False); n1 = quarterly(F, ["LegacyNetIncomeLoss"], "USD", derive=False)
+        imp = {e: n1[e] / e1[e] for e in e1 if e in n1 and e < cutoff and abs(e1[e]) >= 0.10 and near(SHd, e, 10, 0) is None}
+        if imp: SHd = dict(sorted({**imp, **SHd}.items())); flags.append(f"老报告股数缺{len(imp)}季→单季净利÷单季稀释EPS")   # 两个数都是公司原件直接报的单季数（不用累计相减推出的季），EPS 两位小数、|EPS|≥0.10 时股数误差≤5%
         flags.append(f"老报告补{len(NI) - n0}季·原件优先至{cutoff}")
     if t in CLASS_A_EPS:   # 股数＝单季净利 ÷ 单季 A 类稀释 EPS＝公司把 B/C 按转换比例折成 A 类后的分母（2026-06 季 56.28 亿÷2.97≈18.95 亿，公司公布 18.98 亿）
         SHi = {}; SHd = {e: NI[e] / EPS[e] for e in EPS if e in NI and abs(EPS[e]) >= 0.05}
@@ -496,6 +499,9 @@ def build(t, prev, src, do_stitch=True):
         ks = [k for k in NI if k <= e][-4:]
         eqs = [near(EQ, k) for k in ks]
         if all(eqs) and st.mean(eqs) != 0: rows["roe"].append([L, ni, st.mean(eqs), round(ni / st.mean(eqs) * 100, 2)])
+        elif LEG and e < cutoff:           # 老报告只给年末权益（10-Q 资产负债表没解析到）：按公司年报口径＝近四季净利 ÷（期初＋期末权益）/2，两端都须是原件数
+            q0, q1 = near(EQ, e, 10, 0), near(EQ, (_d(e) - dt.timedelta(days=365)).isoformat(), 10, 10)
+            if q0 and q1 and q0 + q1 != 0: rows["roe"].append([L, ni, (q0 + q1) / 2, round(ni / ((q0 + q1) / 2) * 100, 2)])
         opi, tax = ttm(OPI, e), ttm(TAX, e)
         nopat = opi * (1 - tax / (ni + tax)) if (opi is not None and tax is not None and (ni + tax) > 0 and opi > 0) else ni
         ic = []

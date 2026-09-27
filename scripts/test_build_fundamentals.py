@@ -145,6 +145,9 @@ def main():
     fund = {"ticker": "T"}
     bf.carry_history(fund, {p: [] for p in bf.PAGE_KEYS}, {}, "2026-09-26")
     check("nothing to carry and nothing fetched: keys stay absent (never invented)", "pe" not in fund and "history_carried" not in fund)
+    # 2026-09-27：旧源退役后中间可能整年没数，估值拆分只比相邻两年
+    dv = bf.valuation_driver([["2006-12-31", 10, 1, 10], ["2007-09-30", 12, 1.2, 10], ["2010-12-31", 20, 2, 10], ["2011-12-31", 22, 2, 11]])
+    check("driver: a multi-year gap is skipped, never booked as one year", [d["year"] for d in dv] == [2007, 2011])
     # 2026-09-27：滚动四季不许沿用停报之后的旧季度（edgar_history.ttm）
     import edgar_history as eh
     q = {"2014-12-31": 1, "2015-03-31": 2, "2015-06-30": 3, "2015-09-30": 4}

@@ -155,6 +155,29 @@ def carry_history(fund: dict, mt: dict, prev: dict, today: str) -> list:
     return carried
 
 
+def valuation_driver(pe_rows):
+    """估值驱动 vs EPS 驱动：取每年最后一行做年度分解。只比相邻两年；中间整年没数（旧源退役留下的空档）就跳过，不把跨多年的变化记成一年。"""
+    by_year = {}
+    for r in pe_rows:
+        by_year[r[0][:4]] = r
+    years = sorted(by_year)
+    driver = []
+    for a, b in zip(years, years[1:]):
+        if int(b) != int(a) + 1:
+            continue
+        p0, e0 = num(by_year[a][1]), num(by_year[a][2])
+        p1, e1 = num(by_year[b][1]), num(by_year[b][2])
+        if not all(x and x > 0 for x in (p0, e0, p1, e1)):
+            continue
+        driver.append({
+            "year": int(b),
+            "price_ret": round((p1 / p0 - 1) * 100, 1),
+            "eps_chg": round((e1 / e0 - 1) * 100, 1),
+            "pe_chg": round((p1 / e1) / (p0 / e0) * 100 - 100, 1),
+        })
+    return driver
+
+
 def build_stock_fund(ticker: str):
     fund = {"ticker": ticker}
 
@@ -171,24 +194,7 @@ def build_stock_fund(ticker: str):
     if pe_rows:
         fund["pe"] = series_from(pe_rows, 3)
         fund["eps"] = series_from(pe_rows, 2)
-        # 估值驱动 vs EPS 驱动：取每年最后一行做年度分解
-        by_year = {}
-        for r in pe_rows:
-            by_year[r[0][:4]] = r
-        years = sorted(by_year)
-        driver = []
-        for a, b in zip(years, years[1:]):
-            p0, e0 = num(by_year[a][1]), num(by_year[a][2])
-            p1, e1 = num(by_year[b][1]), num(by_year[b][2])
-            if not all(x and x > 0 for x in (p0, e0, p1, e1)):
-                continue
-            driver.append({
-                "year": int(b),
-                "price_ret": round((p1 / p0 - 1) * 100, 1),
-                "eps_chg": round((e1 / e0 - 1) * 100, 1),
-                "pe_chg": round((p1 / e1) / (p0 / e0) * 100 - 100, 1),
-            })
-        fund["driver"] = driver
+        fund["driver"] = valuation_driver(pe_rows)
     if mt["ps-ratio"]:
         fund["ps"] = series_from(mt["ps-ratio"], 3)
     if mt["price-book"]:
