@@ -1208,7 +1208,7 @@
         cell(s.fwd20) + cell(s.fwd40) + cell(s.fwd60) + cell(s.spx_fwd60) + cell(s.fwd_to_date) + cell(s.spx_to_date) + "</tr>"
       ).join("");
 
-    // 持有期矩阵：五个视界 × 双锚的胜率与中位收益（120/250 视界未到期的信号不计入）
+    // 持有期矩阵：五个视界 × 双锚的上涨占比与中位收益（120/250 视界未到期的信号不计入）
     const mtEl = document.getElementById("k-matrix");
     if (mtEl) {
       const HZ = [20, 40, 60, 120, 250];
@@ -1227,10 +1227,10 @@
       const medCell = (v) => v == null ? "<td>--</td>" : `<td class="${v >= 0 ? "pos" : "neg"}">${pct(v)}</td>`;
       mtEl.innerHTML =
         `<tr><th></th>${HZ.map((h) => `<th>+${h}d</th>`).join("")}</tr>` +
-        `<tr><td>纳指 胜率</td>${nd.wins.map((w) => `<td>${w}</td>`).join("")}</tr>` +
+        `<tr><td>纳指 上涨占比</td>${nd.wins.map((w) => `<td>${w}</td>`).join("")}</tr>` +
         `<tr><td>纳指 平均收益</td>${nd.avgs.map(medCell).join("")}</tr>` +
         `<tr><td>纳指 中位收益</td>${nd.meds.map(medCell).join("")}</tr>` +
-        `<tr><td>标普 胜率</td>${sp.wins.map((w) => `<td>${w}</td>`).join("")}</tr>` +
+        `<tr><td>标普 上涨占比</td>${sp.wins.map((w) => `<td>${w}</td>`).join("")}</tr>` +
         `<tr><td>标普 平均收益</td>${sp.avgs.map(medCell).join("")}</tr>` +
         `<tr><td>标普 中位收益</td>${sp.meds.map(medCell).join("")}</tr>`;
     }
@@ -1241,8 +1241,8 @@
     const winS = sig.signals.filter((s) => s.spx_fwd60 != null && s.spx_fwd60 > 0).length;
     const hasS = sig.signals.filter((s) => s.spx_fwd60 != null).length;
     document.getElementById("k-verdict").textContent =
-      `实证结论：2011 年以来共 ${n} 次信号。60 个交易日窗口胜率：标普 ${winS}/${hasS}、纳指 ${win60}/${has60}` +
-      `（V 形回调中几乎必胜；2021 末—2022 的持续熊市中信号会连续触发、短期窗口为负）。` +
+      `实证结论：2011 年以来共 ${n} 次信号。60 个交易日后上涨：标普 ${winS}/${hasS}、纳指 ${win60}/${has60}` +
+      `（V 形回调中几乎都上涨；2021 末—2022 的持续熊市中信号会连续触发、短期窗口为负）。` +
       `所有信号持有至今全部为正。历史规律不保证未来。`;
   }
 
@@ -1560,7 +1560,7 @@
             const r = d.rows[params[0].dataIndex];
             // 函数体内的中文走 translate（JSON.stringify(getOption()) 扫不进函数体）
             const T = (s) => (window.MC_I18N ? MC_I18N.translate(s) : s);
-            return `${T(`持有 ${r.years} 年`)}<br/>${T(`胜率 ${r.win}%`)}<br/>`
+            return `${T(`持有 ${r.years} 年`)}<br/>${T(`上涨概率 ${r.win}%`)}<br/>`
               + T(`年化中位 ${r.median}% · 最差 ${r.worst}% · 最好 ${r.best}%`);
           },
         }),
@@ -1580,7 +1580,7 @@
     const _host2 = document.getElementById(tableId);
     if (!_host2) return;  // §63 瘦身路由页：该面板不在本页，跳过填充
     _host2.innerHTML =
-      "<tr><th>持有期</th><th>胜率</th><th>年化中位</th><th>最差年化</th><th>最好年化</th><th>样本</th></tr>" +
+      "<tr><th>持有期</th><th>上涨概率</th><th>年化中位</th><th>最差年化</th><th>最好年化</th><th>样本</th></tr>" +
       d.rows.map((r) =>
         `<tr><td>${r.years} 年</td><td>${r.win}%</td>` + f(r.median) + f(r.worst) + f(r.best) +
         `<td>${r.samples}</td></tr>`).join("");
@@ -2850,7 +2850,7 @@
           data: zip(d.dates, d.fng), lineStyle: { color: p.gold, width: 1.1 }, itemStyle: { color: p.gold },
           markLine: { silent: true, symbol: "none",
             lineStyle: { color: p.danger, type: "dashed", width: 1.2 },
-            label: { color: p.danger, formatter: "开仓阈值 25", fontFamily: "JetBrains Mono", fontSize: 10 },
+            label: { color: p.danger, formatter: "窗口阈值 25", fontFamily: "JetBrains Mono", fontSize: 10 },
             data: [{ yAxis: d.threshold }] },
           markArea: { silent: true, data: areas } },
         { name: "纳指 100", type: "line", yAxisIndex: 1, showSymbol: false,

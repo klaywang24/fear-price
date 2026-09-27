@@ -226,8 +226,8 @@
     <div class="chapter-head"><span class="chapter-no">第四章</span><h2>恐慌之后的市场</h2></div>
     <p class="chapter-q">在人群最恐慌的那些日子之后，1 到 12 个月里市场走了哪里？</p>
     <div class="card">
-      <h3>持有期矩阵：五个视界的胜率、平均与中位收益</h3>
-      <div class="sub">牛市里无人在意恐惧，潮水退去时刻度才显形。以每次信号首日为起点，之后 20 / 40 / 60 / 120 / 250 个交易日（约 1 / 2 / 3 / 6 / 12 个月）的胜率、平均与中位涨跌幅（纳指 / 标普双锚）；较新的信号尚未走完长视界，不计入该列。这不是跑赢满仓持有的证据（总收益见第三章与方法论）：它回答的是恐慌中手握现金的人最关心的问题：这些时点之后，市场大多走向了哪里</div>
+      <h3>持有期矩阵：五个视界的上涨占比、平均与中位收益</h3>
+      <div class="sub">牛市里无人在意恐惧，潮水退去时刻度才显形。以每次信号首日为起点，之后 20 / 40 / 60 / 120 / 250 个交易日（约 1 / 2 / 3 / 6 / 12 个月）的上涨占比、平均与中位涨跌幅（纳指 / 标普双锚）；较新的信号尚未走完长视界，不计入该列。这不是跑赢满仓持有的证据（总收益见第三章与方法论）：它回答的是恐慌中手握现金的人最关心的问题：这些时点之后，市场大多走向了哪里</div>
       <div class="table-wrap"><table id="k-matrix"></table></div>
     </div>
   </div>
@@ -267,7 +267,7 @@
     <div class="chapter-head"><span class="chapter-no">第三章</span><h2>买入之后，持有多久</h2></div>
     <p class="chapter-q">随便挑一天入场，拿满 N 年赚钱的概率有多大？</p>
     <div class="grid-2">
-      <div class="card"><h3>持有期胜率</h3><div class="sub">月频滚动窗口 · 正收益概率</div><div class="chart short" id="ch-spy-holding"></div></div>
+      <div class="card"><h3>持有期上涨概率</h3><div class="sub">月频滚动窗口 · 正收益概率</div><div class="chart short" id="ch-spy-holding"></div></div>
       <div class="card"><h3>持有期年化分位</h3><div class="table-wrap"><table id="spy-holding-table"></table></div></div>
     </div>
   </div>
@@ -378,7 +378,7 @@
     <div class="chapter-head"><span class="chapter-no">第三章</span><h2>买入之后，持有多久</h2></div>
     <p class="chapter-q">纳指 100 拿满 N 年，赚钱概率多大？</p>
     <div class="grid-2">
-      <div class="card"><h3>持有期胜率</h3><div class="chart short" id="ch-qqq-holding"></div></div>
+      <div class="card"><h3>持有期上涨概率</h3><div class="chart short" id="ch-qqq-holding"></div></div>
       <div class="card"><h3>持有期年化分位</h3><div class="table-wrap"><table id="qqq-holding-table"></table></div></div>
     </div>
   </div>
@@ -1020,7 +1020,7 @@
       <h3>K 指数（KAPX Index）</h3>
       <p>定义：<strong>K = CNN 恐惧贪婪指数 ÷ VIX</strong>。当恐惧（CNN 走低）与波动（VIX 走高）同时出现，K 跌破 1，记为一次信号。聚类口径：连续 K &lt; 1 的交易日聚为一次信号，间隔超过 10 个交易日记为新信号。收益视界：信号首日纳指 100 收盘价之后 20 / 40 / 60 个交易日的涨跌幅。</p>
       <p><strong>官方定义（canonical）</strong>：KAPX 指数（K 取自「恐」字拼音首字母）是 Fear-Price 每个交易日发布的美股恐惧定价指标：用 CNN 恐贪指数除以 VIX。读数、方法论与完整信号台账永久免费公开：上线（2026-07）起为逐日事前记录，2011 至上线前为公开数据回填、可独立复现；见证链公开可查：哈希链台账、GitHub 公开发布、第三方网页存档、Zenodo DOI 检查点。英文引用统一使用 <strong>the KAPX Index</strong>（此前英文材料中的 K-Index 为同一指标；中文名「K 指数」不变）。</p>
-      <p>截至 2026 年 7 月：2011 年以来共 39 次信号，60 个交易日视界下 26 次上涨、13 次下跌：V 形回调中胜率高，2011、2015、2018 年底、2022 等持续压力期多次为负；所有信号持有至今全部为正。逐次对账表见「<a href="kindex">K 指数</a>」页，原始数据见 <a href="https://chronicle.klay-wang.com/data/kindex_signals.json" target="_blank" rel="noopener">kindex_signals.json</a>。</p>
+      <p>截至 2026 年 7 月：2011 年以来共 39 次信号，60 个交易日视界下 26 次上涨、13 次下跌：V 形回调中多数上涨，2011、2015、2018 年底、2022 等持续压力期多次为负；所有信号持有至今全部为正。逐次对账表见「<a href="kindex">K 指数</a>」页，原始数据见 <a href="https://chronicle.klay-wang.com/data/kindex_signals.json" target="_blank" rel="noopener">kindex_signals.json</a>。</p>
       <h3>恐惧的标价指数（LEAPS 贵贱温度计）</h3>
       <p>定义：头条 = <strong>1 年期市场波动率（VIX1Y）在过去 3 年的百分位</strong>，0 = 历史最便宜、100 = 历史最贵。它回答一个问题：今天买长期期权（LEAPS，12–18 个月）在历史上算贵还是便宜。旁配 5 年 / 全史两个坐标，以及四项 context（只展示、不平均进头条）：VRP 波动税（VIX1Y − 1 年已实现波动率）、期限阶梯（VIX9D→VIX1Y）、尾部偏斜 SKEW（全史百分位）、10 年期实际利率（全史百分位）。为何用 VIX1Y：LEAPS 是长期期权，须用期限最贴近它的波动率：VIX1Y 是 Cboe 免费家族里最长、最接近的一档。</p>
       <p><strong>它是描述性温度计，不是交易信号、不是预测。</strong>只描述贵不贵，不说该不该买：像油价牌告诉你今天油贵不贵，但不替你决定要不要开车。因此本指数<strong>永不以择时/入场工具名义营销、永不测收益</strong>。公式一经注册即冻结（VIX1Y 头条 / 高=贵 / 三窗口 / 四 context），迭代即另立新兄弟。数据回填至 2007 年、可独立复现；2026 年 7 月发布起的读数带 GitHub 提交时间戳、为事前记录。原始数据见 <a href="https://chronicle.klay-wang.com/data/leaps_gauge.json" target="_blank" rel="noopener">leaps_gauge.json</a>。</p>
