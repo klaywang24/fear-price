@@ -2958,6 +2958,10 @@
     const verdict = p3 >= 66 ? "偏贵" : p3 >= 55 ? "略偏贵" : p3 >= 45 ? "中性" : p3 >= 34 ? "略偏便宜" : "偏便宜";
     const inv = t.ratio_vix_vix1y < 1;
     const sign = (v) => (v > 0 ? "+" : "") + v.toFixed(1);
+    // 2026-09-27（兜底审计后续·C3）：context 卡的某一项上游取空（如 Cboe 与雅虎 SKEW 同时取空）⇒ 整块或 value 为 null，
+    //   原写法 .toFixed 直接抛错，温度计 context 区整块不出。取不到就显示「—」，其余卡照常。
+    const numOr = (o, k, dig) => (o && typeof o[k] === "number" && isFinite(o[k])) ? o[k].toFixed(dig) : "—";
+    const pctOr = (o) => (o && typeof o.pctile_full === "number" && isFinite(o.pctile_full)) ? Math.round(o.pctile_full) : "—";
     // 柱高用相对刻度：把 5 档间的差值放大（绝对刻度下 15→23 只差三成，视觉上像一样高）
     const ladderVals = [t.vix9d, t.vix, t.vix3m, t.vix6m, t.vix1y];
     const ladderHi = Math.max(...ladderVals), ladderLo = Math.min(...ladderVals);
@@ -3016,13 +3020,13 @@
         </div>
         <div class="senti-card">
           <div class="lc-name">Call 偏斜 SKEW <span>看涨相对看跌</span></div>
-          <div class="lc-val">${Math.round(x.call_skew.pctile_full)}</div>
-          <div class="lc-meta"><span>分位 · 全史 · 值 ${x.call_skew.value.toFixed(0)}</span></div>
+          <div class="lc-val">${pctOr(x.call_skew)}</div>
+          <div class="lc-meta"><span>分位 · 全史 · 值 ${numOr(x.call_skew, "value", 0)}</span></div>
         </div>
         <div class="senti-card">
           <div class="lc-name">实际利率 <span>10 年期 · 资金压在仓里的成本</span></div>
-          <div class="lc-val">${Math.round(x.real_rate.pctile_full)}</div>
-          <div class="lc-meta"><span>分位 · 全史 · ${x.real_rate.value.toFixed(2)}%</span></div>
+          <div class="lc-val">${pctOr(x.real_rate)}</div>
+          <div class="lc-meta"><span>分位 · 全史 · ${numOr(x.real_rate, "value", 2)}%</span></div>
         </div>
       </div>
       <p class="footnote src-note"><span>VIX1Y = ${c.vix1y}</span> · <span>4 context 只展示，不平均进头条</span> · <span>数据截至</span> ${c.date} (<span>${c.segment === "forward" ? "前向台账" : "回测"}</span>) · <span>描述性数据，非投资建议</span></p>`;
