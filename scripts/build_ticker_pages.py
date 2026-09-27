@@ -312,12 +312,12 @@ def render(D, s, lang, css_v, uni):
     has_walls = bool(s["fh"])
 
     title = T(lang, f"{zh_label} 期权读数：保险价格一年分位、墙位与开奖记录 · 恐惧的标价 Fear-Price",
-              f"{en_label} options: implied volatility percentile, walls and settled calls · Fear-Price")
+              f"{en_label} options: implied volatility percentile, walls and settled cases · Fear-Price")
     desc = T(lang,
              f"{zh_name or tk}（{tk}）期权市场每个交易日收盘后的读数：一个月期保险价格在过去一年里的位置、上下两面墙、"
              f"本周预期波动区间、最近 30 个交易日的轨迹，以及我们对它立过的每一案和开奖结果。",
              f"{en_name or tk} ({tk}) options after every close: where one-month implied volatility sits in its one-year range, "
-             f"the put and call walls, this week's priced move, the last 30 trading days, and every call we have filed "
+             f"the put and call walls, this week's expected move, the last 30 trading days, and every case we have filed "
              f"on it with its settlement.")
 
     out = []
@@ -371,15 +371,15 @@ def render(D, s, lang, css_v, uni):
     if s["lives"] or st:
         q_zh.append(f"今天给{who_zh}买保护贵不贵"); q_en.append(f"is protection on {who_en} cheap or dear today")
     if st:
-        q_zh.append("钱押在哪些价位"); q_en.append("at which prices has money been placed")
+        q_zh.append("钱押在哪些价位"); q_en.append("where has the money been placed")
     if s["fh"] or s["cm"]:
-        q_zh.append("最近一个月怎么走过来的"); q_en.append("how did the last month get here")
-    q_zh.append(f"我们对{who_zh}立过的案开奖了没有"); q_en.append(f"how did the calls we filed on {who_en} settle")
+        q_zh.append("最近一个月怎么走过来的"); q_en.append("how did the past month play out")
+    q_zh.append(f"我们对{who_zh}立过的案开奖了没有"); q_en.append(f"how did the judgments we filed on {who_en} settle")
     q_en[0] = q_en[0][0].upper() + q_en[0][1:]
     w('<p class="dek">' + T(lang,
         "，".join(q_zh).strip() + "。每个交易日收盘后更新，对的错的都留着。",
         (", ".join(q_en[:-1]) + ", and " + q_en[-1] if len(q_en) > 1 else q_en[0]) +
-        ". Updated after every close, right calls and wrong ones alike.") + "</p>")
+        "? Updated after every close, with right and wrong judgments alike left on the record.") + "</p>")
     if st:
         w('<p class="tp-note">' + T(lang,
             f"数据日 {dot(data_date)} · 收盘 {num(st['spot'])}（{pct(st.get('chg_pct'))}）· 距 52 周高点 {pct(st.get('dd_52w'), sign=False)}",
@@ -404,13 +404,13 @@ def render(D, s, lang, css_v, uni):
         if isinstance(p, (int, float)):
             # 口径（Klay 09-26 定）：只说 0 是一年最便宜、100 是一年最贵，两种算法都成立；对外不写「百分之几的日子」。
             w('<div class="tp-kpi">'
-              f'<span class="k">{T(lang, "保险价格一年分位", "One-year percentile")}</span>'
+              f'<span class="k">{T(lang, "保险价格一年分位", "One-year IV percentile")}</span>'
               f'<span class="v">{p:.0f}<small> / 100</small></span>'
               f'<div class="tp-meter"><i style="left:{max(2, min(98, p)):.1f}%"></i></div>'
               '<p>' + T(lang,
                   f"一个月期保险（30 天隐含波动率）在过去一年里的位置，0 是一年最便宜，100 是一年最贵。"
                   f"现在给{who_zh}买一个月的保护，价格在{pctl_words(p, False)}。",
-                  f"Where one-month protection (30-day implied volatility) sits in its past year, 0 the cheapest "
+                  f"Where one-month protection (30-day implied volatility) sits within its past-year range, 0 the cheapest "
                   f"and 100 the dearest. Protection on {who_en} is now in {pctl_words(p, True)}.") + "</p></div>")
         lv = s["lives"]
         if lv:
@@ -421,12 +421,12 @@ def render(D, s, lang, css_v, uni):
         if st and st.get("em_abs") and st.get("spot"):
             em_pct = st["em_abs"] / st["spot"] * 100
             w('<div class="tp-kpi">'
-              f'<span class="k">{T(lang, "期权定价的本周波动", "Priced move this week")}</span>'
+              f'<span class="k">{T(lang, "期权定价的本周波动", "Expected move this week")}</span>'
               f'<span class="v">±{em_pct:.1f}%<small> ±{num(st["em_abs"])}</small></span>'
               '<p>' + T(lang,
-                  f"期权价格隐含的本周区间是 {num(st['em_lo'])} 到 {num(st['em_hi'])}。收在区间外，卖保护的人亏钱。",
+                  f"期权价格隐含的本周区间是 {num(st['em_lo'])} 到 {num(st['em_hi'])}。收在区间外，卖期权的人亏钱。",
                   f"Option prices imply {num(st['em_lo'])} to {num(st['em_hi'])} for the week. A close outside it "
-                  f"means the protection sellers lose.") + "</p></div>")
+                  f"means the option sellers lose.") + "</p></div>")
         if st and isinstance(st.get("pc_vol"), (int, float)):
             pv, po = st["pc_vol"], st.get("pc_oi")
             side = (T(lang, "成交里看涨多于看跌", "Calls outtraded puts") if pv < 1
@@ -441,11 +441,11 @@ def render(D, s, lang, css_v, uni):
         if st and st.get("put_wall") and st.get("call_wall") and st.get("spot"):
             spot = st["spot"]
             rows = [
-                (st.get("em_hi"), T(lang, "本周区间上沿", "Priced move, top"), T(lang, "期权隐含的本周高点。", "This week's implied high.")),
-                (st.get("call_wall"), T(lang, "上墙", "Call wall"), T(lang, "看涨持仓最厚的价位，别人付过定金的目标价。", "The strike with the most call open interest: a target someone paid a deposit on.")),
+                (st.get("em_hi"), T(lang, "本周区间上沿", "Expected move, high"), T(lang, "期权隐含的本周高点。", "This week's implied high.")),
+                (st.get("call_wall"), T(lang, "上墙", "Call wall"), T(lang, "看涨持仓最厚的价位，别人付过定金的目标价。", "The strike with the most call open interest: an upside target someone has already made a down payment on.")),
                 (spot, T(lang, "收盘", "Close"), ""),
                 (st.get("put_wall"), T(lang, "下墙", "Put wall"), T(lang, "看跌持仓最厚的价位，别人付过保费的保护层。", "The strike with the most put open interest: protection someone already paid for.")),
-                (st.get("em_lo"), T(lang, "本周区间下沿", "Priced move, bottom"), T(lang, "期权隐含的本周低点。", "This week's implied low.")),
+                (st.get("em_lo"), T(lang, "本周区间下沿", "Expected move, low"), T(lang, "期权隐含的本周低点。", "This week's implied low.")),
                 (st.get("flip"), T(lang, "多空分界", "Flip level"), T(lang, "价格在它上方，做市商的对冲会压住波动；跌破它，对冲会放大波动。", "Above it, dealer hedging damps moves; below it, hedging amplifies them.")),
             ]
             rows = sorted([r for r in rows if isinstance(r[0], (int, float))], key=lambda r: -r[0])
@@ -514,21 +514,21 @@ def render(D, s, lang, css_v, uni):
                 "只列逐条复核过的 A 级。归因只做算术：量至少两倍于持仓记更像新增，量超过持仓记倾向新增，量小于持仓记无法归因。",
                 "A-grade rows only, each rechecked. Attribution is arithmetic: volume at least twice OI reads likely new; above OI, leans new; below OI, inconclusive.") + "</p>")
         else:
-            w('<p class="tp-note">' + T(lang, f"今天{who_zh}没有合约进大单榜。", f"No {who_en} contract made the big board today.") + "</p>")
+            w('<p class="tp-note">' + T(lang, f"今天{who_zh}没有合约进大单榜。", f"No {who_en} contract made today's leaderboard.") + "</p>")
         w(f'<p class="tp-fresh">{T(lang, "只放数据日当天。全部标的的大单榜在", "Data date only. The board for every name is in")} '
           f'<a href="/options#op-ch4">{T(lang, "期权页第四章", "Chapter IV of the options page")}</a>{T(lang, "。", ".")}</p>')
 
     # ── 四 开奖记录 ──
     cases = ([c for c in s["cases"] if c["status"] == "待开奖"] +
              sorted([c for c in s["cases"] if c["status"] != "待开奖"], key=lambda c: c["events"][0]["date"], reverse=True))
-    w(chap("我们对它立过的案", "Every call we filed on it"))
+    w(chap("我们对它立过的案", "Every case we filed on it"))
     if cases:
         n_open = sum(c["status"] == "待开奖" for c in cases)
         n_done = sum(c["status"] == "已开奖" for c in cases)
         first_case = min(c["events"][0]["date"] for c in cases)
         w('<p class="tp-note">' + T(lang,
             f"每一案先写下判断和验证条件，到期按条件开奖，错了原样留着。这里是所有提到{who_zh}的案子，一案不删。点开看立案原文。",
-            f"Each call is written down with its test before the fact, settled by that test, and left standing when wrong. "
+            f"Each judgment is written down with its test before the fact, settled by that test, and left standing when wrong. "
             f"These are all the cases that name {who_en}, none removed. Open one for the original filing.") + "</p>")
         w('<div class="tp-count">'
           f'<div><b>{len(cases)}</b>{T(lang, f"案 · 自 {dot(first_case)}", f"cases since {dot(first_case)}")}</div>'
@@ -608,7 +608,7 @@ def render(D, s, lang, css_v, uni):
     w(f'<b>{T(lang, "口径说明", "How to read this page")}</b><br>')
     for zh_line, en_line in [
         ("一年分位与 30 天、一年期保险价格来自两把不同的尺子，只各自比自己的过去，互相不拼。",
-         "The one-year percentile and the 30-day and one-year implied vols come from two different rulers; each is compared only with its own past."),
+         "The one-year percentile and the 30-day and one-year implied vols come from two different sources; each is compared only with its own past, and the two are never spliced together."),
         ("30 天、一年期保险价格是恒定期限读数：用两个相邻到期日插值到正好 30 天和 365 天，每天收盘前取一次。",
          "The 30-day and one-year vols are constant-maturity: interpolated between the two nearest expiries to exactly 30 and 365 days, read once before each close."),
         ("大单一行是一个合约当天的累计，不是一笔交易。我们没有逐笔时间戳和主动买卖方向，所以只说换手额。",
