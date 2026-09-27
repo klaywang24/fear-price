@@ -2481,6 +2481,15 @@ FINRA_SI_API = "https://api.finra.org/data/group/otcMarket/name/consolidatedShor
 SHORT_INT_TICKERS = SHORT_FLOW_TICKERS      # 与流量表同一批，便于并排
 SI_WINDOW = 48          # 48 期 ≈ 2 年（双月）
 SI_MIN = 24             # 不足 24 期不给百分位，绝不用短窗口冒充
+# 2026-09-26 Klay 定（选项 C）：做空持仓扩到跳空表票池 50 只，站上分组展示。
+#   🔴 新增 30 只**只发加工读数**（自身近 48 期的分位），原始股数、补仓天数、日均量不进本文件
+#   （09-24 规矩「原始不上、加工可上」；FINRA 接口只许非商业）。它们的原值只落本机管线
+#   （期权数据管线 tools/fetch_finra.py → 每期做空持仓_全票池.csv）。
+#   原 20 只（SHORT_INT_TICKERS）是 09-24 前的存量，raw 列照旧，等律师七问；广度图、散点、显著性
+#   三章仍只用原 20 只（那几章的文字写死了基于 20 只的读数，换分母会对不上）。
+SHORT_INT_EXTRA = ["GOOG", "AMD", "INTC", "TSM", "MRVL", "ORCL", "SKHY", "SOFI", "CRWV", "NBIS", "QCOM",
+                   "ARM", "IONQ", "MARA", "MSTR", "RDDT", "APP", "COIN", "HOOD", "CVNA", "PLTR",
+                   "GS", "AXP", "JPM", "MA", "V", "GME", "NFLX", "SMCI", "DELL"]
 SI_NAME_SIM = 0.45      # 名称归一化后相似度低于此 → 判为换了标的
 
 
@@ -2600,6 +2609,30 @@ def build_short_interest():
             "note": None if enough else f"历史仅 {len(win)} 期，不足 {SI_MIN} 期，百分位不计算",
         }
 
+    # ── 分位层：原 20 只从上面已组好的序列算；新增 30 只现拉现算，原值不留 ──
+    pctl = {}
+    for tk in SHORT_INT_TICKERS:
+        cut_from = cuts.get(tk, {}).get("from")
+        pairs = [(d, old_by.get(d, {}).get(tk)) for d in settles]
+        pairs = [(d, r) for d, r in pairs if r is not None and not (cut_from and d < cut_from)]
+        _put_pctl(pctl, tk, [d for d, _ in pairs], [r["si"] for _, r in pairs], [r["dtc"] for _, r in pairs])
+    for tk in SHORT_INT_EXTRA:
+        try:
+            rows, cut = _si_fetch(tk)
+        except Exception as e:
+            print(f"   {tk} 拉取失败，本轮不发分位: {e}")
+            continue
+        ds, sis, dtcs = [], [], []
+        for r in rows:
+            try:
+                si = int(r["currentShortPositionQuantity"])
+            except (ValueError, TypeError):
+                continue
+            ds.append(r["settlementDate"]); sis.append(si); dtcs.append(_f(r.get("daysToCoverQuantity")))
+        _put_pctl(pctl, tk, ds, sis, dtcs, cut=cut)
+    print(f"   分位层 {len(pctl)} 只（原 {len(SHORT_INT_TICKERS)} ＋ 新增只发分位 "
+          f"{sum(1 for t in SHORT_INT_EXTRA if t in pctl)}）")
+
     write_json("short_interest.json", {
         "meta": {
             "name": "做空持仓",
@@ -2623,7 +2656,45 @@ def build_short_interest():
         "current": current,
         "cuts": cuts,
         "revisions": old_rev,
+        # 分位层（加工读数）：原 20 只＋新增 30 只同一口径，站上横截面与单票下钻只读这里
+        "pctl": pctl,
+        "pctl_meta": {
+            "tickers_raw_public": SHORT_INT_TICKERS,
+            "tickers_pctl_only": [t for t in SHORT_INT_EXTRA if t in pctl],
+            "missing": sorted(set(SHORT_INT_EXTRA) - set(pctl)),
+            "method": f"每个结算期取该票自身最近 {SI_WINDOW} 期（含本期）的百分位，不足 {SI_MIN} 期记 null；"
+                      "代码易主切断点之前的历史不参与",
+            "note": "新增票只发分位，不发原始持仓（FINRA 原始统计不再新上网）。"
+                    "分位每次由 FINRA 当期全史重算，FINRA 事后修订原值时分位会跟着变",
+        },
     })
+
+
+def _rolling_pctl(vals):
+    """逐期分位：每期取自身最近 SI_WINDOW 个非空值（含本期），不足 SI_MIN 记 None。
+    与 current.pctile_* 同一算法（末期值应逐位相等）。"""
+    out, seen = [], []
+    for v in vals:
+        if v is None:
+            out.append(None)
+            continue
+        seen.append(v)
+        win = seen[-SI_WINDOW:]
+        out.append(round(sum(1 for x in win if x <= v) / len(win) * 100, 1) if len(win) >= SI_MIN else None)
+    return out
+
+
+def _put_pctl(pctl, tk, dates, sis, dtcs, cut=None):
+    """把一只票的分位序列写进 pctl（只有日期与分位，没有原值）。"""
+    if not dates:
+        return
+    ps, pd_ = _rolling_pctl(sis), _rolling_pctl(dtcs)
+    last = len(dates) - 1
+    pctl[tk] = {"dates": dates, "si": ps, "dtc": pd_,
+                "settle": dates[last], "cur_si": ps[last], "cur_dtc": pd_[last],
+                "periods": min(len([x for x in sis if x is not None]), SI_WINDOW)}
+    if cut:
+        pctl[tk]["cut_from"] = cut[0]
 
 
 def _f(v):

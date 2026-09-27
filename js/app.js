@@ -3326,38 +3326,75 @@
   // 🚨 用 DTC（补仓天数 = 持仓 ÷ 日均量）而不是持仓股数：股数会随股本与成交量长期漂移，
   //    实测「持仓水平分位」跨票均值近 6 期 81.8、2024 全年 60.1，看着像在飙升；但同期
   //    DTC 分位是 63.3 vs 74.5：**两个口径指向相反**。归一化之后才是真的拥挤度。
-  /* 贰 · 当前横截面：三档可切（补仓天数 / 持仓股数 / 当日流量） */
-  let crossMode = "dtc";
+  /* 贰 · 当前横截面：三档可切（补仓天数 / 持仓股数 / 当日流量）＋ 分组切换
+     2026-09-26 Klay 定（选项 C）：扩到 50 只（跳空表票池），按组看，一次一组不拥挤；
+     标签统一只写分位，不写原始股数、天数、占比。补仓天数与持仓股数两档读 si.pctl（加工层，50 只同一口径）；
+     流量档读 short_flow（仍只有原 20 只：FINRA 每日文件要攒满三年才给分位，新票接口只有 12 个月）。 */
+  const SI_GROUPS = [
+    ["指数 · ETF", ["SPY", "QQQ", "IWM", "TLT", "SMH", "XLF", "XLK", "XLV", "XLC"]],
+    ["八巨头", ["AAPL", "AMZN", "GOOG", "GOOGL", "META", "MSFT", "NVDA", "TSLA", "SPCX"]],
+    ["半导体 · 存储", ["AVGO", "TSM", "AMD", "INTC", "MU", "SNDK", "MRVL", "QCOM", "SKHY", "SMCI", "DELL", "ARM"]],
+    ["软件 · AI 云", ["ORCL", "PLTR", "CRWV", "NBIS", "APP"]],
+    ["加密 · 券商", ["COIN", "HOOD", "MSTR", "SOFI", "MARA"]],
+    ["金融", ["GS", "JPM", "AXP", "MA", "V"]],
+    ["其他", []],   // 🔴 末行必须永远是空的「其他」：不在任何组里的票自动落到这里（同期权页 GROUPS 的规矩）
+  ];
+  function siGroups(tks) {
+    const g = SI_GROUPS.map(([n, ts]) => [n, ts.filter((t) => tks.includes(t))]);
+    const grouped = new Set(SI_GROUPS.flatMap((x) => x[1]));
+    g[g.length - 1][1].push(...tks.filter((t) => !grouped.has(t)).sort());
+    return g.filter((x) => x[1].length);
+  }
+  let crossMode = "dtc", crossGrp = "八巨头";
+  function buildGrpSeg() {
+    const box = document.getElementById("seg-sigrp");
+    if (!box || box.children.length) return;
+    load("short_interest").then((si) => {
+      const T = (s) => (window.MC_I18N ? MC_I18N.translate(s) : s);
+      siGroups(Object.keys(si.pctl || {})).forEach(([n, ts]) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.dataset.k = n; b.textContent = T(n);
+        b.setAttribute("aria-selected", String(n === crossGrp));
+        box.appendChild(b);
+      });
+    });
+  }
+  buildGrpSeg();
   chart("leaps", "ch-short-interest", async (p) => {
     const [si, sf] = await Promise.all([load("short_interest"), load("short_flow")]);
     const isEN = !!(window.MC_I18N && MC_I18N.lang && MC_I18N.lang() === "en");
     const T = (s) => (window.MC_I18N ? MC_I18N.translate(s) : s);
+    const pc = si.pctl || {};
+    const grp = siGroups(Object.keys(pc)).find(([n]) => n === crossGrp) || siGroups(Object.keys(pc))[0];
+    const tks = grp ? grp[1] : [];
     const rows = [];
-    for (const tk of Object.keys(si.series)) {
-      const c = si.current[tk] || {}, f = (sf.current || {})[tk] || {};
-      let v = null, extra = "";
-      if (crossMode === "dtc") { v = c.pctile_dtc; extra = c.dtc != null ? c.dtc.toFixed(2) + (isEN ? "d" : " 天") : ""; }
-      else if (crossMode === "si") { v = c.pctile_si; extra = c.si != null ? (c.si / 1e6).toFixed(0) + "M" : ""; }
-      else { v = f.pctile; extra = f.ratio != null ? f.ratio.toFixed(0) + "%" : ""; }
-      if (v != null) rows.push({ tk, v, extra });
+    for (const tk of tks) {
+      const c = pc[tk] || {}, f = (sf.current || {})[tk] || {};
+      const v = crossMode === "dtc" ? c.cur_dtc : crossMode === "si" ? c.cur_si : f.pctile;
+      if (v != null) rows.push({ tk, v });
     }
     rows.sort((a, b) => a.v - b.v);
-    const miss = Object.keys(si.series).filter((tk) => !rows.find((r) => r.tk === tk));
+    const miss = tks.filter((tk) => !rows.find((r) => r.tk === tk));
+    const newOnly = new Set((si.pctl_meta || {}).tickers_pctl_only || []);
     const note = document.getElementById("cross-note");
     if (note) {
       note.textContent =
         (crossMode === "flow" ? T("当日做空成交占比在自身三年历史中的位置。这是流量，与另外两档的存量口径不同。")
          : crossMode === "dtc" ? T("补仓天数 = 做空持仓 ÷ 日均成交量，除掉了规模，读的是相对拥挤度。")
          : T("持仓股数的分位。注意它有非平稳问题：多数票同时逼近高位，多半是尺子的问题不是市场的问题。"))
-        + (miss.length ? wideGap() + T("未显示：") + joinList(miss) + T("（历史不足，不给百分位：宁可不出数，也不出假数）") : "");
+        + (miss.length ? wideGap() + T("未显示：") + joinList(miss)
+           + (crossMode === "flow" && miss.some((t) => newOnly.has(t))
+              ? T("（流量档只有原 20 只：每日做空占比要攒满三年才给分位）")
+              : T("（历史不足，不给百分位：宁可不出数，也不出假数）")) : "")
+        + wideGap() + T("2026-09-26 起扩到 50 只；新增 30 只只发分位，不发原始持仓。");
     }
     if (!rows.length) {
-      return { title: { text: T("历史积累中"), left: "center", top: "middle",
+      return { title: { text: T("本组在这一档没有可用的分位"), left: "center", top: "middle",
         textStyle: { color: p.muted, fontSize: 13, fontWeight: "normal" } } };
     }
     return {
       tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toFixed(1)) }),
-      grid: { left: 82, right: 92, top: 24, bottom: 32 },
+      grid: { left: 82, right: 56, top: 24, bottom: 32 },
       xAxis: Object.assign({ type: "value", min: 0, max: 100,
         name: isEN ? "percentile" : "百分位" }, baseAxis(p)),
       yAxis: Object.assign({ type: "category", data: rows.map((r) => r.tk) },
@@ -3374,8 +3411,7 @@
           borderRadius: [0, 4, 4, 0],
         },
         label: { show: true, position: "right", color: p.muted, fontSize: 11,
-          fontFamily: "JetBrains Mono",
-          formatter: (x) => x.value.toFixed(0) + (rows[x.dataIndex].extra ? paren(rows[x.dataIndex].extra) : "") },
+          fontFamily: "JetBrains Mono", formatter: (x) => x.value.toFixed(0) },
         markLine: { silent: true, symbol: "none",
           lineStyle: { color: p.ink, type: "dashed", width: 1 },
           label: { color: p.ink, formatter: isEN ? "50 neutral" : "50 中性", fontSize: 10, fontFamily: "JetBrains Mono" },
@@ -3384,8 +3420,9 @@
     };
   });
   segBind("seg-cross", (k) => { crossMode = k; rebuild("ch-short-interest"); });
+  segBind("seg-sigrp", (k) => { crossGrp = k; rebuild("ch-short-interest"); });
 
-  /* 叁 · 单票下钻：持仓（柱）与补仓天数（线）同图，双轴各自缩放 */
+  /* 叁 · 单票下钻：两把尺的分位逐期（2026-09-26 起，50 只同一口径；原先是持仓股数柱＋补仓天数线的原值图） */
   let curTk = "NVDA";
   chart("leaps", "ch-short-single", async (p) => {
     const si = await load("short_interest");
@@ -3393,48 +3430,41 @@
     const isEN = !!(window.MC_I18N && MC_I18N.lang && MC_I18N.lang() === "en");
     const T = (s) => (window.MC_I18N ? MC_I18N.translate(s) : s);
     const N = 48;
-    const dates = si.dates.slice(-N), ser = si.series[curTk].slice(-N), dtc = si.days_to_cover[curTk].slice(-N);
-    const keep = dates.map((d, i) => i).filter((i) => ser[i] != null);
+    const x = (si.pctl || {})[curTk] || { dates: [], si: [], dtc: [] };
+    const dates = x.dates.slice(-N), ps = x.si.slice(-N), pd = x.dtc.slice(-N);
+    const any = ps.some((v) => v != null) || pd.some((v) => v != null);
     const note = document.getElementById("single-note");
-    const c = si.current[curTk] || {}, co = sa.corr[curTk];
+    const co = sa.corr[curTk];
     if (note) {
-      /* ⚠️ 这段曾硬编码「，」「。」「），」等全角标点，英文态下读起来是坏的；
-         且 T(" 股（环比 ") 这类**带首尾空格的键在 translate() 里会被 trim 掉、永远匹配不上**（实测）。
-         ∴ 键一律不留首尾空格，分隔符改用语言中性的「 · 」与半角逗号。 */
       const sep = " · ";
-      note.textContent = keep.length
+      note.textContent = any
         ? [curTk,
-           `${T("最新结算")} ${c.settle || "—"}`,
-           `${T("持仓")} ${c.si != null ? (c.si / 1e6).toFixed(1) + "M" : "—"} (${c.chg != null ? (c.chg >= 0 ? "+" : "") + c.chg.toFixed(1) + "%" : "—"})`,
-           `${T("补仓天数")} ${c.dtc != null ? c.dtc.toFixed(2) : "—"}`,
-           `${T("股数分位")} ${c.pctile_si != null ? c.pctile_si.toFixed(0) : "—"}`,
-           `${T("拥挤度分位")} ${c.pctile_dtc != null ? c.pctile_dtc.toFixed(0) : "—"}`,
+           `${T("最新结算")} ${x.settle || "—"}`,
+           `${T("拥挤度分位")} ${x.cur_dtc != null ? x.cur_dtc.toFixed(0) : "—"}`,
+           `${T("股数分位")} ${x.cur_si != null ? x.cur_si.toFixed(0) : "—"}`,
           ].join(sep)
           + (co ? sep + `${T("流量变化与持仓变化的相关")} ρ=${co.chg >= 0 ? "+" : ""}${co.chg.toFixed(3)}, ${T("置换检验")} p=${co.p.toFixed(4)}${co.p < 0.05 ? T("（p<0.05，但 Bonferroni 校正后不存活）") : T("（不显著）")}` : "")
-          + (c.note ? sep + c.note : "")
-        : T("该标的在本窗口内无数据（代码复用切断后历史不足）");
+          + (x.cut_from ? sep + T("代码换过发行人，切断点") + " " + x.cut_from : "")
+        : curTk + sep + T("历史不足 24 期，不给百分位");
     }
-    if (!keep.length) {
-      return { title: { text: T("该标的在本窗口内无数据"), left: "center", top: "middle",
+    if (!any) {
+      return { title: { text: T("历史不足 24 期，不给百分位"), left: "center", top: "middle",
         textStyle: { color: p.muted, fontSize: 13, fontWeight: "normal" } } };
     }
     return {
-      tooltip: tip(p),
-      legend: { data: [T("做空持仓（股数）"), T("补仓天数")], top: 0, textStyle: { color: p.muted, fontSize: 11 } },
-      grid: { left: 62, right: 56, top: 34, bottom: 34 },
+      tooltip: tip(p, { valueFormatter: (v) => (v == null ? "--" : (+v).toFixed(1)) }),
+      legend: { data: [T("拥挤度分位"), T("股数分位")], top: 0, textStyle: { color: p.muted, fontSize: 11 } },
+      grid: { left: 48, right: 24, top: 34, bottom: 34 },
       xAxis: Object.assign({ type: "category", data: dates }, baseAxis(p),
         { axisLabel: { color: p.muted, fontSize: 10, interval: Math.ceil(dates.length / 8) } }),
-      yAxis: [
-        Object.assign({ type: "value", name: isEN ? "shares" : "股数",
-          axisLabel: { color: p.muted, fontSize: 10, formatter: (v) => (v / 1e6).toFixed(0) + "M" } }, baseAxis(p)),
-        Object.assign({ type: "value", name: isEN ? "days" : "天", scale: true,
-          splitLine: { show: false } }, baseAxis(p)),
-      ],
+      yAxis: Object.assign({ type: "value", min: 0, max: 100, name: isEN ? "percentile" : "百分位" }, baseAxis(p)),
       series: [
-        { name: T("做空持仓（股数）"), type: "bar", data: dates.map((d, i) => ser[i]),
-          itemStyle: { color: p.border, borderRadius: [2, 2, 0, 0] }, barMaxWidth: 12 },
-        { name: T("补仓天数"), type: "line", yAxisIndex: 1, data: dates.map((d, i) => dtc[i]),
-          symbol: "none", lineStyle: { width: 2.2, color: p.accent }, connectNulls: true },
+        { name: T("拥挤度分位"), type: "line", data: pd, symbol: "none", color: p.accent,
+          lineStyle: { width: 2.4, color: p.accent }, connectNulls: false },
+        { name: T("股数分位"), type: "line", data: ps, symbol: "none", color: p.muted,
+          lineStyle: { width: 1.8, color: p.muted, type: "dashed" }, connectNulls: false,
+          markLine: { silent: true, symbol: "none", lineStyle: { color: p.ink, type: "dashed", width: 1 },
+            label: { show: false }, data: [{ yAxis: 50 }] } },
       ],
     };
   });
@@ -3532,21 +3562,32 @@
     };
   });
 
-  /* 单票选择器：动态生成，随语言重建时保持当前选中 */
+  /* 单票选择器：按组分行（2026-09-26 起 50 只，样式同期权页第七章：每行＝组名＋一排票签），随语言重建时保持当前选中 */
   function buildTkPicker() {
     const box = document.getElementById("tk-picker");
     if (!box || box.children.length) return;
     load("short_interest").then((si) => {
-      Object.keys(si.series).forEach((tk) => {
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "tk-chip"; b.textContent = tk;
-        b.setAttribute("aria-selected", String(tk === curTk));
-        b.onclick = () => {
-          curTk = tk;
-          [...box.children].forEach((x) => x.setAttribute("aria-selected", String(x === b)));
-          rebuild("ch-short-single");
-        };
-        box.appendChild(b);
+      const T = (s) => (window.MC_I18N ? MC_I18N.translate(s) : s);
+      box.style.cssText = "display:flex;flex-direction:column;gap:10px;margin:4px 0 18px";
+      siGroups(Object.keys(si.pctl || {})).forEach(([n, ts]) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:7px";
+        const lab = document.createElement("span");
+        lab.textContent = T(n);
+        lab.style.cssText = "min-width:96px;font-size:12px;color:var(--muted)";
+        row.appendChild(lab);
+        ts.forEach((tk) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "tk-chip"; b.textContent = tk;
+          b.setAttribute("aria-selected", String(tk === curTk));
+          b.onclick = () => {
+            curTk = tk;
+            box.querySelectorAll(".tk-chip").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+            rebuild("ch-short-single");
+          };
+          row.appendChild(b);
+        });
+        box.appendChild(row);
       });
     });
   }

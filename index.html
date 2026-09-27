@@ -774,6 +774,7 @@
       <button type="button" data-k="si" aria-selected="false">持仓股数分位</button>
       <button type="button" data-k="flow" aria-selected="false">当日做空占比分位（流量）</button>
     </div>
+    <div class="seg" id="seg-sigrp"></div>
     <div class="card">
       <h3>各标的的拥挤度百分位</h3>
       <div class="sub">本表滞后约两周：每月两次结算，结算日之后约 8 个交易日才发布，所以它不是今天的读数，只能当缓慢变动的背景。历史不足 24 期的不给百分位，留空。</div>
@@ -783,12 +784,12 @@
   </div>
 
   <div class="chapter">
-    <div class="chapter-head"><span class="chapter-no">单票下钻</span><h2>持仓和补仓天数</h2></div>
-    <p class="chapter-q">上面是横截面，这里是纵切面。选一只票，看它的持仓（柱）与补仓天数（线）在最近 48 个结算期里怎么走。两者常常不同向：这正是「股数」与「拥挤度」不是一回事的直接证据。</p>
+    <div class="chapter-head"><span class="chapter-no">单票下钻</span><h2>两把尺，逐期</h2></div>
+    <p class="chapter-q">上面是横截面，这里是纵切面。选一只票，看它的补仓天数分位与持仓股数分位在最近 48 个结算期里怎么走。两条线常常不同向：这正是「股数」与「拥挤度」不是一回事的直接证据。</p>
     <div class="tk-picker" id="tk-picker"></div>
     <div class="card">
-      <h3>持仓与拥挤度 · 最近 48 个结算期</h3>
-      <div class="sub">柱为做空持仓（股数，左轴），线为补仓天数（右轴）。两轴各自缩放，只看形状不看高低对比。</div>
+      <h3>拥挤度分位与股数分位 · 最近 48 个结算期</h3>
+      <div class="sub">两条线都是这只票在自身近两年里的百分位，0 是最不挤，100 是最挤。实线为补仓天数分位，虚线为持仓股数分位。新增的 30 只只发分位，不发原始持仓。</div>
       <div class="chart tall" id="ch-short-single"></div>
       <p class="footnote" id="single-note"></p>
     </div>
@@ -1199,8 +1200,8 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="js/i18n.js?v=20260926a"></script>
-<script src="js/app.js?v=20260926a"></script>
+<script src="js/i18n.js?v=20260926b"></script>
+<script src="js/app.js?v=20260926b"></script>
 <script src="js/docs-i18n.js?v=20260926e"></script>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>

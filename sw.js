@@ -21,7 +21,8 @@
 // 2026-09-26 → mc-v34：定价三卡加宽、间距 28px、不再单字换行（Klay 当 bug 报的，同 mc-v6 先例主动 bump）。
 // 2026-09-26 → mc-v35：定价页整页内容栏放宽到 1040 与卡片对齐，Pro 副标删「自己用这把尺子」。
 // 2026-09-26 → mc-v37：个股页 /t/ 上线，/t/ 改为先走网络。
-const CACHE = "mc-v37";
+// 2026-09-27 → mc-v38：做空页扩到 50 只并分组、标签只写分位、单票下钻改分位线（外壳换了，回访者不能停在旧版）。
+const CACHE = "mc-v38";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
