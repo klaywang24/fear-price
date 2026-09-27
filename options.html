@@ -780,7 +780,9 @@ html:not([lang^="zh"]) .op-nav a.tab { padding: 6px 10px; }
     return "other";
   };
   const isWrong = c => verdict(c) === "wrong";
-  const trTicker = t => L === "en" ? String(t || "").replace(/^(.*?)等(\d+)只$/, "$2 names incl. $1").replace(/^(\d+)只$/, "$1 names") : t;
+  // 2026-09-27 补两种写法：「跨资产」「动量组21只」此前原样漏成中文（台账 ticker 列的写法不止「X等N只」「N只」两种）
+  const trTicker = t => L === "en" ? String(t || "").replace(/^(.*?)等(\d+)只$/, "$2 names incl. $1").replace(/^动量组(\d+)只$/, "$1-name momentum basket")
+    .replace(/^(\d+)只$/, "$1 names").replace(/^跨资产$/, "Cross-asset") : t;
   // 2026-09-12：状态多了两种终态 —— 已撤案 / 勘误（此前生成器只发 待开奖/已开奖，撤案与勘误被显示成「待开奖」）
   const badge = c => c.status === "待开奖" ? `<span class="op-badge wait">${tr("待开奖","Open")}</span>` :
     c.status === "已撤案" ? `<span class="op-badge muted">${tr("已撤案","Withdrawn")}</span>` :
