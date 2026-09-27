@@ -145,11 +145,25 @@ def main():
     fund = {"ticker": "T"}
     bf.carry_history(fund, {p: [] for p in bf.PAGE_KEYS}, {}, "2026-09-26")
     check("nothing to carry and nothing fetched: keys stay absent (never invented)", "pe" not in fund and "history_carried" not in fund)
+    import edgar_history as eh
+    # 2026-09-27：换财年公司的年报把同一财年末改标（高盛 2008 财年 11-28 → 11-30），不许再推出一季；过渡单月不算季
+    def rec(s, e, v, filed): return {"start": s, "end": e, "val": v, "form": "10-K", "filed": filed}
+    gs = [rec("2008-03-01", "2008-05-30", 4.58, "2009-08-05"), rec("2007-12-01", "2008-05-30", 7.81, "2009-08-05"),
+          rec("2008-05-31", "2008-08-29", 1.81, "2009-11-04"), rec("2007-12-01", "2008-08-29", 9.62, "2009-11-04"),
+          rec("2007-12-01", "2008-11-28", 4.47, "2010-03-01"), rec("2007-12-01", "2008-11-30", 4.47, "2011-03-01"),
+          rec("2008-11-29", "2008-12-26", -2.15, "2010-03-01"), rec("2008-12-27", "2009-03-27", 3.39, "2010-05-10"),
+          rec("2009-03-28", "2009-06-26", 4.93, "2009-08-05"), rec("2009-06-27", "2009-09-25", 5.25, "2009-11-04")]
+    q = eh.quarterly({"facts": {"us-gaap": {"EarningsPerShareDiluted": {"units": {"USD/shares": gs}}}}}, ["EarningsPerShareDiluted"], "USD/shares")
+    check("quarterly: a relabelled fiscal-year end (GS 11-28 / 11-30) never yields a phantom quarter",
+          "2008-11-30" not in q and round(q.get("2008-11-28", 0), 2) == -5.15)
+    check("ttm: the four fiscal quarters around a one-month transition period still sum (GS 2009-09 = 8.42)",
+          eh.ttm(q, "2009-09-25") is not None and round(eh.ttm(q, "2009-09-25"), 2) == 8.42)
+    q.pop("2009-03-27")
+    check("ttm: a genuinely missing quarter is still refused", eh.ttm(q, "2009-09-25") is None)
     # 2026-09-27：旧源退役后中间可能整年没数，估值拆分只比相邻两年
     dv = bf.valuation_driver([["2006-12-31", 10, 1, 10], ["2007-09-30", 12, 1.2, 10], ["2010-12-31", 20, 2, 10], ["2011-12-31", 22, 2, 11]])
     check("driver: a multi-year gap is skipped, never booked as one year", [d["year"] for d in dv] == [2007, 2011])
     # 2026-09-27：滚动四季不许沿用停报之后的旧季度（edgar_history.ttm）
-    import edgar_history as eh
     q = {"2014-12-31": 1, "2015-03-31": 2, "2015-06-30": 3, "2015-09-30": 4}
     check("ttm: stale quarters years before the period end are not reused (BAC capex / TJX operating income shape)",
           eh.ttm(q, "2023-12-31") is None)

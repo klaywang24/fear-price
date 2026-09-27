@@ -67,7 +67,7 @@ def quarterly(facts, tags, unit=None, derive=True):
                 if e1 not in single and 80 <= (_d(e1) - _d(e0)).days <= 100: single[e1] = c1_ - c0
             fy = [(e, v) for e, v in ends.items() if 350 <= (_d(e) - _d(s0)).days <= 380]
             for e, v in fy:
-                if e in single: continue
+                if any(abs((_d(k) - _d(e)).days) <= 10 for k in single): continue   # 同一季已有（高盛 2008 财年后来的年报把 11-28 改标 11-30：再减一次会凭空多出一季 3.23，2009-06/09 两个 TTM EPS 各多算一季）
                 qs = [vv for ee, vv in single.items() if s0 < ee < e]
                 if len(qs) == 3: single[e] = v - sum(qs)
     return dict(sorted(single.items()))
@@ -93,7 +93,7 @@ def ttm(qd, end, span=380):
     2018 年营业利润（站上已发布过错值）；美银 2015 后不报资本开支 ⇒ 重算时 2015–2025 每年自由现金流多扣 11.55 亿。
     现在算不出就不给（ROIC 按既定规则退到净利，FCF 年度资本开支缺失且近四季也没有时按 0 计）。"""
     ks = [k for k in qd if k <= end][-4:]
-    if len(ks) < 4 or (_d(ks[-1]) - _d(ks[0])).days > span - 80: return None
+    if len(ks) < 4 or (_d(ks[-1]) - _d(ks[0])).days > span - 70: return None   # 首尾季末正常相距 ~273 天；放到 310 是给换财年的过渡月（高盛 2008-12 单月不算季，四个财季首尾 301 天）；缺一季会 ≥360 天，仍拒
     if (_d(end) - _d(ks[-1])).days > 45: return None
     return sum(qd[k] for k in ks)
 def near(inst, e, back=45, fwd=0):
