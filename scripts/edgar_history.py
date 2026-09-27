@@ -52,8 +52,8 @@ def quarterly(facts, tags, unit=None, derive=True):
             d = _dur(a)
             if 80 <= d <= 100: s1[a["end"]] = _pick(s1.get(a["end"]), a)
             elif 170 <= d <= 190 or 260 <= d <= 290 or 350 <= d <= 380: c1[(a["start"], a["end"])] = _pick(c1.get((a["start"], a["end"])), a)
-        for k, v in s1.items(): single.setdefault(k, v["val"])
-        for k, v in c1.items(): cum.setdefault(k, v["val"])
+        single.update({k: v["val"] for k, v in s1.items()})      # 标签清单按「后者覆盖」排优先级（与 annual/instant 同规则）；09-26 曾误改成先到先得，营收等族优先级整体倒置，09-27 改回
+        cum.update({k: v["val"] for k, v in c1.items()})
     if derive:
         starts = {}
         for (s0, e), v in cum.items(): starts.setdefault(s0, {})[e] = v
@@ -408,12 +408,19 @@ def build(t, prev, src, do_stitch=True):
         """base 优先；extra 只补 base 缺的季度。tol：两者重叠季中位偏差超过 tol 就不补（口径不同，如含少数股东损益）。"""
         if not extra: return base
         if tol is not None:
-            ov = [abs(extra[k] / base[k] - 1) for k in base if k in extra and base[k]]
-            if ov and st.median(ov) > tol: return base
+            ov = [abs(extra[k] / base[k] - 1) for k in sorted(base) if k in extra and base[k]]
+            if ov and st.median(ov) > tol:
+                # 全部重叠不达标时只许「往后接」：最近 8 个重叠季口径一致，才补基准末期之后的季度，历史选择一律不动
+                # （博通：母公司净利 2019 停报、普通股可分配净利 2024-02 停报，含少数股东净利 2018 后与之逐位相同，但早年合伙架构差 5%）
+                rec = ov[-8:]
+                if base and len(rec) >= 4 and st.median(rec) <= tol:
+                    last = max(base); out = dict(base); out.update({k: v for k, v in extra.items() if k > last})
+                    return dict(sorted(out.items()))
+                return base
         out = dict(extra); out.update(base); return dict(sorted(out.items()))
     for tg in EPS_TAGS:
         if tg != eps_tag: EPS = fill(EPS, quarterly(F, [tg], "USD/shares"), 0.02)
-    for tg in NI_TAGS:
+    for tg in ["NetIncomeLoss", "ProfitLoss", "NetIncomeLossAvailableToCommonStockholdersBasic"]:   # 补缺顺序：含少数股东净利与母公司净利对得上时先用它（口径＝优先股分红前），对不上再退到普通股可分配净利（博通 2020：29.60 亿 vs 26.63 亿）
         if tg != ni_tag: NI = fill(NI, quarterly(F, [tg], "USD"), 0.02)
     for tg in ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]:
         if tg != eq_tag: EQ = fill(EQ, instant(F, [tg], "USD"), 0.02)
