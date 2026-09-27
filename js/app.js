@@ -476,7 +476,7 @@
       <div class="chapter" id="${basket}-fd-profit">
         <div class="chapter-head"><span class="chapter-no"></span><h2>利润这条线</h2></div>
         <p class="chapter-q">股价背后，利润跟上了吗？</p>
-        <div class="card"><h3>EPS（TTM · 季频）</h3><div class="chart short" id="${basket}-fd-eps"></div></div>
+        <div class="card"><h3 id="${basket}-fd-eps-title">EPS（TTM · 季频）</h3><div class="chart short" id="${basket}-fd-eps"></div></div>
         <div class="grid-2">
           <div class="card"><h3>营业收入（近四财年 · 十亿美元）</h3><div class="chart short" id="${basket}-fd-rev"></div></div>
           <div class="card"><h3>净利润（近四财年 · 十亿美元）</h3><div class="chart short" id="${basket}-fd-ni"></div></div>
@@ -736,10 +736,11 @@
         lineStyle: { color: p[colorKey], width: 1.3 }, itemStyle: { color: p[colorKey] },
       };
       if (opts && opts.median) {
-        const sorted = data.values.filter((v) => v != null).slice().sort((a, b) => a - b);
-        const med = sorted[Math.floor(sorted.length / 2)];
+        const med = median(data.values);     // 与读数卡「历史中位数」同一个实现
+        // 标签画在图框内侧（右端、线上方）：画在框外时右边距只有 20px，「中位 29.0」被裁成「中」（2026-09-27 Klay 截图指出，全部个股同病）
         s.markLine = { silent: true, symbol: "none", lineStyle: { color: p.ink, type: "dashed" },
-          label: { color: p.muted, formatter: "中位 " + med.toFixed(1), fontFamily: "JetBrains Mono" },
+          label: { color: p.muted, formatter: "中位 " + med.toFixed(1), fontFamily: "JetBrains Mono", position: "insideEndTop",
+                   backgroundColor: p.card, padding: [1, 4], borderRadius: 2 },   // 衬卡片底色：数据线贴着中位线走时（台积电 2025–26）不压字
           data: [{ yAxis: med }] };
       }
       return { tooltip: tip(p), grid: { left: 54, right: 20, top: 20, bottom: 26 },
@@ -754,7 +755,17 @@
         data: vals.map((v) => ({ value: v, itemStyle: { color: signColor && v < 0 ? p.danger : p[colorKey] } })) }],
     });
 
+    // EPS 图标题按点距如实写：台积电/法拉利 2026-09-27 起为 20-F 年报逐年自算（每年一个点，台积电最新年报后接季度），不再都是季频
+    const epsFreqTitle = (ds) => {
+      const gap = ds.slice(1).map((d, i) => (Date.parse(d) - Date.parse(ds[i])) / 864e5);
+      if (gap.filter((g) => g > 300).length * 2 <= gap.length) return "EPS（TTM · 季频）";
+      return gap.length && gap[gap.length - 1] < 200 ? "EPS（TTM · 年报逐年，最新年报后按季度）" : "EPS（TTM · 年报逐年）";
+    };
     if (fund) {
+      if (fund.eps) {
+        const et = document.getElementById(basket + "-fd-eps-title");
+        if (et) et.textContent = epsFreqTitle(fund.eps.dates);
+      }
       if (fund.eps) await buildOne(basket + "-fd-eps", line(fund.eps, "EPS TTM", "moss"));
       else { const c = document.getElementById(basket + "-fd-eps"); if (c) c.closest(".card").remove(); }
       if (fund.income4 && fund.income4.revenue) {
@@ -797,7 +808,7 @@
           const snapFwd = fund.snapshot && fund.snapshot.fwd_pe;
           vs.innerHTML = [
             ["当前 PE (TTM)", cur.toFixed(1), `自身 ${fund.pe.dates[0].slice(0, 4)}→ 第 ${pct} 百分位`, pct > 90],
-            ["历史中位数", med.toFixed(1), "约 " + fund.pe.dates[0].slice(0, 4) + " 年以来", false],
+            ["历史中位数", med.toFixed(1), "约 " + fund.pe.dates[0].slice(0, 4) + " 年以来 · " + fund.pe.values.filter((v) => v != null).length + " 个点", false],   // 点数写明：台积电/法拉利每年一个点，样本比季频票少得多
             ["远期 PE", snapFwd ? snapFwd.toFixed(1) : "--", "yfinance 快照", false],
             ["相对中位溢价", ((cur / med - 1) * 100).toFixed(0) + "%", cur > med ? "贵于历史中枢" : "低于历史中枢", false],
           ].map(([l, v, n, hot]) =>
