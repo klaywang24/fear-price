@@ -160,6 +160,18 @@ def main():
           eh.ttm(q, "2009-09-25") is not None and round(eh.ttm(q, "2009-09-25"), 2) == 8.42)
     q.pop("2009-03-27")
     check("ttm: a genuinely missing quarter is still refused", eh.ttm(q, "2009-09-25") is None)
+    # 2026-09-27：多类别股（Robinhood）汇总层股数缺或记 0，读原件把各类别相加；有无维度总数时用总数，不重复加
+    ctx = ('<xbrli:context id="a"><xbrli:entity><xbrli:segment><xbrldi:explicitMember dimension="us-gaap:StatementClassOfStockAxis">us-gaap:CommonClassAMember</xbrldi:explicitMember></xbrli:segment></xbrli:entity><xbrli:period><xbrli:instant>2024-12-31</xbrli:instant></xbrli:period></xbrli:context>'
+           '<xbrli:context id="b"><xbrli:entity><xbrli:segment><xbrldi:explicitMember dimension="us-gaap:StatementClassOfStockAxis">us-gaap:CommonClassBMember</xbrldi:explicitMember></xbrli:segment></xbrli:entity><xbrli:period><xbrli:instant>2024-12-31</xbrli:instant></xbrli:period></xbrli:context>'
+           '<xbrli:context id="t"><xbrli:entity></xbrli:entity><xbrli:period><xbrli:instant>2025-02-10</xbrli:instant></xbrli:period></xbrli:context>')
+    x = ctx + ('<us-gaap:CommonStockSharesOutstanding contextRef="a" unitRef="shares">760000000</us-gaap:CommonStockSharesOutstanding>'
+               '<us-gaap:CommonStockSharesOutstanding contextRef="b" unitRef="shares">124000000</us-gaap:CommonStockSharesOutstanding>'
+               '<dei:EntityCommonStockSharesOutstanding contextRef="t" unitRef="shares">885000000</dei:EntityCommonStockSharesOutstanding>')
+    cs = eh.cover_shares_from_instance(x, "10-K", "2025-02-18")
+    check("instance shares: class A + class B summed at the balance-sheet date",
+          [(r["end"], r["val"]) for r in cs.get("CommonStockSharesOutstandingSumOfClasses", [])] == [("2024-12-31", 884000000.0)])
+    check("instance shares: an undimensioned cover total is used as is",
+          [(r["end"], r["val"]) for r in cs.get("EntityCommonStockSharesOutstanding", [])] == [("2025-02-10", 885000000.0)])
     # 2026-09-27：旧源退役后中间可能整年没数，估值拆分只比相邻两年
     dv = bf.valuation_driver([["2006-12-31", 10, 1, 10], ["2007-09-30", 12, 1.2, 10], ["2010-12-31", 20, 2, 10], ["2011-12-31", 22, 2, 11]])
     check("driver: a multi-year gap is skipped, never booked as one year", [d["year"] for d in dv] == [2007, 2011])

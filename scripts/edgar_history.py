@@ -236,6 +236,52 @@ def class_a_from_instance(x, form, filed):
         out["us-gaap"].setdefault(tag, {"units": {}})["units"].setdefault(unit, []).append(rec)
     return out
 
+INSTANCE_FILL = {"GOOGL": ("eps_a", "2015-04-01", "2016-01-31"),   # Alphabet 改组那三季（2015 Q2–Q4）EPS 只按股份类别申报、汇总层空：读原件 A 类稀释 EPS，只补这个窗口
+                 "HOOD": ("cover_shares", "2021-07-01", "9999-12-31")}   # 两类股，汇总层期末股数缺或记 0：读每份 10-Q/10-K 资产负债表日 A＋B 类流通股之和（与其他公司同为期末股数；原先退到季度加权数，IPO 当季少算股本）
+def cover_shares_from_instance(x, form, filed):
+    """一份实例里的流通股：资产负债表日 CommonStockSharesOutstanding 与封面 dei:EntityCommonStockSharesOutstanding；有无维度总数用总数，否则把各股份类别相加。返回 {标签: [记录]}。"""
+    import re as _re
+    ctx = {}
+    for m in _re.finditer(r'<(?:xbrli:)?context id="([^"]+)">(.*?)</(?:xbrli:)?context>', x, _re.S):
+        body = m.group(2); i_ = _re.search(r'<(?:xbrli:)?instant>([^<]+)<', body)
+        mem = _re.findall(r'dimension="([^"]+)"[^>]*>([^<]+)<', body)
+        if not i_: continue
+        if not mem: ctx[m.group(1)] = (i_.group(1), "")
+        elif len(mem) == 1 and mem[0][0].endswith("StatementClassOfStockAxis"): ctx[m.group(1)] = (i_.group(1), mem[0][1])
+    res = {}
+    for pre, tag, name in (("dei", "EntityCommonStockSharesOutstanding", "EntityCommonStockSharesOutstanding"), ("us-gaap", "CommonStockSharesOutstanding", "CommonStockSharesOutstandingSumOfClasses")):
+        tot, cls = {}, {}
+        for m in _re.finditer(rf'<{pre}:{tag}\b([^>]*)>([^<]+)<', x):
+            c = _re.search(r'contextRef="([^"]+)"', m.group(1))
+            if not c or c.group(1) not in ctx: continue
+            d, mem = ctx[c.group(1)]
+            try: v = float(m.group(2))
+            except ValueError: continue
+            if mem: cls.setdefault(d, {})[mem] = v
+            else: tot[d] = v
+        for d in set(tot) | set(cls):
+            v = tot.get(d) or sum(cls.get(d, {}).values())
+            if v > 0: res.setdefault(name, []).append({"end": d, "val": v, "form": form, "filed": filed, "src": "instance-shares"})
+    return res
+def instance_fill_facts(t, fetch):
+    """INSTANCE_FILL 里的票：只读窗口内的原件，补汇总接口缺的那几项；fetch(cik, acc) 返回实例全文。"""
+    kind, lo, hi = INSTANCE_FILL[t]; eps, cov = [], {}
+    for cik in [cik_for(t)] + EXTRA_CIK.get(t, []):
+        for rp, fd, form, acc in _periodic_filings(cik):
+            if not (lo <= rp <= hi): continue
+            x = fetch(cik, acc)
+            if not x: continue
+            if kind == "eps_a":
+                f = class_a_from_instance(x, form, fd)["us-gaap"].get("EarningsPerShareDiluted", {}).get("units", {}).get("USD/shares", [])
+                eps += [r for r in f if r.get("src") == "instance-A" and lo <= r["end"] <= hi]
+            else:
+                for k, v in cover_shares_from_instance(x, form, fd).items(): cov.setdefault(k, []).extend(v)
+    g = {}
+    if eps: g["us-gaap"] = {"EarningsPerShareDiluted": {"units": {"USD/shares": eps}}}
+    if cov.get("CommonStockSharesOutstandingSumOfClasses"): g.setdefault("us-gaap", {})["CommonStockSharesOutstandingSumOfClasses"] = {"units": {"shares": cov["CommonStockSharesOutstandingSumOfClasses"]}}
+    if cov.get("EntityCommonStockSharesOutstanding"): g["dei"] = {"EntityCommonStockSharesOutstanding": {"units": {"shares": cov["EntityCommonStockSharesOutstanding"]}}}
+    return {"facts": g}
+
 def class_a_facts(cik, fetch=None):
     """全部 10-Q/10-K 原件读 A 类口径；fetch(acc) 可换成本地缓存。"""
     F = {"facts": {"us-gaap": {}}}
@@ -250,6 +296,7 @@ def get_facts(ticker):
     F = companyfacts(cik)
     for old in EXTRA_CIK.get(ticker, []): F = merge_facts(companyfacts(old), F)
     if ticker in CLASS_A_EPS: F = merge_facts(F, class_a_facts(cik))
+    if ticker in INSTANCE_FILL: F = merge_facts(F, instance_fill_facts(ticker, _instance_xml))
     if ticker not in FROZEN_TICKERS:
         try:
             F, note = supplement_latest(ticker, F, cik)
@@ -313,7 +360,7 @@ def get_splits(ticker):
 
 # ───────── 标签族与冻结名单 ─────────
 # 标签族。择一类（EPS/NI/权益）按列表顺序取第一个覆盖达标者；改名换代类（营收/资本开支/现金流/现金/债务）按顺序合并、后者覆盖。
-EPS_TAGS = ["EarningsPerShareDiluted","IncomeLossFromContinuingOperationsPerDilutedShare","EarningsPerShareBasicAndDiluted","DilutedEarningsLossPerShare"]   # 择一·优先级从高到低：标准稀释 EPS 优先
+EPS_TAGS = ["EarningsPerShareDiluted","IncomeLossFromContinuingOperationsPerDilutedShare","EarningsPerShareBasicAndDiluted","DilutedEarningsLossPerShare","IncomeLossFromContinuingOperationsPerBasicAndDilutedShare"]   # 择一·优先级从高到低：标准稀释 EPS 优先
 NI_TAGS  = ["NetIncomeLoss","NetIncomeLossAvailableToCommonStockholdersBasic","ProfitLoss"]   # 择一：母公司净利优先，覆盖不全时退到「普通股可分配净利」（盈透）
 REV_TAGS = ["Revenue","RevenuesNetOfInterestExpense","SalesRevenueGoodsNet","SalesRevenueNet","Revenues","RevenueFromContractWithCustomerIncludingAssessedTax","RevenueFromContractWithCustomerExcludingAssessedTax"]
 # 2026-09-27 补 IncludingAssessedTax：TJX 2017 起只报含代收销售税的营收，原清单没有它 ⇒ 2018-08 起 33 季营收取不到、市销率沿用 2018 年旧营收。
@@ -321,7 +368,7 @@ REV_TAGS = ["Revenue","RevenuesNetOfInterestExpense","SalesRevenueGoodsNet","Sal
 #   本清单整体顺序（连同 OCF/CX/CASH/DEBT 各族）都按旧规则排，优先级实际已倒置（麦当劳营收取成直营销售）。
 #   test_build_fundamentals 两条行为测试锁住意图：总营收优先于子项、不含税优先于含税——现在是红的，
 #   weekly.yml 会在测试这步停下不发布，待基本面线按先到先得重排各族清单后转绿。
-SH_INST  = ["NumberOfSharesOutstanding","EntityCommonStockSharesOutstanding","CommonStockSharesOutstanding"]
+SH_INST  = ["NumberOfSharesOutstanding","EntityCommonStockSharesOutstanding","CommonStockSharesOutstanding","CommonStockSharesOutstandingSumOfClasses"]   # 末项只由原件补读产生（多类别股各类相加）
 SH_DUR   = ["WeightedAverageNumberOfSharesOutstandingBasic","WeightedAverageNumberOfDilutedSharesOutstanding"]
 OCF_TAGS = ["CashFlowsFromUsedInOperatingActivities","NetCashProvidedByUsedInOperatingActivitiesContinuingOperations","NetCashProvidedByUsedInOperatingActivities"]   # 2013–2016 年不少公司用「持续经营」口径标签
 CX_TAGS  = ["PaymentsForProceedsFromProductiveAssets","PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities","PaymentsToAcquireProductiveAssets","PaymentsToAcquirePropertyPlantAndEquipment"]
@@ -398,23 +445,27 @@ def build(t, prev, src, do_stitch=True):
     F = src.facts(t)
     LEG = src.legacy(t) if hasattr(src, "legacy") else {}
     if LEG: F = merge_facts(F, {"facts": {"legacy": LEG}})
+    AEQ = quarterly(F, ["WeightedAverageNumberOfSharesOutstandingBasic"], "shares", derive=False) if t in SHARES_FROM_YAHOO else {}   # 伯克希尔自报「平均 A 股等价股数」（拆股调整前取原值）
+    if AEQ:                                # 原件数量级标错的丢掉：2011-06、2011-09、2012-03 三份把 1,649,052 股标成 1.649 万亿（与中位数差一倍以上即弃，取前一季）
+        md = st.median(AEQ.values()); AEQ = {k: v for k, v in AEQ.items() if 0.5 <= v / md <= 2}
     F = split_adjust(F, src.splits(t))
     Q = lambda tags, u="USD": quarterly(F, tags, u); I = lambda tags, u="USD": instant(F, tags, u)
     EPS, eps_tag = pick_one(F, EPS_TAGS, "USD/shares"); NI, ni_tag = pick_one(F, NI_TAGS, "USD"); REV = Q(REV_TAGS); OPI = Q(OPI_TAGS); TAX = Q(TAX_TAGS)
     OCF = Q(OCF_TAGS); CX = Q(CX_TAGS); OCFa = annual(F, OCF_TAGS, "USD"); CXa = annual(F, CX_TAGS, "USD"); PRa = annual(F, PROC_TAGS, "USD")
     EQ, eq_tag = pick_one(F, ["StockholdersEquity","StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], "USD", "i", prefer_last=True)
     SHi = I(SH_INST, "shares"); SHd = quarterly(F, SH_DUR, "shares", derive=False); CASH = I(CASH_TAGS)
+    SHi = {k: v for k, v in SHi.items() if v and v > 0}; SHd = {k: v for k, v in SHd.items() if v and v > 0}   # 多类别股汇总层会记 0（Robinhood 2021）：0 股当缺，不当「没有市净率」
     def fill(base, extra, tol=None):
         """base 优先；extra 只补 base 缺的季度。tol：两者重叠季中位偏差超过 tol 就不补（口径不同，如含少数股东损益）。"""
         if not extra: return base
         if tol is not None:
-            ov = [abs(extra[k] / base[k] - 1) for k in sorted(base) if k in extra and base[k]]
+            ok_ = [k for k in sorted(base) if k in extra and base[k]]; ov = [abs(extra[k] / base[k] - 1) for k in ok_]
             if ov and st.median(ov) > tol:
                 # 全部重叠不达标时只许「往后接」：最近 8 个重叠季口径一致，才补基准末期之后的季度，历史选择一律不动
                 # （博通：母公司净利 2019 停报、普通股可分配净利 2024-02 停报，含少数股东净利 2018 后与之逐位相同，但早年合伙架构差 5%）
                 rec = ov[-8:]
                 if base and len(rec) >= 4 and st.median(rec) <= tol:
-                    last = max(base); out = dict(base); out.update({k: v for k, v in extra.items() if k > last})
+                    lo = ok_[-8:][0]; out = dict(base); out.update({k: v for k, v in extra.items() if k > lo and k not in base})   # 09-27 改：最近一致窗口内的空档也补（好市多含少数股东权益 2024-09 与 2025-08 之间停报三季），窗口前的历史照旧不动
                     return dict(sorted(out.items()))
                 return base
         out = dict(extra); out.update(base); return dict(sorted(out.items()))
@@ -461,7 +512,11 @@ def build(t, prev, src, do_stitch=True):
     prices, latest = src.prices(t)
     YSH = src.shares(t) if t in SHARES_FROM_YAHOO else {}
     def shares_at(e):
-        if YSH: return near(YSH, e, 120, 45)   # 伯克希尔：SEC 股数标签是 A 股折算数（百万级），与 B 股口径不同，一律只用雅虎 B 股等价；日期不规则，季末前 120 天/后 45 天取最近
+        if YSH:                            # 伯克希尔：SEC 股数标签是 A 股折算数（百万级），与 B 股口径不同；雅虎 B 股等价（2015-11 起）日期不规则，季末前 120 天/后 45 天取最近
+            v = near(YSH, e, 120, 45)
+            if v is None and AEQ:          # 更早：公司自报平均 A 股等价股数 ×1500（1 A＝1500 B；2015-09 的 1,643,316×1500 与雅虎 2015-11 的 24.65 亿差 0.003%）
+                a = near(AEQ, e, 100, 0) or near(AEQ, e, 280, 280); v = a * 1500 if a else None   # 第四季度没有单季数取前一季（2010-02 收购 BNSF 增发，不能往后取）；三季数量级标错已丢的，再取前后最近一季（2010–15 各季 164.7–165.2 万，差 <0.3%）
+            return v
         v = near(SHi, e, 10, 0)            # 资产负债表日同日
         if v is None: v = near(SHd, e, 10, 0)   # 单季加权稀释股数
         if v is None: v = near(SHi, e, 0, 75)   # dei 封面日在季末后
@@ -564,6 +619,13 @@ class CacheSource:
                 if not os.path.exists(p): open(p, "w", encoding="utf-8").write(_instance_xml(cik, acc))
                 return open(p, encoding="utf-8").read()
             F = merge_facts(F, class_a_facts(cik, fetch))
+        if t in INSTANCE_FILL:
+            d = f"{self.d}/instance_fill"; os.makedirs(d, exist_ok=True)
+            def fetch2(cik, acc):
+                p = f"{d}/{acc}.xml"
+                if not os.path.exists(p): open(p, "w", encoding="utf-8").write(_instance_xml(cik, acc))
+                return open(p, encoding="utf-8").read()
+            F = merge_facts(F, instance_fill_facts(t, fetch2))
         return F
     def legacy(self, t):
         """老报告（2009 年前）解析结果；目录由环境变量 LEGACY_DIR 指定，未指定则不用。标签改名进 legacy 命名空间，只补缺不改选择。"""
