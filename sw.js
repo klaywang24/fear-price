@@ -26,7 +26,8 @@
 // 2026-09-27 → mc-v40：做空页流量档无数据的组变灰、自动跳到有数的组（Klay 选项 b）。
 // 2026-09-27 → mc-v41：温度计 context 卡 SKEW／实际利率取空显示「—」不再整块崩（app.js?v=20260927c）。
 // 2026-09-27 → mc-v42：定价页 Pro 卡加「站上跟踪的全部美股个股财报历史数据」（售卖承诺变了，回访者不能看旧承诺）。
-const CACHE = "mc-v42";
+// 2026-09-27 → mc-v43：定价/退款/条款英文措辞与中文对齐（售卖页承诺文字变了，回访者不能再看旧版）；i18n/docs-i18n/app 同批改。
+const CACHE = "mc-v43";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
