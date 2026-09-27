@@ -714,9 +714,19 @@
         `<div class="stat"><div class="label">${l}</div><div class="value" style="font-size:19px">${v}</div></div>`).join("");
       // 2026-09-24: when the weekly build could not refresh this snapshot it keeps the previous one and flags it;
       // the reader must see that the figures are carried over, so the card title says which date they are as of.
-      if (el && snap.snapshot_stale) {
-        const h = el.closest(".card") && el.closest(".card").querySelector("h3");
-        if (h) h.textContent += "（数据截至 " + (snap.snapshot_as_of || "上次构建") + " 日）";
+      // 2026-09-27 修：原先往 el.closest(".card") 的 h3 上拼「（数据截至 X 日）」，可仪表盘这章的卡片直接挂在 .chapter 下、
+      //   没有 .card 也没有 h3 ⇒ 沿用旧快照时一个字都不提示（09-24 起从未显示过）；且拼的是中文，EN 态会漏。
+      //   ⇒ 在卡片下面单独放一行说明（不改章标题：章标题还进左侧目录），中英各一句；换到数据新鲜的票时撤掉。
+      if (el) {
+        let note = document.getElementById(basket + "-fd-dash-asof");
+        if (snap.snapshot_stale) {
+          if (!note) { note = document.createElement("p"); note.id = basket + "-fd-dash-asof"; note.className = "sub"; el.after(note); }
+          const en = !!(window.MC_I18N && MC_I18N.lang && MC_I18N.lang() === "en");
+          const asof = snap.snapshot_as_of;
+          note.textContent = en
+            ? "Figures carried over from " + (asof || "the last build") + ": this week's refresh did not complete."
+            : "以上读数沿用" + (asof ? " " + asof + " " : "上次构建") + "的快照：本周更新没有完成。";
+        } else if (note) note.remove();
       }
     }
 
