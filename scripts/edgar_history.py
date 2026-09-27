@@ -17,7 +17,8 @@
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
 · ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自 SEC 数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
-· 冻结名单 FROZEN_TICKERS（6 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向 SEC 申报）、Visa（EPS 按股份类别申报，汇总接口无；官方 A 类口径比旧线高 7–12%，待定）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
+· 冻结名单 FROZEN_TICKERS（5 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向 SEC 申报）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
+· Visa（CLASS_A_EPS，2026-09-27 解冻）：每股口径＝公司公布的 A 类稀释 EPS，读每份 10-Q/10-K 原件实例里 StatementClassOfStockAxis＝ClassA 的那条；股数＝单季净利÷单季 A 类 EPS（即公司把 B/C 按转换比例折成 A 类的分母）；财年末 EPS 与年报逐年相等（FY2024 9.73、FY2025 10.20）。每周现读约 70 份原件。
 · SEC 汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
 · 台积电（QUARTERLY_FOREIGN）2026-09-26 起季度往后接：雅虎季报（每 ADR、新台币，近 5 季）按期末月末汇率折美元，追加晚于旧线末点的季度；追加前用台湾证交所开放接口的官方累计 EPS 核对（差 >1% 或接口不通则不追加，下周自动补）；2026-03/06 两季与旧源对照 EPS -1.6%/-0.6%、PE ≈1%、ROE ≈0.5 点。年报此后只补 FCF。
 · 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
@@ -181,11 +182,74 @@ def supplement_latest(ticker, F, cik):
     if not extra.get("us-gaap"): return F, None
     return merge_facts(F, {"facts": extra}), f"补读原件 {form} 期末{rp}"
 
+CLASS_A_EPS = {"V"}   # 2026-09-27 Klay 定：Visa 每股口径＝公司公布的 A 类稀释 EPS（B/C 类已按转换比例折进分母）；汇总接口按股份类别申报、汇总层为空，只能读报告原件
+
+def _periodic_filings(cik, since="2009-01-01"):
+    """submissions（含翻页）里全部 10-Q/10-K：[(期末, 报送日, 表格, accession)]，按报送日排序。"""
+    r = requests.get(f"https://data.sec.gov/submissions/CIK{cik:010d}.json", headers=SEC_UA, timeout=60); time.sleep(0.15); r.raise_for_status()
+    j = r.json(); blocks = [j["filings"]["recent"]]
+    for f in j["filings"].get("files", []):
+        b = requests.get(f"https://data.sec.gov/submissions/{f['name']}", headers=SEC_UA, timeout=60); time.sleep(0.15); b.raise_for_status(); blocks.append(b.json())
+    out = set()
+    for b in blocks:
+        for f, rp, fd, acc in zip(b["form"], b["reportDate"], b["filingDate"], b["accessionNumber"]):
+            if f in ("10-Q", "10-K") and fd >= since: out.add((rp, fd, f, acc))
+    return sorted(out, key=lambda x: x[1])
+
+def _instance_xml(cik, acc):
+    """报告原件的 XBRL 实例全文：2019 年后是 *_htm.xml，之前是不带 _cal/_def/_lab/_pre 的那份 .xml。"""
+    import re as _re
+    base = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-', '')}"
+    idx = requests.get(f"{base}/index.json", headers=SEC_UA, timeout=60).json(); time.sleep(0.15)
+    names = [x["name"] for x in idx["directory"]["item"]]
+    inst = [n for n in names if n.endswith("_htm.xml")] or [n for n in names if n.endswith(".xml") and not _re.search(r"_(cal|def|lab|pre)\.xml$|FilingSummary", n)]
+    if not inst: return ""
+    x = requests.get(f"{base}/{inst[0]}", headers=SEC_UA, timeout=120).text; time.sleep(0.15)
+    return x
+
+def class_a_from_instance(x, form, filed):
+    """一份实例里：A 类稀释 EPS（StatementClassOfStockAxis 只挂一个 ClassA 成员）＋无维度的股东权益与净利，转成 companyfacts 形状。"""
+    import re as _re
+    ctx = {}
+    for m in _re.finditer(r'<(?:xbrli:)?context id="([^"]+)">(.*?)</(?:xbrli:)?context>', x, _re.S):
+        body = m.group(2)
+        mem = _re.findall(r'dimension="([^"]+)"[^>]*>([^<]+)<', body)
+        s_ = _re.search(r'<(?:xbrli:)?startDate>([^<]+)<', body); e_ = _re.search(r'<(?:xbrli:)?endDate>([^<]+)<', body); i_ = _re.search(r'<(?:xbrli:)?instant>([^<]+)<', body)
+        per = (s_.group(1), e_.group(1)) if s_ and e_ else ((None, i_.group(1)) if i_ else None)
+        if not per: continue
+        if not mem: ctx[m.group(1)] = ("", per)
+        elif len(mem) == 1 and mem[0][0].endswith("StatementClassOfStockAxis") and _re.search(r"ClassA(Common)?(Stock)?Member$", mem[0][1]): ctx[m.group(1)] = ("A", per)
+    out = {"us-gaap": {}}
+    want = {("A", "EarningsPerShareDiluted"): "USD/shares", ("", "StockholdersEquity"): "USD", ("", "NetIncomeLoss"): "USD",
+            ("", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"): "USD"}   # Visa 近年只报含少数股东的权益
+    for m in _re.finditer(r'<us-gaap:([A-Za-z0-9]+)\b([^>]*)>([^<]+)</us-gaap:\1>', x):
+        tag, attrs, val = m.groups()
+        c = _re.search(r'contextRef="([^"]+)"', attrs)
+        if not c or c.group(1) not in ctx: continue
+        kind, (start, end) = ctx[c.group(1)]
+        unit = want.get((kind, tag))
+        if not unit: continue
+        try: v = float(val)
+        except ValueError: continue
+        rec = {"end": end, "val": v, "form": form, "filed": filed, "src": "instance-A" if kind else "instance"}
+        if start: rec["start"] = start
+        out["us-gaap"].setdefault(tag, {"units": {}})["units"].setdefault(unit, []).append(rec)
+    return out
+
+def class_a_facts(cik, fetch=None):
+    """全部 10-Q/10-K 原件读 A 类口径；fetch(acc) 可换成本地缓存。"""
+    F = {"facts": {"us-gaap": {}}}
+    for rp, fd, form, acc in _periodic_filings(cik):
+        x = fetch(acc) if fetch else _instance_xml(cik, acc)
+        if x: F = merge_facts(F, {"facts": class_a_from_instance(x, form, fd)})
+    return F
+
 def get_facts(ticker):
     cik = cik_for(ticker)
     if not cik: raise RuntimeError(f"{ticker}: SEC 代码表无此票")
     F = companyfacts(cik)
     for old in EXTRA_CIK.get(ticker, []): F = merge_facts(companyfacts(old), F)
+    if ticker in CLASS_A_EPS: F = merge_facts(F, class_a_facts(cik))
     if ticker not in FROZEN_TICKERS:
         try:
             F, note = supplement_latest(ticker, F, cik)
@@ -270,7 +334,7 @@ QUARTERLY_FOREIGN = {"TSM": {"cur": "TWD", "ratio": 5, "twse": "2330"}}   # 2026
 PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
 SHARES_FROM_YAHOO = {"BRK.B"}   # SEC 接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
-FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL","V"}   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL"}   # 2026-09-27 Visa 解冻（CLASS_A_EPS 读原件 A 类口径）   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "1994-01-01"   # 2026-09-26：老报告（附件 27 与正文表格）补到 1995 年起
 
 # ───────── 构建 ─────────
@@ -375,6 +439,9 @@ def build(t, prev, src, do_stitch=True):
         REV = prefer(REV, quarterly(F, ["LegacyRevenues"], "USD"))
         SHd = prefer(SHd, quarterly(F, ["LegacyWeightedAverageNumberOfDilutedSharesOutstanding"], "shares", derive=False))
         flags.append(f"老报告补{len(NI) - n0}季·原件优先至{cutoff}")
+    if t in CLASS_A_EPS:   # 股数＝单季净利 ÷ 单季 A 类稀释 EPS＝公司把 B/C 按转换比例折成 A 类后的分母（2026-06 季 56.28 亿÷2.97≈18.95 亿，公司公布 18.98 亿）
+        SHi = {}; SHd = {e: NI[e] / EPS[e] for e in EPS if e in NI and abs(EPS[e]) >= 0.05}
+        flags.append("A类口径")
     if ni_tag and ni_tag != "NetIncomeLoss": flags.append("NI=" + ni_tag[:14])
     if eq_tag == "StockholdersEquity": flags.append("EQ=母")
     Dnc, Dc, Dt, Sb = I(DEBT_NC), I(DEBT_C), I(DEBT_TOT), I(STB)
@@ -474,6 +541,13 @@ class CacheSource:
         for cik in EXTRA_CIK.get(t, []):
             p = f"{self.d}/facts/{t}__{cik}.json"
             if os.path.exists(p): F = merge_facts(json.load(open(p, encoding="utf-8")), F)
+        if t in CLASS_A_EPS:               # 原件缓存在 <d>/visa/<accession>.xml，缺的现下现存
+            cik = cik_for(t); d = f"{self.d}/visa"; os.makedirs(d, exist_ok=True)
+            def fetch(acc):
+                p = f"{d}/{acc}.xml"
+                if not os.path.exists(p): open(p, "w", encoding="utf-8").write(_instance_xml(cik, acc))
+                return open(p, encoding="utf-8").read()
+            F = merge_facts(F, class_a_facts(cik, fetch))
         return F
     def legacy(self, t):
         """老报告（2009 年前）解析结果；目录由环境变量 LEGACY_DIR 指定，未指定则不用。标签改名进 legacy 命名空间，只补缺不改选择。"""

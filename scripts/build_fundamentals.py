@@ -4,7 +4,7 @@
 数据源：
 - 长历史（PE / EPS / PB / ROE / FCF，季频，2007→）：SEC EDGAR 原始申报值 + 雅虎收盘价（拆股已调），本站自算，见 edgar_history.py
   （2026-09-26 起替代 macrotrends：其 09-24 起整站 Cloudflare 人机验证，自动访问一律 403。ROIC 暂无同定义替代，沿用上一版；
-   台积电/法拉利/LVMH/爱马仕/Visa/Circle 冻结沿用（闪迪 09-26 解冻），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
+   台积电/法拉利/LVMH/爱马仕/Circle 冻结沿用（闪迪 09-26、Visa 09-27 解冻），名单在 edgar_history.FROZEN_TICKERS；伯克希尔股数取雅虎 B 股等价）
 - yfinance：当前快照指标、近 4 年报表、完整分红史
 
 输出：data/s_{ticker}_fund.json（逐股）+ data/{basket}_peers.json（同业对比快照）。
