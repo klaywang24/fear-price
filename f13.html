@@ -234,7 +234,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
     : "最新报告期 " + D.latest_quarter + "（各家披露日见胶囊）· 页面装配 " + D.generated_at.slice(0, 10) + " · 源：SEC EDGAR 13F-HR 直读";
   const wall = $("#wall");
   const G = _EN
-    ? ["Solid · concentrated decision (position by position)",
+    ? ["Solid · single decision-maker (position by position)",
        "Outline · multi-strategy / systematic / sovereign (size only)",
        "Not read directly (no standalone 13F-HR filer)"]
     : ["实心 · 集中决策（可逐笔）", "描边 · 平台多策略 / 系统化 / 主权配置（只报规模）",
@@ -269,7 +269,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
       (d.accession ? " · acc " + d.accession : "") + "</div>";
     if (!c.solid) {
       h += _EN
-        ? '<p class="f13-sub">This is a ' + DT(c) + ' filer: the table is the sum of hundreds of separate strategy books, so no single position reads as a house judgement. Size only here (' +
+        ? '<p class="f13-sub">This is a ' + DT(c) + ' filer: the table is the sum of hundreds of separate strategy books, so no single position reads as a house judgment. Size only here (' +
           (c.entries ? c.entries.toLocaleString() : "\u00b7") + ' rows · ' + B(c.value_usd) + ').</p>'
         : '<p class="f13-sub">这家是' + DT(c) + '：持仓表是几百个策略各自仓位的加总，单只持仓读不出机构判断，所以本页对它只报规模（' +
           (c.entries ? c.entries.toLocaleString() : "·") + ' 条持仓 · ' + B(c.value_usd) + '）。</p>';
@@ -302,7 +302,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
         vs.map((v, i) => '<div class="b" style="height:' + Math.max(2, v / mx * 100) + '%" title="' + ps[i] + " " + B(v) + '"></div>').join("") +
         '</div><div class="f13-tlx"><span>' + ps[0] + "</span><span>" + ps[ps.length - 1] + "</span></div>";
       if (d.timeline.shares_top) {
-        h += '<h3>' + (_EN ? "Share count by quarter (current top names; steady accumulation is a shape here, not an adjective)" : "持仓股数逐期（当前前几大 · 连续加仓在这里是能看见的形状）") + '</h3>';
+        h += '<h3>' + (_EN ? "Share count by quarter (current top names; steady accumulation shows up here as a visible shape)" : "持仓股数逐期（当前前几大 · 连续加仓在这里是能看见的形状）") + '</h3>';
         let cnt = 0;
         // 2026-08-20 Klay 令：这一段的发行人名前补公司 logo。
         // shares_top 的键只有发行人名、没有 ticker，而同一份 d.holdings 里带 tk
@@ -322,7 +322,7 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
         }
       }
     } else if (c.solid) {
-      h += '<p class="f13-sub">' + (_EN ? "Timeline being backfilled: the full quarter-by-quarter history is still being pulled from EDGAR and will appear once complete."
+      h += '<p class="f13-sub">' + (_EN ? "Timeline being backfilled: the full quarter-by-quarter history is still being pulled from EDGAR and will appear as it arrives."
                                         : "时间轴回补中：全史逐期数据正在从 EDGAR 补齐，补到即显示。") + '</p>';   /* 2026-09-27：原无 EN 分支 */
     }
     $("#panel").innerHTML = '<div class="f13-panel">' + h + "</div>";
@@ -355,9 +355,9 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
       "季末到披露日之间那段走势，在披露当天就已经是已知的、可复算的":
         "the price path between quarter-end and filing date is already known and fully recomputable on the day it is disclosed",
       "。本页只对账：不算机构盈亏（13F 无成本价、无空头腿），不归因，不给跟不跟。":
-        ". This page only reconciles: no institution P&L (13F carries no cost basis and no short leg), no attribution, no follow-or-not calls.",
+        ". This page only reconciles: no institution P&L (13F carries no cost basis and no short leg), no attribution, and no view on whether to follow them.",
       "＝集中决策：每一笔都是一个决策体的判断，可逐笔看":
-        " = concentrated decision: every position is one decision-maker's judgement, readable position by position",
+        " = single decision-maker: every position is one decision-maker's judgment, readable position by position",
       "＝平台多策略 / 系统化 / 主权配置：只报规模。从几千行里挑一只说它看好，等于从一栋楼里挑一个房客说这栋楼喜欢他":
         " = multi-strategy / systematic / sovereign: size only. Picking one name out of thousands of rows to say \u201cthey like it\u201d is like picking one tenant out of a building to say the building likes him",
       "开奖表 · 季末价 → 披露日价（可复算）": "Scorecard: quarter-end price to filing-date price (recomputable)",
@@ -402,12 +402,12 @@ table.f13 td.iss { font-family: inherit; max-width: 240px; overflow: hidden; tex
     const RX = [
       [/^最新持仓 · 前 (\d+)（按市值）$/, (m) => `Top ${m[1]} holdings (by value)`],
       [/^时间轴 · 组合总值（(\d+) 期：(\S+) → (\S+)）$/, (m) => `Timeline: book value (${m[1]} quarters, ${m[2]} to ${m[3]})`],
-      [/^持仓股数逐期（当前前几大 · 连续加仓在这里是能看见的形状）$/, () => "Share count by quarter (current top names; steady accumulation is a shape here, not an adjective)"],
+      [/^持仓股数逐期（当前前几大 · 连续加仓在这里是能看见的形状）$/, () => "Share count by quarter (current top names; steady accumulation shows up here as a visible shape)"],
       [/^其余 (\d+) 只合计$/, (m) => `Other ${m[1]} names combined`],
       [/^(\d+) 笔 · (.+)$/, (m) => `${m[1]} positions · ${m[2]}`],
       [/^([\d,]+) 条 · (.+)$/, (m) => `${m[1]} rows · ${m[2]}`],
       [/(\d+) 期$/, (m) => `${m[1]}q`],
-      [/^集中决策 · 报告期 (\S+) · 披露 (\S+) · 组合 (\S+)(.*)$/, (m) => `Concentrated · period ${m[1]} · filed ${m[2]} · book ${m[3]}${m[4]}`],
+      [/^集中决策 · 报告期 (\S+) · 披露 (\S+) · 组合 (\S+)(.*)$/, (m) => `Single decision-maker · period ${m[1]} · filed ${m[2]} · book ${m[3]}${m[4]}`],
     ];
     const walk2 = (n) => {
       for (const c of [...n.childNodes]) {
