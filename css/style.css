@@ -370,6 +370,9 @@ html:not([lang^="zh"]) .lang-switch { font-size: 11.5px; padding: 3px 8px; }
     order: 3;
     flex: 0 0 100%;
     width: 100%;
+    /* 2026-09-27 补：本段本意是「tab 栏独占一行、横向滑动」，但一直没写 nowrap，基础样式 .tabs{flex-wrap:wrap}
+       照样生效 ⇒ 375px 下 7 个 tab 折成 4 行（高 171），顶栏总高 269 且吸顶，占掉三分之一屏。 */
+    flex-wrap: nowrap;
     padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
     /* 右缘渐隐，提示 tab 栏可横向滑动、并非被截断 */
@@ -1096,6 +1099,9 @@ td.left-col { text-align: left; }
 /* 个股 hero 的 7 张卡固定一行排满，避免最大回撤孤零零掉到第二行 */
 .stock-hero .stat-strip { grid-template-columns: repeat(7, 1fr); }
 @media (max-width: 1000px) { .stock-hero .stat-strip { grid-template-columns: repeat(4, 1fr); } }
+/* 2026-09-27：4 列在手机上装不下 —— 每张卡最窄约 103px（「×3,423.5」这类读数），4 列加间距 448px，
+   视口窄于约 496px 就把整页撑宽（375px 实测页宽 493）。≤560px 改 2 列。 */
+@media (max-width: 560px) { .stock-hero .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .stock-hero .stat .value { font-size: 18px; }
 /* ---------- 页脚合规区 ---------- */
 .site-footer {
