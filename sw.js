@@ -25,7 +25,8 @@
 // 2026-09-27 → mc-v39：做空页分组条窄屏改横排独占一行（mc-v38 上线后 800px 宽两条胶囊并排纵向堆叠）。
 // 2026-09-27 → mc-v40：做空页流量档无数据的组变灰、自动跳到有数的组（Klay 选项 b）。
 // 2026-09-27 → mc-v41：温度计 context 卡 SKEW／实际利率取空显示「—」不再整块崩（app.js?v=20260927c）。
-const CACHE = "mc-v41";
+// 2026-09-27 → mc-v42：定价页 Pro 卡加「站上跟踪的全部美股个股财报历史数据」（售卖承诺变了，回访者不能看旧承诺）。
+const CACHE = "mc-v42";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());

@@ -206,6 +206,7 @@
     <ul class="ptier-list">
       <li>Everything in Standard</li>
       <li>Macro transmission-chain full history (CSV): Fed balance sheet and liquidity, bank cash by bank size, the 10-year Treasury yield and Treasury futures positioning, from the start to today</li>
+      <li>Financial history for every US stock the site tracks (CSV), from about 2009: first-reported and revised values side by side; ROE, ROIC and free cash flow computed on the site's published definitions</li>
       <li>Full history (CSV) for each of the site's rulers: added once data licensing is confirmed (planned)</li>
       <li>Custom threshold alerts, API (planned)</li>
     </ul>
