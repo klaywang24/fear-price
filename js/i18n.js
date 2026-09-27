@@ -253,6 +253,8 @@
     "标普500成分股": ["S&P 500 constituents", "", "", ""],
     // 2026-09-27：波动率家族横条图的纵轴标签（build_data.VOL_FAMILY["VXSMH"]），此前漏收 ⇒ EN 态纵轴显示中文。
     "半导体 ETF": ["Semiconductor ETF", "ETF semi-conducteurs", "Halbleiter-ETF", "ETF de semiconductores"],
+    // 2026-09-27：估值图里 multpl 标 Estimate 的月份那条虚线的图例后缀（app.js estSeries）
+    "E（估计）": ["E (estimate)", "E (estimation)", "E (Schätzung)", "E (estimación)"],
     "百分位": ["percentile", "", "", ""],
     "当前": ["current", "", "", ""],
     // ---- 做空成交结构（2026-07-18）----

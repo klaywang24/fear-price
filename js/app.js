@@ -1804,7 +1804,8 @@
     if (!e || !e.dates || !e.dates.length) return null;
     const lastA = [d.dates[d.dates.length - 1], d.values[d.values.length - 1]];
     return {
-      name: name + " E（估计）", type: "line", showSymbol: true, symbol: "emptyCircle", symbolSize: 5,
+      // 2026-09-27：原为 name + " E（估计）" 整串，图表文字按整串查字典查不到 ⇒ EN 态图例与悬停显示中文。后缀单独翻译再拼。
+      name: name + " " + (window.MC_I18N ? MC_I18N.translate("E（估计）") : "E（估计）"), type: "line", showSymbol: true, symbol: "emptyCircle", symbolSize: 5,
       data: [lastA].concat(zip(e.dates, e.values)),
       lineStyle: { color, width: 1.2, type: "dashed" }, itemStyle: { color },
       label: { show: true, position: "top", fontSize: 9, fontFamily: "JetBrains Mono", color,
