@@ -78,7 +78,7 @@
     },
 
     terms: {
-      en: { kicker: "TERMS", h1: "Terms of Service", dek: "Last updated: 2026-07-06",
+      en: { kicker: "TERMS", h1: "Terms of Service", dek: "Last updated: 2026-09-27",
         body: `<h3>Operator</h3>
 <p>This website and its paid products are operated by <strong>XIN WANG</strong>, a sole proprietor trading as <strong>Fear-Price</strong>. Contact details are on the Contact page.</p>
 <h3>Acceptance</h3>
@@ -91,6 +91,11 @@
 <p>To the maximum extent permitted by law, we are not liable for any direct or indirect loss arising from your use of, or inability to use, this site.</p>
 <h3>Intellectual property &amp; third parties</h3>
 <p>The site's code is source-available under PolyForm Noncommercial 1.0.0 (see the GitHub repo) — free for noncommercial use, commercial use requires a separate license; charts and copy are for personal, non-commercial reference. Third-party services referenced by the site are governed by their own terms.</p>
+<h3>Data use &amp; automated access</h3>
+<p>You are welcome to read, study and research this site, and search engines and AI assistants are welcome to index and cite its pages; when citing, please name the source and link to it. The data endpoints listed in the API description (openapi.json) may be called for noncommercial purposes under the license stated there.</p>
+<p>Without written permission, you may not: scrape or download this site's data files in bulk by automated means; republish or redistribute all or a substantial part of the data, or compile it into a dataset, database, API or other product; or use the data for any commercial purpose, including paid products and commercial research.</p>
+<p>The underlying values come from public sources (such as the SEC, FRED and Cboe); no one owns those facts, and each source's own terms apply to them. What this site claims is the selection, arrangement and computation behind its indices, derived metrics and ledger structure, licensed under PolyForm Noncommercial 1.0.0 (free for noncommercial use; commercial use requires a separate license). Datasets published on Kaggle and Hugging Face under CC BY 4.0 may be used under that license.</p>
+<p>If you breach this section, your permission to use the site ends automatically, and we reserve the right to request removal and pursue remedies under applicable law. We publish a daily fingerprint of the data and store it in third-party web archives, which can show where the data came from and when. For bulk or commercial use, write to us about a license.</p>
 <h3>Paid products &amp; billing</h3>
 <p>Checkout, invoicing and taxes for this site's paid subscriptions are handled by <strong>Paddle as the Merchant of Record</strong> — meaning your payment contract is with Paddle, and its terms and privacy policy also apply. Purchasers must be 18 or the age of majority in their jurisdiction. Refunds follow our Refund Policy.</p>
 <h3>Governing law &amp; severability</h3>

@@ -115,6 +115,7 @@ def build_openapi():
             "version": "1.0.0",
             "contact": {"name": "Fear-Price", "url": SITE},
             "license": POLYFORM,
+            "termsOfService": SITE.rstrip("/") + "/terms",   # 2026-09-27 条款加「数据使用与自动访问」节，机器可读层挂上链接
         },
         "servers": [{"url": SITE}],
         "x-license-note": LICENSE_NOTE,
