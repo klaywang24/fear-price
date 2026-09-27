@@ -87,8 +87,13 @@ def instant(facts, tags, unit=None):
         out.update({k: v["val"] for k, v in o1.items()})
     return dict(sorted(out.items()))
 def ttm(qd, end, span=380):
+    """滚动四季。🔴 2026-09-27 修：最后一季必须在期末前 45 天内。原先只取「期末之前最后四季」、不查离期末多远，
+    公司停报某科目后会一直沿用好几年前的四季：TJX 2019 起不报营业利润 ⇒ 2019–2026 共 30 季投入资本回报率用的是
+    2018 年营业利润（站上已发布过错值）；美银 2015 后不报资本开支 ⇒ 重算时 2015–2025 每年自由现金流多扣 11.55 亿。
+    现在算不出就不给（ROIC 按既定规则退到净利，FCF 年度资本开支缺失且近四季也没有时按 0 计）。"""
     ks = [k for k in qd if k <= end][-4:]
     if len(ks) < 4 or (_d(ks[-1]) - _d(ks[0])).days > span - 80: return None
+    if (_d(end) - _d(ks[-1])).days > 45: return None
     return sum(qd[k] for k in ks)
 def near(inst, e, back=45, fwd=0):
     lo, hi = _d(e) - dt.timedelta(days=back), _d(e) + dt.timedelta(days=fwd)
@@ -246,7 +251,9 @@ def get_splits(ticker):
 # 标签族。择一类（EPS/NI/权益）按列表顺序取第一个覆盖达标者；改名换代类（营收/资本开支/现金流/现金/债务）按顺序合并、后者覆盖。
 EPS_TAGS = ["EarningsPerShareDiluted","IncomeLossFromContinuingOperationsPerDilutedShare","EarningsPerShareBasicAndDiluted","DilutedEarningsLossPerShare"]   # 择一·优先级从高到低：标准稀释 EPS 优先
 NI_TAGS  = ["NetIncomeLoss","NetIncomeLossAvailableToCommonStockholdersBasic","ProfitLoss"]   # 择一：母公司净利优先，覆盖不全时退到「普通股可分配净利」（盈透）
-REV_TAGS = ["Revenue","RevenuesNetOfInterestExpense","SalesRevenueGoodsNet","SalesRevenueNet","Revenues","RevenueFromContractWithCustomerExcludingAssessedTax"]
+REV_TAGS = ["Revenue","RevenuesNetOfInterestExpense","SalesRevenueGoodsNet","SalesRevenueNet","Revenues","RevenueFromContractWithCustomerIncludingAssessedTax","RevenueFromContractWithCustomerExcludingAssessedTax"]
+# 2026-09-27 补 IncludingAssessedTax：TJX 2017 起只报含代收销售税的营收，原清单没有它 ⇒ 2018-08 起 33 季营收取不到、市销率沿用 2018 年旧营收。
+#   排在 Excluding 之前（合并时后者覆盖）：两者都报的公司仍取不含税口径；实测 29 只里只有 TJX 受影响。
 SH_INST  = ["NumberOfSharesOutstanding","EntityCommonStockSharesOutstanding","CommonStockSharesOutstanding"]
 SH_DUR   = ["WeightedAverageNumberOfSharesOutstandingBasic","WeightedAverageNumberOfDilutedSharesOutstanding"]
 OCF_TAGS = ["CashFlowsFromUsedInOperatingActivities","NetCashProvidedByUsedInOperatingActivitiesContinuingOperations","NetCashProvidedByUsedInOperatingActivities"]   # 2013–2016 年不少公司用「持续经营」口径标签

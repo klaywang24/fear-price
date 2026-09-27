@@ -145,6 +145,15 @@ def main():
     fund = {"ticker": "T"}
     bf.carry_history(fund, {p: [] for p in bf.PAGE_KEYS}, {}, "2026-09-26")
     check("nothing to carry and nothing fetched: keys stay absent (never invented)", "pe" not in fund and "history_carried" not in fund)
+    # 2026-09-27：滚动四季不许沿用停报之后的旧季度（edgar_history.ttm）
+    import edgar_history as eh
+    q = {"2014-12-31": 1, "2015-03-31": 2, "2015-06-30": 3, "2015-09-30": 4}
+    check("ttm: stale quarters years before the period end are not reused (BAC capex / TJX operating income shape)",
+          eh.ttm(q, "2023-12-31") is None)
+    check("ttm: four quarters ending at the period end still sum", eh.ttm(q, "2015-09-30") == 10)
+    check("revenue tags: IncludingAssessedTax is read, and ExcludingAssessedTax still wins when both exist",
+          eh.REV_TAGS.index("RevenueFromContractWithCustomerIncludingAssessedTax")
+          < eh.REV_TAGS.index("RevenueFromContractWithCustomerExcludingAssessedTax"))
     print("pass" if not FAILS else f"FAIL {len(FAILS)}")
     return 1 if FAILS else 0
 
