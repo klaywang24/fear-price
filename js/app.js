@@ -956,7 +956,7 @@
     if (!tocChapters.length) return;
     let current = tocChapters[0];
     for (const c of tocChapters) {
-      if (c.getBoundingClientRect().top <= 150) current = c;
+      if (c.getBoundingClientRect().top <= coverBottom() + 60) current = c;   // 2026-09-27：原写死 150，吸顶选票区下沿已到 ~270
     }
     let activeLink = null;
     tocEl.querySelectorAll("a").forEach((a) => {
@@ -981,14 +981,48 @@
   // 2026-07-20 用户要求「和底部表格对齐，不要到底部」：滚到内容尾部时把目录整体顶上去，
   // 使其底缘 = 正文底缘（.container 底），不再越过内容飘向页脚。
   const containerEl = document.querySelector(".container");
+  /* 2026-09-27（Klay 令）：目录顶边与本页那条标题线齐平（「TECHNOLOGY & MEGACAP」「TECH · AAPL」这类 .kicker），
+     不越过它、也不和上面的选票区并排。原来写死 top:168，而标题线在 321（科技总览）/ 约 398（个股页），
+     目录整块悬在选票区旁边。
+     规则：top = max(标题线当前位置, 盖在上面的东西的下沿 + 12)。「盖在上面的东西」＝顶栏，
+     有吸顶选票区时＝选票区（它吸住时下沿＝顶栏高＋自身高）。页面刚打开两者齐平；往下拖时目录跟标题线一起上移，
+     到了上沿就停住 —— 永远不会越过标题线，也不会钻到顶栏或选票区底下。 */
+  const topbarEl = document.querySelector(".topbar");
+  function syncTopbarH() {       // 吸顶选票区的 top 用它（CSS var(--topbar-h)），顶栏高随语言与宽度变
+    if (topbarEl) document.documentElement.style.setProperty("--topbar-h", topbarEl.offsetHeight + "px");
+  }
+  syncTopbarH();
+  if (topbarEl && window.ResizeObserver) new ResizeObserver(syncTopbarH).observe(topbarEl);
+  function stickySubnav() {     // 当前面板里在吸顶的选票区（窄屏它是 static，不算）
+    const sn = document.querySelector(".panel.active .subnav");
+    return sn && sn.offsetParent && getComputedStyle(sn).position === "sticky" ? sn : null;
+  }
+  function coverBottom() {       // 滚动时正文上方被固定遮住的高度（顶栏＋吸住后的选票区）
+    const tb = topbarEl ? topbarEl.offsetHeight : 58;
+    const sn = stickySubnav();
+    return sn ? tb + sn.offsetHeight : tb;
+  }
+  function tocAnchor() {         // 本页的标题线：个股页取个股抬头，其余取当前面板第一条可见的 .kicker
+    const panel = document.querySelector(".panel.active");
+    if (!panel) return null;
+    const stock = panel.querySelector(".basket-stock");
+    const scope = stock && stock.style.display !== "none" ? stock : panel;
+    return [...scope.querySelectorAll(".kicker")].find((k) => k.offsetParent) || null;
+  }
   function positionToc() {
     // 只在桌面固定态生效；窄屏是抽屉，别动它的 transform
     if (!window.matchMedia("(min-width: 1280px)").matches || tocEl.classList.contains("open")) {
-      tocEl.style.transform = ""; return;
+      tocEl.style.transform = ""; tocEl.style.top = ""; tocEl.style.maxHeight = ""; return;
     }
     if (!containerEl) return;
+    const sn = stickySubnav();
+    const floor = (sn ? sn.getBoundingClientRect().bottom : (topbarEl ? topbarEl.getBoundingClientRect().bottom : 116)) + 12;
+    const anchor = tocAnchor();
+    const want = Math.round(Math.max(floor, anchor ? anchor.getBoundingClientRect().top : floor));
+    tocEl.style.top = want + "px";
+    tocEl.style.maxHeight = `calc(100vh - ${want + 24}px)`;
     const contentBottom = containerEl.getBoundingClientRect().bottom;
-    const tocTop = parseFloat(getComputedStyle(tocEl).top) || 116;   // 与 CSS 保持单一真源
+    const tocTop = want;
     const overshoot = (tocTop + tocEl.offsetHeight) - (contentBottom - 8); // 目录底超出正文底多少
     tocEl.style.transform = overshoot > 0 ? `translateY(${-overshoot}px)` : "";
   }
@@ -999,6 +1033,11 @@
     setTimeout(() => { highlightToc(); positionToc(); tocTick = false; }, 80);
   }, { passive: true });
   window.addEventListener("resize", positionToc, { passive: true });
+  // 2026-09-27：目录顶边跟着标题线走，位置每帧对齐（上面那条 80ms 节流只管高亮，跟位置会一顿一顿）
+  let tocRaf = 0;
+  window.addEventListener("scroll", () => {
+    if (!tocRaf) tocRaf = requestAnimationFrame(() => { tocRaf = 0; positionToc(); });
+  }, { passive: true });
   setInterval(() => { highlightToc(); positionToc(); }, 500); // 兜底，保证高亮与跟随永远跟手
 
   function buildToc() {
@@ -1046,7 +1085,8 @@
     if (!a) { tocEl.classList.remove("open"); return; } // 点遮罩空白处即收起抽屉
     const target = document.getElementById(a.dataset.target);
     if (target) {
-      const y = target.getBoundingClientRect().top + window.scrollY - 120;
+      // 2026-09-27：原减 120，章节标题会停在吸顶选票区底下（它的下沿约 270）⇒ 按实际遮挡高度留空
+      const y = target.getBoundingClientRect().top + window.scrollY - coverBottom() - 16;
       window.scrollTo({ top: y, behavior: "smooth" });
     }
     if (window.innerWidth < 1560) tocEl.classList.remove("open");

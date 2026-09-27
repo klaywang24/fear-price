@@ -736,7 +736,11 @@ html:not([lang^="zh"]) .breadth-bar div { min-width: 62px; }
 /* ---------- 二级胶囊导航（板块总览 ↔ 个股） ---------- */
 .subnav {
   position: sticky;
-  top: 58px;
+  /* 2026-09-27 修（Klay 截图：往下拖时圆环被遮住）：原写死 top:58px，而顶栏早已改成两行、实高约 104px，
+     且顶栏 z-index 100 高于本块 90 ⇒ 吸住时上面约 46px 钻到顶栏底下，「科技总览」圆环与首行被切掉。
+     ⇒ 吸在顶栏实际下沿：--topbar-h 由 app.js 用 ResizeObserver 量顶栏实高写入（语言、宽度一变就跟着变），
+       58px 只是脚本跑之前的兜底。 */
+  top: var(--topbar-h, 58px);
   z-index: 90;
   display: flex;
   flex-wrap: wrap;
@@ -846,7 +850,8 @@ tr.clickable td:first-child { color: var(--accent-deep); font-weight: 600; }
 .toc {
   display: none;
   position: fixed;
-  top: 168px;   /* 2026-07-26 下移：原 116 紧贴顶栏底(105)，且与档案页的 sticky subnav(144) 并排打架；
+  top: 168px;   /* ⚠️ 2026-09-27 起只是脚本跑之前的兜底：实际 top 由 app.js positionToc() 按本页标题线算（见那里的注释）。
+                   2026-07-26 下移：原 116 紧贴顶栏底(105)，且与档案页的 sticky subnav(144) 并排打架；
                    168 让目录起点落在正文首个区块附近，视觉上与正文同一水平线起步 */
   /* 🔄 2026-08-31 §74：left 从写死 18px 改成**跟随正文左缘**。
      §71 把它留在视口左缘 + 只靠断点保证不重叠，实测 1660px EN 态重叠 1px（目录右 234 / 正文左 233）：
@@ -1216,7 +1221,8 @@ html.dark-mode .ci-x .c-ic, html.dark-mode .ci-github .c-ic { fill: #e8e6e1; }
   （科技=半导体/平台·软件/硬件·终端 三行；金融=银行·卡组织/券商·投行/资管·保险/加密 四行，与桌面行分组一致）。
    nowrap 防个股中文名被挤成竖排（此前「台积电」在窄屏拆三行变圆球）。 */
 @media (max-width: 700px) {
-  .subnav { gap: 6px; }
+  /* 2026-09-27：手机上选票区折成四五行（约 250px），再吸顶会和顶栏一起盖掉半屏 ⇒ 窄屏不吸，跟着页面走。 */
+  .subnav { gap: 6px; position: static; }
   .subnav .pill-anchor {
     align-self: auto;
     font-size: 12.5px;
