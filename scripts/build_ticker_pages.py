@@ -630,7 +630,7 @@ def render(D, s, lang, css_v, uni):
     # ── 页脚（与 options.html 同结构，链接改根路径）──
     w('<footer class="site-footer"><div class="footer-main"><div class="footer-brand-col">'
       f'<div class="footer-brand">{T(lang, "恐惧的标价", "Fear-Price")}<span>Fear-Price</span></div>'
-      f'<div class="footer-tag">{T(lang, "每个交易日自动更新的美股百年图表档案与读数台账", "A self-updating archive of a century of US market charts, plus a public ledger of daily readings")}</div>'
+      f'<div class="footer-tag">{T(lang, "每个交易日自动更新的美股百年图表档案与读数台账", "A century of US market charts and a ledger of readings, updated automatically every trading day")}</div>'
       '</div><div class="footer-colgroup">'
       f'<div class="footer-col"><div class="footer-col-h">About</div><a href="/about">{T(lang, "关于我们", "About us")}</a>'
       f'<a href="/methodology">{T(lang, "方法论", "Methodology")}</a><a href="/contact">{T(lang, "联系我们", "Contact us")}</a></div>'
