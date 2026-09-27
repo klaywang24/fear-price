@@ -774,7 +774,8 @@
       <button type="button" data-k="si" aria-selected="false">持仓股数分位</button>
       <button type="button" data-k="flow" aria-selected="false">当日做空占比分位（流量）</button>
     </div>
-    <div class="seg" id="seg-sigrp"></div>
+    <!-- 分组条（2026-09-27）：组名短，窄屏也横排换行，不跟 .seg 在 820px 以下的纵向堆叠；独占一行，免得和上面那条并排 -->
+    <div class="seg" id="seg-sigrp" style="display:flex;width:fit-content;flex-direction:row;flex-wrap:wrap;border-radius:16px"></div>
     <div class="card">
       <h3>各标的的拥挤度百分位</h3>
       <div class="sub">本表滞后约两周：每月两次结算，结算日之后约 8 个交易日才发布，所以它不是今天的读数，只能当缓慢变动的背景。历史不足 24 期的不给百分位，留空。</div>

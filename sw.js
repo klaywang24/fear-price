@@ -22,7 +22,8 @@
 // 2026-09-26 → mc-v35：定价页整页内容栏放宽到 1040 与卡片对齐，Pro 副标删「自己用这把尺子」。
 // 2026-09-26 → mc-v37：个股页 /t/ 上线，/t/ 改为先走网络。
 // 2026-09-27 → mc-v38：做空页扩到 50 只并分组、标签只写分位、单票下钻改分位线（外壳换了，回访者不能停在旧版）。
-const CACHE = "mc-v38";
+// 2026-09-27 → mc-v39：做空页分组条窄屏改横排独占一行（mc-v38 上线后 800px 宽两条胶囊并排纵向堆叠）。
+const CACHE = "mc-v39";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
