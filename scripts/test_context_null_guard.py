@@ -27,7 +27,7 @@ def chk(name, cond):
 
 
 helpers = re.findall(r"^\s*const (?:numOr|pctOr) = .*;$", src, re.M)
-m = re.search(r'(<div class="lc-name">Call 偏斜 SKEW.*?numOr\(x\.real_rate, "value", 2\)}%</span></div>)', src, re.S)
+m = re.search(r'(<div class="lc-name">尾部偏斜 SKEW.*?numOr\(x\.real_rate, "value", 2\)}%</span></div>)', src, re.S)
 chk("source: both helpers and the SKEW/real-rate card block are present in js/app.js", len(helpers) == 2 and m)
 chk("source: no bare `.value.toFixed` left on call_skew / real_rate",
     "x.call_skew.value.toFixed" not in src and "x.real_rate.value.toFixed" not in src)

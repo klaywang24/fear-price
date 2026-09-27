@@ -3086,7 +3086,8 @@
           <div class="lc-meta"><span>${inv ? "越远越贵 · 保得久，保费高" : "倒挂 · 眼下比一年后还贵"}</span></div>
         </div>
         <div class="senti-card">
-          <div class="lc-name">Call 偏斜 SKEW <span>看涨相对看跌</span></div>
+          <!-- 2026-09-27：原标「Call 偏斜 · 看涨相对看跌」，但数据取的是 Cboe SKEW（标普尾部风险，主要由虚值看跌定价），名字改对；数据字段 call_skew 不动（公开 JSON 有人在读） -->
+          <div class="lc-name">尾部偏斜 SKEW <span>标普大跌的保险有多贵</span></div>
           <div class="lc-val">${pctOr(x.call_skew)}</div>
           <div class="lc-meta"><span>分位 · 全史 · 值 ${numOr(x.call_skew, "value", 0)}</span></div>
         </div>
