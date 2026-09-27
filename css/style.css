@@ -1564,6 +1564,8 @@ html:not([lang^="zh"]) .brand { font-size: 17.5px; }
 .footer-main { display: flex; gap: 48px; flex-wrap: wrap; justify-content: space-between; margin-bottom: 26px; }
 .footer-brand-col { flex: 1 1 300px; max-width: 380px; }
 .footer-brand span { font-family: 'Fraunces', serif; font-style: italic; font-size: 14px; color: var(--ink-muted); margin-left: 8px; font-weight: 500; }
+/* 2026-09-27：页脚是「中文站名 + 英文副名」，英文界面下中文那半也译成 Fear-Price，全站英文页脚显示成 Fear-Price Fear-Price。英文态藏掉副名。 */
+html:not([lang^="zh"]) .footer-brand span { display: none; }
 .footer-social { display: flex; gap: 13px; margin-top: 15px; }
 .footer-social a { color: var(--ink-muted); display: inline-flex; }
 .footer-social a:hover { color: var(--accent); }
