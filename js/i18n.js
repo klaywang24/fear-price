@@ -309,7 +309,8 @@
     "SPEARMAN 相关系数 · 全样本合并": ["SPEARMAN CORRELATION · POOLED SAMPLE", "", "", ""],
     "显著性": ["Significance", "", "", ""],
     "校正后一只不剩": ["None survive", "", "", ""],
-    "把「流量变化 vs 持仓变化」逐票拆开，每只做 4,000 次置换检验。11 只里有 4 只 p<0.05（纯随机的期望是 0.55 只）：说明确实有东西。但做多重比较校正（Bonferroni，阈值 p<0.0045）之后，一只都不存活。": ["Breaking “change in flow vs change in short interest” down name by name, each with 4,000 permutations. Four of eleven come in at p<0.05, where pure chance would give 0.55 — so there is something here. But after correcting for multiple comparisons (Bonferroni, threshold p<0.0045), not one survives.", "", "", ""],
+    // 2026-09-27：中文去直角引号时改成「这一组」，键未跟 ⇒ EN 态漏成中文。
+    "把流量变化 vs 持仓变化这一组逐票拆开，每只做 4,000 次置换检验。11 只里有 4 只 p<0.05（纯随机的期望是 0.55 只）：说明确实有东西。但做多重比较校正（Bonferroni，阈值 p<0.0045）之后，一只都不存活。": ["We test flow change against short-interest change name by name, with 4,000 permutations each. Four of eleven clear p<0.05, where chance alone would produce 0.55: there is something there. After a multiple-comparison correction (Bonferroni, threshold p<0.0045), none survives.", "", "", ""],
     "逐票相关系数与置换检验": ["Correlation and permutation test, name by name", "", "", ""],
     "条形是 Spearman ρ，标红的是 p<0.05。注意两只 ETF 精确为零：这与 ETF 的做空量由申赎套利主导、跟看空无关的理论预期一致。一个符合理论的零值，比一堆勉强显著的正值更能说明这组数没被过度拟合。": ["Bars are Spearman ρ; those in red are p<0.05. Note that both ETFs come in at exactly zero — consistent with the theoretical expectation that ETF short volume is dominated by create/redeem arbitrage and has nothing to do with bearishness. A zero that matches theory says more about the honesty of this sample than a handful of barely-significant positives.", "", "", ""],
     "四只显著、校正后归零，这句话本身就是结论：有东西，但不够硬。所以这一章只陈列检验结果，不据此下任何判断。": ["Four significant, none surviving correction — that sentence is itself the conclusion: there is something, but it is not solid enough. So this chapter presents the test results and draws nothing from them.", "", "", ""],
