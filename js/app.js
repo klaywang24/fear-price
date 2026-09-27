@@ -668,6 +668,20 @@
     let fund = null, peers = null;
     try { fund = await load("s_" + safe + "_fund"); } catch (e) {}
     try { peers = await load(basket + "_peers"); } catch (e) {}
+    // 2026-09-27：记下这只票基本面的真实数据日；已插好的出处行整块换新（新节点才会被 i18n 的 MutationObserver 翻译，四语言沿用同一句式）
+    if (fund && fund.history_as_of) {
+      (window.__fdAsof = window.__fdAsof || {})[basket] = fund.history_as_of;
+      const seen = new Set();
+      document.querySelectorAll(`[id^="${basket}-fd-"]`).forEach((el) => {
+        const card = el.closest(".card"), note = card && card.querySelector(".src-note");
+        if (!note || seen.has(card)) return;
+        const inner = card.querySelector(".chart, table");       // 与出处行生成同一判据：卡内第一张图/表是基本面的才换
+        if (!inner || !/-fd-/.test(inner.id || "") || !inner.id.startsWith(basket + "-fd-")) return;
+        seen.add(card);
+        note.remove();
+        card.insertAdjacentHTML("beforeend", `<p class="footnote src-note">数据截至 ${fund.history_as_of} · SEC EDGAR + Yahoo Finance · 每周六自动更新</p>`);
+      });
+    }
     const host = document.getElementById(basket + "-stock");
     const drop = (key) => { const el = document.getElementById(basket + "-fd-" + key); if (el) el.remove(); };
 
@@ -2752,7 +2766,9 @@
           ? `数据截至 ${asof} · ${src} · ${opts.freq}`
           : `数据截至 ${dd}-${mo}-${y}（结算日） · ${src} · 每月两次结算，结算日后约 8 个交易日发布`;
       } else if (/-fd-/.test(inner.id || "")) {
-        line = `数据截至 ${metaDate} · SEC EDGAR + Yahoo Finance · 每周六自动更新`;
+        // 2026-09-27：基本面各图的日期取这只票自己的 history_as_of（冻结票长历史停在上一版，不能写成全站日期）；renderFund 加载后会记下并重插
+        const fdAsof = (window.__fdAsof || {})[(inner.id || "").split("-fd-")[0]];
+        line = `数据截至 ${fdAsof || metaDate} · SEC EDGAR + Yahoo Finance · 每周六自动更新`;
       } else {
         line = `数据截至 ${metaDate} · ${src} · 每交易日收盘后自动更新`;
       }
