@@ -375,6 +375,10 @@ def write_index(done, kind="cn"):
                  if first_img else '<div class="dg-thumb"></div>')
         href = "./" + slug if cn else "./" + slug + ".en"   # 无扩展：Pages 会把 .html 308 到无扩展形态（§77）
         shown = title if cn else en_title
+        # 2026-09-27：冻结源（≤08-09）只有中文原标题，英文索引照录（邮件标题原样照录是数据契约）；
+        # 正文是英文的，所以不写「以中文发布」，只标「标题为中文」，免得英文读者以为点进去是中文。
+        if not cn and re.search(r"[\u4e00-\u9fff]", shown or ""):
+            tag += '<span class="dg-tag">Title in Chinese</span>'
         items.append('<a class="dg-item" href="' + href + '">' + thumb +
                      '<div><div class="dg-meta">' + date + '</div>'
                      '<div class="dg-it">' + html.escape(shown) + tag + '</div></div></a>')
