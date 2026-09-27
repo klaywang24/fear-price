@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""个股长历史（PE / EPS / PB / ROE / FCF）：证监会 EDGAR 原始申报值 + 雅虎复权价，自建；2026-09-26 起替代 macrotrends（09-24 起整站 Cloudflare 人机验证，自动访问一律 403）。
+"""个股长历史（PE / EPS / PB / ROE / FCF）：SEC EDGAR 原始申报值 + 雅虎复权价，自建；2026-09-26 起替代 macrotrends（09-24 起整站 Cloudflare 人机验证，自动访问一律 403）。
 
 产出与旧源同形状，build_fundamentals.py 下游（series_from / driver / carry_history）不改：
   {"pe-ratio": [[date, price, eps_ttm, pe], …], "ps-ratio": […], "price-book": […], "roe": […], "roic": [], "free-cash-flow": [[yyyy-12-31, fcf_$M], …]}
@@ -8,19 +8,19 @@
 · 价格＝雅虎 Adj Close 月末（旧源即此口径：七个年份隐含价÷Adj Close 全部＝1.000）；日期标签＝财季末所在月的月末（英伟达 1/4/7/10、美光 2/5/8/11）。
 · EPS_TTM＝四个单季之和；财报从不单独给第四季，Q4＝全年−前三季 YTD。每期取**当时原始申报值**（点时间口径），
   重述不回写：微软 2016–18 ASC 606 期与旧源有差（旧源把重述后全年减重述前 YTD 造出 0.86 的幻影季度）。
-· 拆股：证监会存原始申报值，按申报日之后发生的拆股逐条回调（每股÷、股数×），与复权价对齐。
+· 拆股：SEC 存原始申报值，按申报日之后发生的拆股逐条回调（每股÷、股数×），与复权价对齐。
 · PB＝价÷(总权益÷流通股)，总权益含少数股东（旧源口径；可口可乐 6.8%→0.4%、盈透 283%→0.7%）。
 · ROE＝母公司净利 TTM ÷ 构成 TTM 的四个季末总权益均值（苹果五个时点精确相等）。
 · FCF＝财年 OCF − 资本开支（净额，扣处置回款；只认 10-K，亚马逊每份 10-Q 也报 12 个月滚动值）。
   旧源对财年不按自然年的公司（苹果/微软/沃尔玛/好市多/家得宝/TJX/Visa/美光）把 12 月**单季**当成了全年，站上苹果一直显示 300–500 亿而非 ~1000 亿；本版改对。
-· ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自证监会数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
+· ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自 SEC 数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
-· 冻结名单 FROZEN_TICKERS（6 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、Visa（EPS 按股份类别申报，汇总接口无；官方 A 类口径比旧线高 7–12%，待定）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
-· 证监会汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
+· 冻结名单 FROZEN_TICKERS（6 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向 SEC 申报）、Visa（EPS 按股份类别申报，汇总接口无；官方 A 类口径比旧线高 7–12%，待定）、Circle（上市一年，新旧两边差一倍无法判定）。闪迪 2026-09-26 解冻。
+· SEC 汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
 · 台积电（QUARTERLY_FOREIGN）2026-09-26 起季度往后接：雅虎季报（每 ADR、新台币，近 5 季）按期末月末汇率折美元，追加晚于旧线末点的季度；追加前用台湾证交所开放接口的官方累计 EPS 核对（差 >1% 或接口不通则不追加，下周自动补）；2026-03/06 两季与旧源对照 EPS -1.6%/-0.6%、PE ≈1%、ROE ≈0.5 点。年报此后只补 FCF。
 · 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
-· 伯克希尔：证监会 EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
-证监会要求 UA 带联系方式、≤10 请求/秒。"""
+· 伯克希尔：SEC EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
+SEC 要求 UA 带联系方式、≤10 请求/秒。"""
 import json, os, csv, time, statistics as st, datetime as dt
 import requests
 
@@ -99,7 +99,7 @@ def month_end_label(e):
     nxt = (d.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
     return (nxt - dt.timedelta(days=1)).isoformat()
 
-# ───────── 取数：证监会 / 雅虎 ─────────
+# ───────── 取数：SEC / 雅虎 ─────────
 import json, time, os, io, csv
 import requests
 SEC_UA = {"User-Agent": "fear-price.klay-wang.com research contact klaywang24@gmail.com", "Accept-Encoding": "gzip"}
@@ -163,7 +163,7 @@ def _instance_facts(cik, acc, form, filed):
     return out
 
 def supplement_latest(ticker, F, cik):
-    """证监会汇总接口有时漏收最新一期（2026-09-26 实证：可口可乐 7-29 报送的 Q2 10-Q 带 XBRL，两个月后 companyfacts 里仍没有）。
+    """SEC 汇总接口有时漏收最新一期（2026-09-26 实证：可口可乐 7-29 报送的 Q2 10-Q 带 XBRL，两个月后 companyfacts 里仍没有）。
     submissions 里最新 10-Q/10-K 的期末晚于 companyfacts 净利末期时，直接读那份报告的 XBRL 实例补进去；原有记录照旧（earliest 规则下旧记录优先）。"""
     ni = [a["end"] for tag in ("NetIncomeLoss", "ProfitLoss") for a in (F["facts"].get("us-gaap", {}).get(tag, {}).get("units", {}).get("USD", []))]
     last = max(ni) if ni else ""
@@ -176,7 +176,7 @@ def supplement_latest(ticker, F, cik):
 
 def get_facts(ticker):
     cik = cik_for(ticker)
-    if not cik: raise RuntimeError(f"{ticker}: 证监会代码表无此票")
+    if not cik: raise RuntimeError(f"{ticker}: SEC 代码表无此票")
     F = companyfacts(cik)
     for old in EXTRA_CIK.get(ticker, []): F = merge_facts(companyfacts(old), F)
     if ticker not in FROZEN_TICKERS:
@@ -254,14 +254,14 @@ OPI_TAGS = ["OperatingIncomeLoss"]; TAX_TAGS = ["IncomeTaxExpenseBenefit"]
 CASH_TAGS= ["Cash","CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents","CashAndCashEquivalentsAtCarryingValue"]
 DEBT_NC  = ["LongTermDebtAndCapitalLeaseObligations","LongTermDebtNoncurrent"]; DEBT_C = ["LongTermDebtAndCapitalLeaseObligationsCurrent","LongTermDebtCurrent"]
 DEBT_TOT = ["LongTermDebt"]; STB = ["ShortTermBorrowings","CommercialPaper"]
-ROIC_EMIT = True    # 2026-09-26 Klay 定：按本站公开定义自算，不追旧源；整条自证监会数据起算，不与旧线缝合
+ROIC_EMIT = True    # 2026-09-26 Klay 定：按本站公开定义自算，不追旧源；整条自 SEC 数据起算，不与旧线缝合
 FROZEN_PRICE_TICKER = {"MC.PA": "LVMUY", "RMS.PA": "HESAY"}   # 旧源用 ADR（美元）算的，刷新末点也用 ADR 价
 ANNUAL_IFRS = {"TSM": ("TWD", 5), "RACE": ("EUR", 1)}            # 20-F 年报：报表币种、每 ADR 对应普通股数
 QUARTERLY_FOREIGN = {"TSM": {"cur": "TWD", "ratio": 5, "twse": "2330"}}   # 2026-09-26 Klay 定：台积电季度往后接（雅虎季报＋台湾证交所官方累计 EPS 核对）
 PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
-SHARES_FROM_YAHOO = {"BRK.B"}   # 证监会接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
+SHARES_FROM_YAHOO = {"BRK.B"}   # SEC 接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
-FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL","V"}   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无证监会申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+FROZEN_TICKERS = {"TSM","RACE","MC.PA","RMS.PA","CRCL","V"}   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
 FIRST = "1994-01-01"   # 2026-09-26：老报告（附件 27 与正文表格）补到 1995 年起
 
 # ───────── 构建 ─────────
@@ -372,7 +372,7 @@ def build(t, prev, src, do_stitch=True):
     prices, latest = src.prices(t)
     YSH = src.shares(t) if t in SHARES_FROM_YAHOO else {}
     def shares_at(e):
-        if YSH: return near(YSH, e, 120, 45)   # 伯克希尔：证监会股数标签是 A 股折算数（百万级），与 B 股口径不同，一律只用雅虎 B 股等价；日期不规则，季末前 120 天/后 45 天取最近
+        if YSH: return near(YSH, e, 120, 45)   # 伯克希尔：SEC 股数标签是 A 股折算数（百万级），与 B 股口径不同，一律只用雅虎 B 股等价；日期不规则，季末前 120 天/后 45 天取最近
         v = near(SHi, e, 10, 0)            # 资产负债表日同日
         if v is None: v = near(SHd, e, 10, 0)   # 单季加权稀释股数
         if v is None: v = near(SHi, e, 0, 75)   # dei 封面日在季末后
@@ -443,7 +443,7 @@ def build(t, prev, src, do_stitch=True):
         rows["pe-ratio"]   = stitch(prev_rows(B, "pe", True), rows["pe-ratio"])
         rows["price-book"] = rows["price-book"] if t in PB_NO_STITCH else stitch(prev_rows(B, "pb_hist"), rows["price-book"])
         rows["roe"]        = stitch(prev_rows(B, "roe"), rows["roe"])
-        # roic 不缝合：本站定义与旧源不同，整条自证监会数据起算（≈2009），避免接缝；不适用票留空由上游删键
+        # roic 不缝合：本站定义与旧源不同，整条自 SEC 数据起算（≈2009），避免接缝；不适用票留空由上游删键
     return rows, flags
 
 class NetSource:

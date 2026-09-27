@@ -70,7 +70,7 @@ GitHub Pages 自动发布
 | 指数 / ETF / 个股价格 | Yahoo Finance（yfinance） | 每日 |
 | CNN 恐惧贪婪指数 | [whit3rabbit/fear-greed-data](https://github.com/whit3rabbit/fear-greed-data) 存档（2011→）+ CNN 官方接口当天值 | 每日 |
 | 席勒 CAPE / PE(TTM) / EPS（1871→） | multpl.com | 每日 |
-| 个股 PE/EPS/PB/ROE/FCF（季频，2007→；更早沿用上一版） | 美国证监会 EDGAR 原始申报值 + 雅虎复权价，本站自算（ROIC 按本站定义自算（税后经营利润 ÷ 四季均值的权益+有息负债−现金，银行券商不显示）；台积电/法拉利/LVMH/爱马仕/Visa/Circle 长历史冻结但 PE 末点每周刷新，台积电此后季度按雅虎季报追加并以台湾证交所官方累计 EPS 核对、法拉利按 20-F 年报逐年追加；伯克希尔股数用雅虎 B 股等价） | 每周 |
+| 个股 PE/EPS/PB/ROE/FCF（季频，2007→；更早沿用上一版） | SEC EDGAR 原始申报值 + 雅虎复权价，本站自算（ROIC 按本站定义自算（税后经营利润 ÷ 四季均值的权益+有息负债−现金，银行券商不显示）；台积电/法拉利/LVMH/爱马仕/Visa/Circle 长历史冻结但 PE 末点每周刷新，台积电此后季度按雅虎季报追加并以台湾证交所官方累计 EPS 核对、法拉利按 20-F 年报逐年追加；伯克希尔股数用雅虎 B 股等价） | 每周 |
 | 个股报表（近 4 财年）/ 分红全史 / 快照 | Yahoo Finance | 每周 |
 | 成分股名单与行业 | Wikipedia | 每日 |
 | 公司 Logo | assets.parqet.com | 实时 |
@@ -86,7 +86,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install yfinance pandas requests lxml
 
 python scripts/build_data.py           # 重刷每日数据（约 3 分钟）
-python scripts/build_fundamentals.py   # 重刷基本面（约 15 分钟；证监会接口 ≤10 请求/秒）
+python scripts/build_fundamentals.py   # 重刷基本面（约 15 分钟；SEC 接口 ≤10 请求/秒）
 
 python3 -m http.server 8137            # 打开 http://localhost:8137
 ```
