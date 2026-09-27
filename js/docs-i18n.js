@@ -187,7 +187,7 @@
     <ul class="ptier-list">
 <!-- 2026-07-26 用户裁：与中文同步 —— 头版开始露每期开头两句（judgment_teaser），措辞先行。 -->
       <li><b>Today's full read</b> — subscribers' inboxes only before the open; past issues are public in the archive</li>
-      <li><b>The reading archive</b> — filed daily, compounding</li>
+      <li><b>The reading archive</b> — filed daily, growing every day</li>
 <!-- 2026-07-25 用户裁：与中文版同步删除「每周一期传说处决」。该栏目暂时不产出，
      售卖页不留不在交付的承诺。⚠️ 改定价权益必须中英同改：EN 版定价面板由本文件整块替换。 -->
       <!-- 2026-09-26：与中文同步，按实际交付改写（原为 options-structure data table）。 -->
@@ -207,7 +207,7 @@
       <li>Everything in Standard</li>
       <li>Macro transmission-chain full history (CSV): Fed balance sheet and liquidity, bank cash by bank size, the 10-year Treasury yield and Treasury futures positioning, from the start to today</li>
       <li>Financial history for every US stock the site tracks (CSV), from about 2009: first-reported and revised values side by side; ROE, ROIC and free cash flow computed on the site's published definitions</li>
-      <li>Full history (CSV) for each of the site's rulers: added once data licensing is confirmed (planned)</li>
+      <li>Full history (CSV) for each of the site's gauges: added once data licensing is confirmed (planned)</li>
       <li>Custom threshold alerts, API (planned)</li>
     </ul>
     <div class="ptier-foot">
@@ -216,7 +216,7 @@
   </div>
 </div>
 <p class="pay-methods"><span class="pay-label"><strong>Payment methods</strong>: </span><span class="pay-body"><img class="pay-ico" src="icons/pay/visa.svg" alt="" loading="lazy">Visa / <img class="pay-ico" src="icons/pay/mastercard.svg" alt="" loading="lazy">Mastercard / <img class="pay-ico" src="icons/pay/paypal.svg" alt="" loading="lazy">PayPal / <img class="pay-ico" src="icons/pay/applepay.svg" alt="" loading="lazy">Apple Pay / <img class="pay-ico" src="icons/pay/unionpay.svg" alt="" loading="lazy">UnionPay credit cards.<br><img class="pay-ico" src="icons/pay/alipay.svg" alt="" loading="lazy">Alipay / <img class="pay-ico" src="icons/pay/wechatpay.svg" alt="" loading="lazy">WeChat Pay / <img class="pay-ico" src="icons/pay/unionpay.svg" alt="" loading="lazy">UnionPay debit cards are not supported.</span></p>
-<p><strong>The numbers are everywhere, free forever.</strong> The archive earns its keep on every selloff that comes after: that morning, you are already holding a reading whose method has not changed in fifteen years.</p>
+<p class="pricing-fine"><strong>The numbers are everywhere, free forever.</strong> The archive earns its keep on every selloff that comes after: that morning, you are already holding a reading whose method has not changed in fifteen years.</p>
 <div class="pricing-inst">
   <p><strong>Institutional / data licensing</strong>: for funds, RIAs, family offices, broker research and financial media.</p>
   <ul>
@@ -226,7 +226,7 @@
     <li><b>How</b>: <a href="contact">contact us</a> with your use and scope; priced by use, delivered under a license agreement.</li>
   </ul>
 </div>
-<p>Standard annual = 10 months' price ($290); Pro is annual only at $590. Payment is handled by Paddle; this site provides data and information only, and is not investment advice or any buy or sell recommendation.</p>` },
+<p class="pricing-fine">Standard annual = 10 months' price ($290); Pro is annual only at $590. Payment is handled by Paddle; this site provides data and information only, and is not investment advice or any buy or sell recommendation.</p>` },
     },
   };
 
