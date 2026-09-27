@@ -16,6 +16,7 @@
 · ROIC：旧源（Zacks 供 macrotrends）定义在付费墙后、网格搜索复现不了（最好 ±1.5 点），故按本站公开定义自算：NOPAT＝营业利润×(1−实际税率)（无营业利润用净利），投入资本＝总权益+长债(含一年内)+短期借款/商业票据−现金及等价物，取四个 TTM 季末平均；整条自证监会数据起算不缝合；银行/券商类（ROIC_NOT_APPLICABLE）不适用不显示，由 build_fundamentals 删键。
 · 缝合：新序列首日之前沿用上一版已发布数据（1987 年起的 ROE 长史不丢）；新源若没接到上一版末端一年内则整段沿用。
 · 冻结名单 FROZEN_TICKERS（7 只）：台积电/法拉利（IFRS 本币年报）、LVMH/爱马仕（不向美国证监会申报）、Visa（股数按类别申报，接口无汇总，雅虎只给 A 类差 6–13%）、闪迪/Circle（上市不足两年）。
+· 证监会汇总接口漏收最新一期时（2026-09-26 实证：可口可乐 Q2 10-Q 报送两个月仍不在 companyfacts），自动读那份报告的 XBRL 实例补上（supplement_latest）；读失败不影响本次，沿用汇总接口。
 · 冻结票每周仍刷新 PE 末点（最新价 ÷ 最后一期 EPS，旧源亦如此）；台积电/法拉利按 20-F 年报（IFRS 本币×每 ADR 股数×汇率）逐年追加晚于旧序列末点的年度行（TSM 年报值与旧季度值财年末对照差 ≤1%）；LVMH/爱马仕旧序列本就无 EPS，原样沿用。
 · 伯克希尔：证监会 EPS 标签 2013 后停更且股数按类别申报，用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致）算 NI/股数；PE/EPS/ROE 与旧源精确相符，更早缝合上一版；PB 不缝合（旧源 PB 错）。
 证监会要求 UA 带联系方式、≤10 请求/秒。"""
@@ -114,11 +115,65 @@ def merge_facts(base, extra):
             else: dst[tag] = body
     return base
 
+def _latest_periodic(cik):
+    """submissions 里最近一份 10-Q/10-K：(期末日, 报送日, accession)。"""
+    r = requests.get(f"https://data.sec.gov/submissions/CIK{cik:010d}.json", headers=SEC_UA, timeout=60); time.sleep(0.15); r.raise_for_status()
+    rec = r.json()["filings"]["recent"]
+    for f, rp, fd, acc in zip(rec["form"], rec["reportDate"], rec["filingDate"], rec["accessionNumber"]):
+        if f in ("10-Q", "10-K"): return rp, fd, f, acc
+    return None
+
+def _instance_facts(cik, acc, form, filed):
+    """直接读报告原件的 XBRL 实例（*_htm.xml），取无维度的 us-gaap/dei 事实，转成 companyfacts 记录形状。"""
+    import re as _re
+    base = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-', '')}"
+    idx = requests.get(f"{base}/index.json", headers=SEC_UA, timeout=60).json(); time.sleep(0.15)
+    inst = [x["name"] for x in idx["directory"]["item"] if x["name"].endswith("_htm.xml")]
+    if not inst: return {}
+    x = requests.get(f"{base}/{inst[0]}", headers=SEC_UA, timeout=90).text; time.sleep(0.15)
+    ctx = {}
+    for m in _re.finditer(r'<(?:xbrli:)?context id="([^"]+)">(.*?)</(?:xbrli:)?context>', x, _re.S):
+        body = m.group(2)
+        if "segment" in body or "scenario" in body: continue
+        s_ = _re.search(r'<(?:xbrli:)?startDate>([^<]+)<', body); e_ = _re.search(r'<(?:xbrli:)?endDate>([^<]+)<', body); i_ = _re.search(r'<(?:xbrli:)?instant>([^<]+)<', body)
+        ctx[m.group(1)] = (s_.group(1), e_.group(1)) if s_ and e_ else ((None, i_.group(1)) if i_ else None)
+    out = {"us-gaap": {}, "dei": {}}
+    for m in _re.finditer(r'<(us-gaap|dei):([A-Za-z0-9]+)\b([^>]*)>([^<]+)</\1:\2>', x):
+        ns, tag, attrs, val = m.groups()
+        c = _re.search(r'contextRef="([^"]+)"', attrs)
+        if not c or not ctx.get(c.group(1)): continue
+        try: v = float(val)
+        except ValueError: continue
+        start, end = ctx[c.group(1)]
+        unit = "USD/shares" if ("PerShare" in tag or tag in EPS_TAGS) else ("shares" if "Shares" in tag and "PerShare" not in tag else "USD")
+        rec = {"end": end, "val": v, "form": form, "filed": filed, "src": "instance"}
+        if start: rec["start"] = start
+        out[ns].setdefault(tag, {"units": {}})["units"].setdefault(unit, []).append(rec)
+    return out
+
+def supplement_latest(ticker, F, cik):
+    """证监会汇总接口有时漏收最新一期（2026-09-26 实证：可口可乐 7-29 报送的 Q2 10-Q 带 XBRL，两个月后 companyfacts 里仍没有）。
+    submissions 里最新 10-Q/10-K 的期末晚于 companyfacts 净利末期时，直接读那份报告的 XBRL 实例补进去；原有记录照旧（earliest 规则下旧记录优先）。"""
+    ni = [a["end"] for tag in ("NetIncomeLoss", "ProfitLoss") for a in (F["facts"].get("us-gaap", {}).get(tag, {}).get("units", {}).get("USD", []))]
+    last = max(ni) if ni else ""
+    lp = _latest_periodic(cik)
+    if not lp or lp[0] <= last: return F, None
+    rp, fd, form, acc = lp
+    extra = _instance_facts(cik, acc, form, fd)
+    if not extra.get("us-gaap"): return F, None
+    return merge_facts(F, {"facts": extra}), f"补读原件 {form} 期末{rp}"
+
 def get_facts(ticker):
     cik = cik_for(ticker)
     if not cik: raise RuntimeError(f"{ticker}: 证监会代码表无此票")
     F = companyfacts(cik)
     for old in EXTRA_CIK.get(ticker, []): F = merge_facts(companyfacts(old), F)
+    if ticker not in FROZEN_TICKERS:
+        try:
+            F, note = supplement_latest(ticker, F, cik)
+            if note: print(f"  {ticker} {note}")
+        except Exception as ex:
+            print(f"  {ticker} 补读原件失败（不影响本次，沿用汇总接口）：{type(ex).__name__}: {str(ex)[:80]}")
     return F
 
 def _yf(ticker):
