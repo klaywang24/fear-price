@@ -78,8 +78,9 @@ def fetch_history(ticker: str, retries: int = 3) -> pd.DataFrame:
 _PRICE_FALLBACK = {
     "^GSPC": ("sp500_century.json", "close"),   # 1927 起，比 kindex 的 spx 更长
     "^IXIC": ("ixic_century.json", "close"),    # 1971 起
-    "^NDX":  ("kindex.json", "ndx"),            # 这两条本来就只回溯到 2011
-    "^VIX":  ("kindex.json", "vix"),
+    # 🔴 2026-09-26 改：原先指 kindex.json（2011 起），一回退就把 1985 起的 ndx_century 截短
+    "^NDX":  ("ndx_century.json", "close"),     # 1985 起
+    "^VIX":  ("kindex.json", "vix"),            # 本来就只回溯到 2011（VIX 不画世纪图）
 }
 
 
@@ -354,6 +355,7 @@ def build_kindex(ndx_close: pd.Series, spx_close: pd.Series, vix_close: pd.Serie
         row["spx_to_date"] = round(float(spx_full.iloc[-1] / s_entry - 1) * 100, 2)
         sig_rows.append(row)
 
+    _refuse_if_regress("kindex.json", dates(df.index))
     write_json("kindex.json", {
         "dates": dates(df.index),
         "cnn": rnd(df["cnn"], 1),
@@ -428,6 +430,7 @@ def build_index_panels(prefix: str, close: pd.Series, vol_index: pd.Series | Non
 
     # 世纪图：日频（2020/1987 这类快速崩盘的尖 V 自然显出真实深度；月末收盘会把它抹平）
     daily_c = close.dropna()
+    _refuse_if_regress(f"{prefix}_century.json", dates(daily_c.index))
     write_json(f"{prefix}_century.json", {"dates": dates(daily_c.index), "close": rnd(daily_c, 2)})
 
     # 月频序列：世纪图已改日频不再用它，但下面的「滚动 5 年年化」与「月度季节性」仍依赖。
@@ -563,6 +566,40 @@ def pulse_would_regress(new_date, prev):
     🔑 判据只比日期：同一天重算照写（盘后修正要能覆盖），只拦「比现有更旧」。prev 缺日期或读不到 ⇒ 不拦。"""
     old = (prev or {}).get("date")
     return bool(old) and str(new_date) < str(old)
+
+
+def sentiment_would_regress(new_date, new_term_date, prev):
+    """sentiment.json 两个日期（CNN 分项日 date、期限结构末日 term_date）任一早于现有文件 ⇒ True。"""
+    prev = prev or {}
+    return (pulse_would_regress(new_date, prev)
+            or pulse_would_regress(new_term_date, {"date": prev.get("term_date")}))
+
+
+def history_would_regress(new_dates, prev_dates):
+    """整份覆盖写的全史文件（kindex / leaps / *_century）：返回拒写原因，没问题返回 None。
+    🔴 2026-09-26 双源审计：与 pulse 同病。任一路少回最后一行 ⇒ 合并框末日退回更旧日期；
+       ^NDX 上游挂 ⇒ 退回 2011 起的后备 ⇒ 把 1985 起的世纪图截短。两种都是「空/旧结果当成功」。
+    判据：起点晚于旧文件（历史被截短）或末日早于旧文件（回退）。旧文件读不到 ⇒ 不拦。"""
+    if not prev_dates:
+        return None
+    if not new_dates:
+        return "新序列为空"
+    if str(new_dates[0]) > str(prev_dates[0]):
+        return f"起点 {prev_dates[0]} → {new_dates[0]}，历史被截短"
+    if str(new_dates[-1]) < str(prev_dates[-1]):
+        return f"末日 {prev_dates[-1]} → {new_dates[-1]}，回退到更旧日期"
+    return None
+
+
+def _refuse_if_regress(name: str, new_dates):
+    """history_would_regress 为真 ⇒ 抛错（调用方经 _guard 记进 meta.failures、留旧文件）。"""
+    try:
+        prev = json.loads((DATA / name).read_text()).get("dates") or []
+    except Exception:
+        prev = []
+    why = history_would_regress(list(new_dates), prev)
+    if why:
+        raise RuntimeError(f"{name} 不覆盖（留旧文件）：{why}")
 
 
 def _missing_latest(px, ticks):
@@ -843,6 +880,16 @@ def _fred(series_id: str, start: str = "2000-01-01") -> pd.Series:
     return pd.Series(df["v"].values, index=pd.to_datetime(df["d"]))
 
 
+def _fred_or_empty(series_id: str, start: str = "2000-01-01") -> pd.Series:
+    """辅助项用：_fred 失败或取回空 ⇒ 空序列（调用方负责沿用旧值并留痕），不抛。"""
+    try:
+        s = _fred(series_id, start=start)
+        return s if not s.empty else pd.Series(dtype=float)
+    except Exception as e:
+        print(f"  ⚠️ {series_id}: FRED 取不到（{type(e).__name__}: {str(e)[:60]}）")
+        return pd.Series(dtype=float)
+
+
 def _weekly(s: pd.Series, nd: int = 2):
     w = s.resample("W").last().dropna()
     return {"dates": dates(w.index), "values": rnd(w, nd)}
@@ -937,14 +984,34 @@ def build_macro():
         "gdp_qoq": ("GDPC1", lambda s: (lambda g: {"dates": dates(g.index), "values": rnd(g, 1)})(((s / s.shift(1)) ** 4 - 1).dropna() * 100)),
         "cp_yoy": ("CP", lambda s: (lambda y: {"dates": dates(y.index), "values": rnd(y, 1)})((s.pct_change(4).dropna()) * 100)),  # 季频
     }
-    for key, (sid, f) in fetch_plan.items():
-        try:
-            out[key] = f(_fred(sid))
-        except Exception as e:
-            print(f"  {sid} failed (kept old if any): {e}")
-        time.sleep(0.6)
+    # 🔴 2026-09-26 双源审计：原先 out 每轮从空开始、失败只打印「kept old」，实则该键从整份覆盖的
+    #    macro.json 里消失（传导链本机镜像读这些键），也不进 meta.failures。现在失败键沿用旧值并留痕。
+    try:
+        prev = json.loads((DATA / "macro.json").read_text())
+    except Exception:
+        prev = {}
+    out, failed = merge_macro(fetch_plan, prev, lambda sid: _fred(sid), pause=0.6)
+    if failed:
+        _FAILURES.append({"section": "宏观（FRED）",
+                          "error": f"{len(failed)}/{len(fetch_plan)} 条失败，已沿用旧值：{', '.join(failed)}"[:200]})
     if out:
         write_json("macro.json", out)
+
+
+def merge_macro(fetch_plan, prev, fetch, pause=0.0):
+    """逐键取数；失败键用 prev 里的旧值（没有旧值就缺席）。返回 (out, 失败序列号列表)。键序同 fetch_plan。"""
+    out, failed = {}, []
+    for key, (sid, f) in fetch_plan.items():
+        try:
+            out[key] = f(fetch(sid))
+        except Exception as e:
+            failed.append(sid)
+            if key in prev:
+                out[key] = prev[key]
+            print(f"  {sid} failed（{'沿用旧值' if key in prev else '无旧值、本键缺席'}）: {e}")
+        if pause:
+            time.sleep(pause)
+    return out, failed
 
 
 # ---------------------------------------------------------------- LEAPS 窗口
@@ -1001,6 +1068,7 @@ def build_leaps(spx_close: pd.Series, ndx_close: pd.Series, vix_close: pd.Series
             row["vix_start"] = round(float(vf.iloc[pv]), 2)
         rows.append(row)
 
+    _refuse_if_regress("leaps.json", dates(df.index))
     write_json("leaps.json", {
         "threshold": threshold,
         "dates": dates(df.index),
@@ -1113,6 +1181,16 @@ def build_sentiment(vix_close: pd.Series, vxn_close: pd.Series = None):
         except Exception as e:
             print(f"  VXN 比值失败（跳过该卡）: {e}")
 
+    # 🔴 2026-09-26 双源审计：整份覆盖不比日期，与 pulse 同病 ⇒ 两个日期任一比现有更旧就不写
+    try:
+        _prev_s = json.loads((DATA / "sentiment.json").read_text())
+    except Exception:
+        _prev_s = {}
+    _new_d = subs_date or term.index[-1].strftime("%Y-%m-%d")
+    _new_t = term.index[-1].strftime("%Y-%m-%d")
+    if sentiment_would_regress(_new_d, _new_t, _prev_s):
+        raise RuntimeError(f"sentiment.json 不覆盖（留旧文件）：date {_prev_s.get('date')}→{_new_d}，"
+                           f"term_date {_prev_s.get('term_date')}→{_new_t}，回退到更旧日期")
     write_json("sentiment.json", {
         # date＝七分项（CNN 快照）的日期；term_date＝期限结构末日。09-24 前 date 用的是期限结构末日（见上 subs_date 注）。
         "date": subs_date or term.index[-1].strftime("%Y-%m-%d"),
@@ -1463,12 +1541,25 @@ def build_leaps_index(gspc_close: pd.Series, vix_close: pd.Series):
     if vix1y.empty:
         raise RuntimeError("VIX1Y 三条路（Cboe / Yahoo / 本地存底）全空——绝不写出空台账，留旧文件")
 
+    _dfii = _fred_or_empty("DFII10", start="2003-01-01")
     out = compute_leaps_index(
         vix1y, gspc_close.dropna(), vix_close.dropna(),
         _cboe_close_resilient("VIX9D"), _cboe_close_resilient("VIX3M"),
         _cboe_close_resilient("VIX6M"), _cboe_close_resilient("SKEW"),
-        _fred("DFII10", start="2003-01-01"),
+        _dfii,
     )
+    # 🔴 2026-09-26 双源审计：原先 DFII10 裸调，辅助项 FRED 一挂，头条 VIX1Y 拿到了也写不出温度计。
+    #    现在它挂了 ⇒ 实际利率这一张 context 卡沿用上一份（慢变量），meta 标明；不写 null（前端 .toFixed 会崩）。
+    if _dfii.empty:
+        try:
+            _prev_rr = json.loads((DATA / "leaps_gauge.json").read_text())["current"]["context"]["real_rate"]
+        except Exception:
+            _prev_rr = None
+        if _prev_rr and _prev_rr.get("value") is not None:
+            out["current"]["context"]["real_rate"] = _prev_rr
+            out["meta"]["context_carried"] = ["real_rate"]
+        _FAILURES.append({"section": "恐惧的标价指数·实际利率（DFII10）",
+                          "error": "FRED 取不到，实际利率卡" + ("沿用上一份" if out["meta"].get("context_carried") else "无旧值可沿用")})
 
     # 降级状态写进 meta：站上据此显示「数据源中断」，绝不白屏，也绝不假装数据是新鲜的
     stale_days = (pd.Timestamp(datetime.now(ET).date()) - vix1y.index[-1].normalize()).days  # 2026-08-06 UTC 案同族修
@@ -2965,8 +3056,9 @@ def build_basket(prefix: str, members: list):
         build_mag7(closes)
 
     # 个股钻取页：每只成员生成全套指数面板（各自全历史）
+    # 🔴 2026-09-26 逐只 _guard：世纪图加了「不许截短」后，一只被拒不能连累同篮子后面的成员
     for t, n in members:
-        build_index_panels(f"s_{safe_ticker(t)}", closes[t])
+        _guard(f"个股面板 {t}", build_index_panels, f"s_{safe_ticker(t)}", closes[t])
 
 
 MAG7 = [("NVDA", "英伟达"), ("MSFT", "微软"), ("GOOGL", "谷歌"), ("AMZN", "亚马逊"),
@@ -3056,8 +3148,9 @@ def main():
     except RuntimeError:
         vxn = None
 
-    build_kindex(ndx, gspc, vix)
-    build_leaps(gspc, ndx, vix)
+    # 🔴 2026-09-26 双源审计：以下原为裸调，任一抛错整轮非零退出、当轮好数据全不提交。一律 _guard。
+    _guard("K 指数", build_kindex, ndx, gspc, vix)
+    _guard("LEAPS 窗口", build_leaps, gspc, ndx, vix)
     _guard("情绪仪表盘", build_sentiment, vix, vxn)
     # （build_naaim 已于 2026-09-24 删除）🔴 2026-09-24 Klay 定停抓：NAAIM 08-01 起收费、公开页无当期数据，每天报错；
     #   宏观页「仓位与杠杆」改由 CFTC 股指期货持仓（cot_equity，周频免费）承担，NAAIM 卡片已下线
@@ -3080,16 +3173,16 @@ def main():
     _guard("做空持仓", build_short_interest)   # 双月，滞后约 2 周；只追加、修订另注
     _guard("行业暴露", build_sector_weights)   # 按权重（Yahoo funds_data，每 ETF 1 次调用）
     _guard("AIAE 股票配置", build_aiae)         # FRED Z.1 季频；数据正确性首跑靠 CI 验（本机连不上 FRED）
-    build_index_val()
-    build_macro()
-    build_index_panels("sp500", gspc, vix, "VIX")
-    build_index_panels("ixic", ixic)
-    build_index_panels("ndx", ndx, vxn, "VXN")
-    build_index_extras("sp500", gspc)
-    build_index_extras("ndx", ndx)
-    build_constituents()
-    build_valuation_extras()
-    build_pulse()  # 依赖 constituents 与 pe_ttm，放在其后
+    _guard("指数估值", build_index_val)
+    _guard("宏观（FRED）", build_macro)
+    _guard("指数面板 sp500", build_index_panels, "sp500", gspc, vix, "VIX")
+    _guard("指数面板 ixic", build_index_panels, "ixic", ixic)
+    _guard("指数面板 ndx", build_index_panels, "ndx", ndx, vxn, "VXN")
+    _guard("指数附表 sp500", build_index_extras, "sp500", gspc)
+    _guard("指数附表 ndx", build_index_extras, "ndx", ndx)
+    _guard("成分股", build_constituents)
+    _guard("估值附表", build_valuation_extras)
+    _guard("市场脉搏", build_pulse)  # 依赖 constituents 与 pe_ttm，放在其后（它们失败则读旧文件）
     # Guarded per basket / per ETF: one member's upstream error must not stop the whole
     # daily run (and with it the already-built headline gauge). Failures land in meta.failures.
     for prefix, members in BASKETS.items():
@@ -3097,7 +3190,7 @@ def main():
     for etf in ETF_ANCHORS:
         _guard(f"ETF panel {etf}", lambda e=etf: build_index_panels(f"s_{safe_ticker(e)}", fetch_history(e)["Close"]))
         time.sleep(1)
-    build_cape()
+    _guard("CAPE", build_cape)
 
     write_json("meta.json", {
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

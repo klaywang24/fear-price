@@ -25,6 +25,7 @@ jobs:
       - run: python scripts/test_gauge_yahoo_patch.py   # offline test first (no network, writes nothing); a failure stops this run
       - run: python scripts/test_vol_fallback.py   # offline test first (no network, writes nothing); a failure stops this run
       - run: python scripts/test_notify_discord.py   # offline test first (no network, sends nothing); a failure stops this run
+      - run: python scripts/test_build_guards.py   # offline test first (no network, temp dir only); a failure stops this run
       - run: python scripts/build_data.py
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
