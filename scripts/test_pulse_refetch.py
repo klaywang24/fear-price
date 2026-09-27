@@ -18,6 +18,8 @@ Cases:
   8-11. _drop_hole_days: an interior day most tickers lack is dropped and reported; a thin last row is
         never dropped; no-hole input is untouched; negative sample shows the hole poisons a rolling mean.
 
+  12-16. pulse_would_regress: refuse only dates older than the existing pulse.json (2026-09-26 incident).
+
 Usage: python scripts/test_pulse_refetch.py   (exit 0 = pass, 1 = fail)
 """
 import os
@@ -113,6 +115,20 @@ check("10 no hole, nothing dropped", holes == [] and out.equals(full))
 ma_bad = h.rolling(3).mean().notna().sum(axis=1).iloc[-1]
 ma_ok = bd._drop_hole_days(h, min_cover=8)[0].rolling(3).mean().notna().sum(axis=1).iloc[-1]
 check("11 negative sample: hole poisons the rolling mean, dropping it restores coverage", ma_bad == 2 and ma_ok == 10)
+
+# 12-15 pulse_would_regress (2026-09-26): the 20:25 ET scheduled build got no 2026-09-25 row from Yahoo and
+#       overwrote the 18:12 ET pulse.json (2026-09-25) with 2026-09-24; the guard must refuse older dates only.
+prev_0925 = {"date": "2026-09-25", "adv": 329, "dec": 170}
+check("12 real incident: new 2026-09-24 vs existing 2026-09-25 is refused",
+      bd.pulse_would_regress("2026-09-24", prev_0925) is True)
+check("13 same-day rebuild still writes (late corrections must land)",
+      bd.pulse_would_regress("2026-09-25", prev_0925) is False)
+check("14 a newer day writes", bd.pulse_would_regress("2026-09-28", prev_0925) is False)
+check("15 no previous file / no date: nothing to protect, writes",
+      bd.pulse_would_regress("2026-09-24", None) is False and bd.pulse_would_regress("2026-09-24", {}) is False)
+# 16 negative sample: the pre-fix behaviour (always write) would have let the incident through
+check("16 negative sample: an always-write rule does not catch case 12", (lambda n, p: False)("2026-09-24", prev_0925) is False
+      and bd.pulse_would_regress("2026-09-24", prev_0925) != (lambda n, p: False)("2026-09-24", prev_0925))
 
 print("\n%s" % ("all passed" if not FAILS else "%d failed: %s" % (len(FAILS), FAILS)))
 sys.exit(1 if FAILS else 0)

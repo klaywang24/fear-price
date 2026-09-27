@@ -555,6 +555,16 @@ def pulse_breadth_gate(tot, prev, min_cover=PULSE_MIN_COVER):
     return False, keep
 
 
+def pulse_would_regress(new_date, prev):
+    """本轮算出的头版日期早于现有 pulse.json ⇒ True（调用方不写 pulse.json 与热力图，留旧文件）。
+    🔴 起因（2026-09-26 查实）：09-25 18:12 ET 那班已算出 09-25（涨 329 跌 170），20:25 ET 那班定时构建
+       Yahoo 批量日线没回 09-25 这一行 ⇒ today 取到 09-24，整份覆盖写回 09-24（涨 175 跌 325），
+       热力图同步退回；09-23 凌晨同样退回过一次（09-22 → 09-21）。breadth.json 因为新旧合并没受影响。
+    🔑 判据只比日期：同一天重算照写（盘后修正要能覆盖），只拦「比现有更旧」。prev 缺日期或读不到 ⇒ 不拦。"""
+    old = (prev or {}).get("date")
+    return bool(old) and str(new_date) < str(old)
+
+
 def _missing_latest(px, ticks):
     """最新一个交易日没有收盘价的成分股（列缺席或该格为 NaN）。px 为空⇒全部算缺。"""
     if px is None or px.empty:
@@ -761,6 +771,10 @@ def build_pulse():
         prev_pulse = json.loads((DATA / "pulse.json").read_text())
     except Exception:
         pass
+    if pulse_would_regress(today.strftime("%Y-%m-%d"), prev_pulse):
+        print(f"  🔴 本轮成分股最后一个交易日 {today.strftime('%Y-%m-%d')} 早于现有 pulse.json 的 "
+              f"{prev_pulse.get('date')}（数据源这一轮没回最新一行）⇒ 不回退，pulse.json 与热力图留旧文件")
+        return
     gate_ok, reuse = pulse_breadth_gate(tot, prev_pulse)
     if len(heat) >= PULSE_MIN_COVER:
         write_json("pulse_heatmap.json", {"date": today.strftime("%Y-%m-%d"), "rows": heat})
