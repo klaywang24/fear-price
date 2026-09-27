@@ -151,9 +151,19 @@ def main():
     check("ttm: stale quarters years before the period end are not reused (BAC capex / TJX operating income shape)",
           eh.ttm(q, "2023-12-31") is None)
     check("ttm: four quarters ending at the period end still sum", eh.ttm(q, "2015-09-30") == 10)
-    check("revenue tags: IncludingAssessedTax is read, and ExcludingAssessedTax still wins when both exist",
-          eh.REV_TAGS.index("RevenueFromContractWithCustomerIncludingAssessedTax")
-          < eh.REV_TAGS.index("RevenueFromContractWithCustomerExcludingAssessedTax"))
+    # 2026-09-27 改成行为测试（原先只比清单下标，f0cbf232 把合并改成先到先得后，那条下标断言照过、意图却反了）。
+    #   锁的是引擎注释写明的优先级：同一期多个营收标签时取最全的口径。麦当劳 SalesRevenueGoodsNet 只是直营销售，
+    #   Revenues 才是总营收（2019-03 两者 22.4 亿 vs 50.2 亿）；含税与不含税都报时取不含税。
+    #   ⚠️ 这两条红＝本周基本面不发布（weekly.yml 先跑本测试），宁可沿用上周也不发错数。
+    def fx(tag_vals):
+        return {"facts": {"us-gaap": {t: {"units": {"USD": [{"start": "2019-01-01", "end": "2019-03-31", "val": v,
+                "form": "10-Q", "filed": "2019-05-01"}]}} for t, v in tag_vals.items()}}}
+    r1 = eh.quarterly(fx({"SalesRevenueGoodsNet": 2240500000, "Revenues": 5024100000}), eh.REV_TAGS, "USD")
+    check("revenue merge: total Revenues wins over the SalesRevenueGoodsNet subset (McDonald's shape)",
+          r1.get("2019-03-31") == 5024100000)
+    r2 = eh.quarterly(fx({"RevenueFromContractWithCustomerIncludingAssessedTax": 110,
+                          "RevenueFromContractWithCustomerExcludingAssessedTax": 100}), eh.REV_TAGS, "USD")
+    check("revenue merge: ExcludingAssessedTax wins when both tax variants exist", r2.get("2019-03-31") == 100)
     print("pass" if not FAILS else f"FAIL {len(FAILS)}")
     return 1 if FAILS else 0
 

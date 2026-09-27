@@ -317,7 +317,10 @@ EPS_TAGS = ["EarningsPerShareDiluted","IncomeLossFromContinuingOperationsPerDilu
 NI_TAGS  = ["NetIncomeLoss","NetIncomeLossAvailableToCommonStockholdersBasic","ProfitLoss"]   # 择一：母公司净利优先，覆盖不全时退到「普通股可分配净利」（盈透）
 REV_TAGS = ["Revenue","RevenuesNetOfInterestExpense","SalesRevenueGoodsNet","SalesRevenueNet","Revenues","RevenueFromContractWithCustomerIncludingAssessedTax","RevenueFromContractWithCustomerExcludingAssessedTax"]
 # 2026-09-27 补 IncludingAssessedTax：TJX 2017 起只报含代收销售税的营收，原清单没有它 ⇒ 2018-08 起 33 季营收取不到、市销率沿用 2018 年旧营收。
-#   排在 Excluding 之前（合并时后者覆盖）：两者都报的公司仍取不含税口径；实测 29 只里只有 TJX 受影响。
+#   ⚠️ 09-27 更正：我写这行时以为合并是「后者覆盖」，但 f0cbf232 起 quarterly() 已是先到先得（setdefault），
+#   本清单整体顺序（连同 OCF/CX/CASH/DEBT 各族）都按旧规则排，优先级实际已倒置（麦当劳营收取成直营销售）。
+#   test_build_fundamentals 两条行为测试锁住意图：总营收优先于子项、不含税优先于含税——现在是红的，
+#   weekly.yml 会在测试这步停下不发布，待基本面线按先到先得重排各族清单后转绿。
 SH_INST  = ["NumberOfSharesOutstanding","EntityCommonStockSharesOutstanding","CommonStockSharesOutstanding"]
 SH_DUR   = ["WeightedAverageNumberOfSharesOutstandingBasic","WeightedAverageNumberOfDilutedSharesOutstanding"]
 OCF_TAGS = ["CashFlowsFromUsedInOperatingActivities","NetCashProvidedByUsedInOperatingActivitiesContinuingOperations","NetCashProvidedByUsedInOperatingActivities"]   # 2013–2016 年不少公司用「持续经营」口径标签
