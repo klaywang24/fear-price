@@ -29,7 +29,8 @@
 // 2026-09-27 → mc-v43：定价/退款/条款英文措辞与中文对齐（售卖页承诺文字变了，回访者不能再看旧版）；i18n/docs-i18n/app 同批改。
 // 2026-09-27 → mc-v44：隐私政策更新（订阅与付款）、SKEW 改名、胜率类措辞改写，回访者不能再看旧版。
 // 2026-09-27 → mc-v45：隐私政策中文措辞按 Klay 改为「用户／本站」。
-const CACHE = "mc-v45";
+// 2026-09-27 → mc-v46：隐私政策中文整页统一为「用户／本站」。
+const CACHE = "mc-v46";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());
