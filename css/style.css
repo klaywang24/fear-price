@@ -1193,6 +1193,7 @@ html.dark-mode .contact-icons .ci { background: rgba(255, 255, 255, 0.1); }
 .ci-x .c-ic { fill: #0f1419; }
 .ci-github .c-ic { fill: #181717; }
 .ci-discord .c-ic { fill: #5865F2; }
+.ci-yt .c-ic { fill: #FF0000; }
 html.dark-mode .ci-x .c-ic, html.dark-mode .ci-github .c-ic { fill: #e8e6e1; }
 
 /* ---------------- 行情 tab（左目录 + TradingView 图表） ---------------- */
