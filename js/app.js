@@ -664,13 +664,56 @@
   // 2026-09-24：市值/FCF 由 build_fundamentals 换算成美元后带 currency 字段；换不到汇率时保留本币并标代码，不再一律印 $
   const _ccy = (snap, field) => { const c = snap[field] || snap.currency; return (!c || c === "USD") ? "$" : (c + " "); };
 
+  // 2026-09-28 Klay 定：冻结票（LVMH、爱马仕、Circle）继续挂旧数并标来源。
+  //   原先所有基本面图的出处行一律写「SEC EDGAR + Yahoo Finance」，对冻结票是错标：LVMH、爱马仕根本不向 SEC 申报，
+  //   Circle 的 PB/ROE/FCF 也是旧源的数。改为按每张卡画的序列判断：全是旧数写 macrotrends，新旧混合写 SEC EDGAR + macrotrends；
+  //   受影响的卡下面再加一行旧源说明（哪几条、冻结日、原因）。各段都是固定句式，i18n 按词条与正则逐段翻译。
+  //   出处行有两处插入（stampSources 初插、renderFund 拿到数据后重插），都走本函数，免得一处改了一处没改。
+  const FD_KEYS = { eps: ["eps"], roe: ["roe", "roic"], fcf: ["fcf"], pe: ["pe"], "driver-ch": ["pe", "eps"] };
+  const FD_PRICED = new Set(["pe", "ps", "driver-ch"]);
+  const FD_YAHOO = new Set(["rev", "ni", "div", "peers-ch"]);
+  const FD_LABEL = { pe: "PE", eps: "EPS", pb_hist: "PB", ps: "PS", roe: "ROE", roic: "ROIC", fcf: "FCF" };
+  const FD_WHY = { no_sec: "该公司不向 SEC 申报", young: "上市不足两年，季度数据还不够本站自算" };
+  // 会计口径前后不一的票（build_fundamentals 写 history_basis）：在画了早年数据的卡下注明
+  const FD_BASIS = { tw_gaap_ifrs: "2012 年及以前按台湾会计准则，2008 年前员工分红不计入费用；2013 年起按 IFRS" };
+  const FD_BASIS_CARDS = new Set(["eps", "pe", "ps", "roe", "fcf", "driver-ch"]);
+  function fdFootHTML(chartId, fallbackDate) {
+    const [basket, sfx] = (chartId || "").split("-fd-");
+    const info = (window.__fdInfo || {})[basket] || {};
+    const asof = info.asof || fallbackDate;
+    const present = info.present || [];
+    let keys = sfx === "ps" ? [present.includes("ps") ? "ps" : "pb_hist"] : (FD_KEYS[sfx] || []);
+    keys = keys.filter((k) => present.includes(k));
+    const old = keys.filter((k) => (info.carried || []).includes(k));
+    // 营业收入、净利润（近四财年）、分红、同篮子对比这四张卡来自雅虎（build_fundamentals 的 yfinance 报表、分红史、快照），与 SEC 无关，
+    //   原先也一律写成 SEC EDGAR + Yahoo Finance，09-28 一并改对。
+    let src = FD_YAHOO.has(sfx) ? "Yahoo Finance" : "SEC EDGAR + Yahoo Finance";
+    if (old.length) src = (old.length < keys.length ? "SEC EDGAR + macrotrends" : "macrotrends") + (FD_PRICED.has(sfx) ? " + Yahoo Finance" : "");
+    let html = `<p class="footnote src-note">数据截至 ${asof} · ${src} · 每周六自动更新</p>`;
+    if (old.length && info.from) {
+      html += `<p class="footnote fd-legacy"><span>旧源序列：${old.map((k) => FD_LABEL[k] || k).join(" / ")}</span> · ` +
+        `<span>macrotrends（数据商 Zacks）${info.from} 版，之后不再更新</span>` +
+        (FD_WHY[info.why] ? ` · <span>${FD_WHY[info.why]}</span>` : "") +
+        (old.includes("pe") ? ` · <span>PE 末点按最新收盘价刷新</span>` : "") + `</p>`;
+    }
+    if (FD_BASIS[info.basis] && FD_BASIS_CARDS.has(sfx) && keys.length)
+      html += `<p class="footnote fd-legacy"><span>${FD_BASIS[info.basis]}</span></p>`;
+    return html;
+  }
+
   async function renderFund(basket, safe, ticker) {
+    if (window.__fdInfo) delete window.__fdInfo[basket];   // 切票时先清上一只的冻结信息，免得新票数据到之前被初插按上一只标来源
     let fund = null, peers = null;
     try { fund = await load("s_" + safe + "_fund"); } catch (e) {}
     try { peers = await load(basket + "_peers"); } catch (e) {}
     // 2026-09-27：记下这只票基本面的真实数据日；已插好的出处行整块换新（新节点才会被 i18n 的 MutationObserver 翻译，四语言沿用同一句式）
     if (fund && fund.history_as_of) {
       (window.__fdAsof = window.__fdAsof || {})[basket] = fund.history_as_of;
+      const _hc = fund.history_carried || {};
+      (window.__fdInfo = window.__fdInfo || {})[basket] = {
+        asof: fund.history_as_of, carried: _hc.keys || [], from: _hc.from || null, why: fund.history_frozen_why || null, basis: fund.history_basis || null,
+        present: Object.keys(FD_LABEL).filter((k) => fund[k] && (fund[k].dates || []).length),
+      };
       const seen = new Set();
       document.querySelectorAll(`[id^="${basket}-fd-"]`).forEach((el) => {
         const card = el.closest(".card"), note = card && card.querySelector(".src-note");
@@ -679,7 +722,8 @@
         if (!inner || !/-fd-/.test(inner.id || "") || !inner.id.startsWith(basket + "-fd-")) return;
         seen.add(card);
         note.remove();
-        card.insertAdjacentHTML("beforeend", `<p class="footnote src-note">数据截至 ${fund.history_as_of} · SEC EDGAR + Yahoo Finance · 每周六自动更新</p>`);
+        card.querySelectorAll(".fd-legacy").forEach((x) => x.remove());
+        card.insertAdjacentHTML("beforeend", fdFootHTML(inner.id, fund.history_as_of));
       });
     }
     const host = document.getElementById(basket + "-stock");
@@ -2829,8 +2873,8 @@
           : `数据截至 ${dd}-${mo}-${y}（结算日） · ${src} · 每月两次结算，结算日后约 8 个交易日发布`;
       } else if (/-fd-/.test(inner.id || "")) {
         // 2026-09-27：基本面各图的日期取这只票自己的 history_as_of（冻结票长历史停在上一版，不能写成全站日期）；renderFund 加载后会记下并重插
-        const fdAsof = (window.__fdAsof || {})[(inner.id || "").split("-fd-")[0]];
-        line = `数据截至 ${fdAsof || metaDate} · SEC EDGAR + Yahoo Finance · 每周六自动更新`;
+        card.insertAdjacentHTML("beforeend", fdFootHTML(inner.id, metaDate));   // 2026-09-28：来源随冻结状态变，与 renderFund 同一函数
+        return;
       } else {
         line = `数据截至 ${metaDate} · ${src} · 每交易日收盘后自动更新`;
       }

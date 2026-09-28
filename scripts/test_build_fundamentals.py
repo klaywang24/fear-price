@@ -13,6 +13,7 @@ Cases:
 
 Usage: python scripts/test_build_fundamentals.py   (exit 0 = pass, 1 = fail)
 """
+import json
 import os
 import sys
 
@@ -216,6 +217,20 @@ def main():
           got.get("2020-06-30") == 121.0 and got["2014-03-31"] == 100.0)
     bad = {k: v * 1.05 for k, v in base.items()}; bad["2020-03-31"] = 120.0
     check("fill: backup tag that disagrees recently is not appended", "2020-03-31" not in eh.fill_series(base, bad, 0.02))
+    # 2026-09-28：单一取数路的票（台积电、法拉利）哪怕只有一只被迫沿用，--check-carried 也要失败
+    import tempfile as _tf
+    _d = _tf.mkdtemp(); _old = os.environ.get("RUNNER_TEMP"); os.environ["RUNNER_TEMP"] = _d
+    try:
+        json.dump({"TSM": ["pe", "eps"]}, open(os.path.join(_d, "fund_carried.json"), "w"))
+        check("check_carried: one single-source ticker carried fails the job", bf.check_carried(5) == 1)
+        json.dump({"AAPL": ["pe"], "MC.PA": ["pe"]}, open(os.path.join(_d, "fund_carried.json"), "w"))
+        check("check_carried: one ordinary ticker carried stays under the limit", bf.check_carried(5) == 0)
+    finally:
+        if _old is None: os.environ.pop("RUNNER_TEMP", None)
+        else: os.environ["RUNNER_TEMP"] = _old
+    # 2026-09-28：冻结票的原因表与冻结名单必须同一套键（页面图注按原因代码拼中英文，漏一只就会显示成未知原因）
+    check("frozen: every frozen ticker has a reason code and vice versa", set(eh.FROZEN_WHY) == set(eh.FROZEN_TICKERS))
+    check("frozen: reason codes are ones the page knows", set(eh.FROZEN_WHY.values()) <= {"no_sec", "young"})
     print("pass" if not FAILS else f"FAIL {len(FAILS)}")
     return 1 if FAILS else 0
 

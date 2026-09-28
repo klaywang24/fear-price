@@ -31,7 +31,7 @@
 // 2026-09-27 → mc-v45：隐私政策中文措辞按 Klay 改为「用户／本站」。
 // 2026-09-27 → mc-v46：隐私政策中文整页统一为「用户／本站」。
 // 2026-09-27 → mc-v47：个股基本面图：EPS 标题按点距写（台积电/法拉利改为年报逐年）、中位线标签不再被裁、中位数卡写明点数。
-const CACHE = "mc-v47";
+const CACHE = "mc-v48";
 const CDN_HOSTS = new Set(["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", () => self.skipWaiting());

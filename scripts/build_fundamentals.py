@@ -26,7 +26,7 @@ import yfinance as yf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_data import BASKETS, DATA, safe_ticker, write_json, UA
 
-from edgar_history import history_rows, FROZEN_TICKERS, ROIC_NOT_APPLICABLE  # noqa: E402  长历史：SEC 原始申报 + 雅虎收盘价（拆股已调）（2026-09-26 起）
+from edgar_history import history_rows, FROZEN_TICKERS, FROZEN_WHY, FROZEN_SOURCE, ROIC_NOT_APPLICABLE, IFRS_OWN, HISTORY_BASIS  # noqa: E402  长历史：SEC 原始申报 + 雅虎收盘价（拆股已调）（2026-09-26 起）
 
 HISTORY_PAGES = ("pe-ratio", "ps-ratio", "price-book", "roe", "roic", "free-cash-flow")   # 与旧源同名，下游不改
 
@@ -211,12 +211,25 @@ def build_stock_fund(ticker: str):
                        "values": [num(r[1]) for r in annual]}
 
     _c = carry_history(fund, mt, previous_fund(ticker), datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    if ticker in HISTORY_BASIS:        # 2026-09-28：会计口径前后不一的票（台积电），页面图注据此写明
+        fund["history_basis"] = HISTORY_BASIS[ticker]
     if ticker in FROZEN_TICKERS:        # 2026-09-26：冻结票只刷新 PE 末点（及年报追加），长历史仍是上一版；日期与说明如实标
         _prev = previous_fund(ticker) or {}
         _prev_asof = _prev.get("history_as_of")
         if _prev_asof and not fresh: fund["history_as_of"] = _prev_asof
-        _base = (_prev.get("history_note") or "").split("长历史冻结于 ")[-1][:10] if _prev.get("history_note") else (_prev_asof or "上一版")
-        fund["history_note"] = f"长历史冻结于 {_base}（该票在 SEC 无季频可用序列）；PE 末点按最新价与最后一期 EPS 刷新"
+        _base = ((fund.get("history_carried") or {}).get("from")
+                 or ((_prev.get("history_note") or "").split("长历史冻结于 ")[-1][:10] if _prev.get("history_note") else (_prev_asof or "上一版")))
+        # 2026-09-28 Klay 定三只继续挂旧数并标来源：说明写清哪几条序列是旧源、来源是谁、为什么冻结；
+        #   原句一律写「该票在 SEC 无季频可用序列」，对 Circle 不对（它在 SEC 有申报，冻结是因为上市不足两年），也没写来源。
+        #   开头「长历史冻结于 日期」保持原格式：上面那行靠它读出冻结日。页面图注由前端按 history_frozen_why 与 history_carried 另拼中英文。
+        _why = FROZEN_WHY.get(ticker)
+        _keys = [k for k in ((fund.get("history_carried") or {}).get("keys") or []) if not (k == "roic" and ticker in ROIC_NOT_APPLICABLE)]   # 下面那段会删掉这类票的 ROIC，说明里别提
+        _lbl = {"pe": "PE", "eps": "EPS", "pb_hist": "PB", "ps": "PS", "roe": "ROE", "roic": "ROIC", "fcf": "FCF"}
+        _why_zh = {"no_sec": "该公司不向 SEC 申报，本站没有原始财报可算", "young": "上市不足两年，本站能算的季度还不够"}.get(_why, "本站暂不能自算")
+        fund["history_frozen_why"] = _why
+        fund["history_legacy_source"] = FROZEN_SOURCE
+        fund["history_note"] = (f"长历史冻结于 {_base}：{'、'.join(_lbl.get(k, k) for k in _keys) or '长历史'} 沿用旧源 {FROZEN_SOURCE} 当日版本，之后不再更新；原因：{_why_zh}"
+                                + ("；PE 末点按最新价与最后一期 EPS 刷新" if "pe" in _keys else ""))
     if ticker in ROIC_NOT_APPLICABLE:   # 2026-09-26：银行/券商类不显示 ROIC（本站定义对其不适用），也不沿用旧源的那条
         fund.pop("roic", None)
         _c = [k for k in _c if k != "roic"]
@@ -348,6 +361,12 @@ def check_carried(limit: int) -> int:
     # the frozen list carries everything by design;
     # what this gate watches is a ticker outside that list whose PE history came back empty.
     unexpected = sorted(t for t, keys in carried.items() if t not in FROZEN_TICKERS and "pe" in keys)
+    # 2026-09-28：台积电、法拉利（IFRS_OWN）各自只有一条取数路（台积电汇率只走美联储 H.10，取不到就抛错），
+    #   一只失败也要喊：原先 >5 只才报警，单独一只被迫沿用会静默过关。
+    single = sorted(t for t in unexpected if t in IFRS_OWN)
+    if single:
+        print(f"::error::history came back empty for single-source ticker(s) {single}; the site shows last week's history")
+        return 1
     if len(unexpected) > limit:
         print(f"::error::history came back empty for {len(unexpected)} tickers outside the frozen list (> {limit}); "
               f"the site shows the last published history for: {unexpected}")

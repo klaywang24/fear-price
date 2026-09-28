@@ -371,8 +371,34 @@ def get_shares_history(ticker):
     s = s[~s.index.duplicated(keep="last")].sort_index()
     return {d.date().isoformat(): float(v) for d, v in s.items()}
 
+def get_fred_daily(series_id):
+    """FRED 日频序列 → [(yyyy-mm-dd, float)]。有 FRED_API_KEY（Actions Secrets）走官方接口，没有则走 fredgraph.csv；取不到就抛错，不拿别的源顶替。"""
+    key = os.environ.get("FRED_API_KEY")
+    if key:
+        r = requests.get("https://api.stlouisfed.org/fred/series/observations",
+                         params={"series_id": series_id, "api_key": key, "file_type": "json"}, timeout=60)
+        r.raise_for_status()
+        return [(o["date"], float(o["value"])) for o in r.json()["observations"] if o["value"] not in (".", "")]
+    r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", timeout=60)
+    r.raise_for_status()
+    return [(a, float(b)) for a, b in csv.reader(io.StringIO(r.text)) if a[:1].isdigit() and b not in (".", "")]
+
+def fred_month_end(obs):
+    """日频 → 自然月月末键（与 pandas resample("ME") 同一键），值取该月最后一个有效观测。"""
+    me = {}
+    for d, v in sorted(obs):
+        y, m = int(d[:4]), int(d[5:7])
+        last = (dt.date(y + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1)).isoformat()
+        me[last] = v
+    return me
+
 def get_fx_me(cur):
-    """月末汇率：一单位外币值多少美元 → {yyyy-mm-dd: usd}。"""
+    """月末汇率：一单位外币值多少美元 → {yyyy-mm-dd: usd}。
+    🔴 2026-09-28 新台币改用美联储 H.10（FRED DEXTAUS，每美元兑新台币）：雅虎 TWD=X 的 2014-12-31 是坏点（3.67，实为 31.6，倒数后放大 8 倍多），
+    2004-11～2006-04 断档，2015 年末 31.99 与美联储 32.79 差 2.4%（台积电 FY2015 EPS 因此偏高 2.4%）。FRED 自 1983 年起，与 20-F 里印的美联储汇率同源。
+    取不到就抛错：台积电本周不出新值、沿用上一版并触发 --check-carried 报警，不退回雅虎。欧元（法拉利）雅虎序列无跳点，未改。"""
+    if cur == "TWD":
+        return {k: 1 / v for k, v in fred_month_end(get_fred_daily("DEXTAUS")).items() if v > 0}
     sym = {"TWD": "TWD=X", "EUR": "EURUSD=X"}[cur]
     h = _yf(sym).history(period="max", interval="1d", auto_adjust=False)
     if h.index.tz is not None: h.index = h.index.tz_localize(None)
@@ -428,8 +454,12 @@ QUARTERLY_FOREIGN = {"TSM": {"cur": "TWD", "ratio": 5, "twse": "2330"}}   # 2026
 PB_NO_STITCH = {"BRK.B"}        # 旧源伯克希尔 PB 错（按 B 股数量未折算 A 股，算出 0.9 倍；实际约 1.5 倍），不缝合，只用新算
 SHARES_FROM_YAHOO = {"BRK.B"}   # SEC 接口把按股份类别申报的股数整个剔除；伯克希尔用雅虎 B 股等价流通股（2015-11 起，与旧源反推股数一致），更早缝合上一版
 ROIC_NOT_APPLICABLE = {"JPM","BAC","GS","MS","SCHW","IBKR","AXP","COIN","HOOD","CRCL","BRK.B"}   # 银行/券商/支付牌照类：资产负债表无「有息负债减现金」概念，此指标不适用，不显示
+HISTORY_BASIS = {"TSM": "tw_gaap_ifrs"}   # 2026-09-28：台积电 FY2012 及以前的主报表是台湾会计准则（2008 年前员工分红不计入费用，利润偏高），FY2013 起 IFRS；页面图注按此代码写明
+IFRS_KEEP_BEFORE = {"TSM": "2015-01-01"}   # 2026-09-28 Klay 令补台积电 2015 前历史：FY2000–2014 从 20-F 原件（HTML，无 XBRL）读出、本地算好发布，此日期前的已发布点每周原样保留（同美股 keep_published_before）
 IFRS_OWN = {"TSM", "RACE"}   # 2026-09-27 Klay 定：旧源退役，改为 20-F 年报（IFRS 结构化数据，2015 起）逐年自算，每年一个点；台积电年报之后按季度往后接
 FROZEN_TICKERS = {"MC.PA","RMS.PA","CRCL"}   # 2026-09-27 Visa 解冻（CLASS_A_EPS 读原件 A 类口径）   # 2026-09-26 闪迪解冻（新算与旧线对齐：ROE 逐季相同、EPS 末季差 0.7%）   # IFRS本币年报／无 SEC 申报／多类别股无汇总股数／上市不足两年 → 长历史沿用上一版（carry_history 负责）
+FROZEN_WHY = {"MC.PA": "no_sec", "RMS.PA": "no_sec", "CRCL": "young"}   # 2026-09-28 Klay 定三只继续挂旧数并标来源：原因代码给页面图注用（no_sec＝不向 SEC 申报，本站没有原始财报可算；young＝上市不足两年，本站能算的季度还不够）。改冻结名单时两处一起改，test_build_fundamentals 会查键是否一致
+FROZEN_SOURCE = "macrotrends（数据商 Zacks）"   # 冻结序列的来源：09-19 最后一次从 macrotrends 抓到的版本，其底层数据商是 Zacks
 FIRST = "1994-01-01"   # 2026-09-26：老报告（附件 27 与正文表格）补到 1995 年起
 
 # ───────── 构建 ─────────
@@ -849,6 +879,13 @@ def history_rows(ticker, prev=None, src=None):
     """给 build_fundamentals 用：返回与旧源同形状的六页行；冻结票只刷新 PE 末点（及台积电/法拉利年报追加），其余页留空由 carry_history 沿用上一版。"""
     if ticker in IFRS_OWN:
         rows = ifrs_own_rows(ticker, src or NetSource())
+        cut = IFRS_KEEP_BEFORE.get(ticker)
+        if cut and prev:   # 2026-09-28：结构化数据起点前的年度点是从 20-F 原件读的（本地核对后发布一次），每周更新原样保留、不重算
+            keep = {"pe-ratio": prev_rows(prev, "pe", True), "price-book": prev_rows(prev, "pb_hist"), "roe": prev_rows(prev, "roe"),
+                    "roic": prev_rows(prev, "roic"),
+                    "free-cash-flow": [[f"{y}-12-31", v] for y, v in zip((prev.get("fcf") or {}).get("dates", []), (prev.get("fcf") or {}).get("values", []))]}
+            for pg, old in keep.items():
+                rows[pg] = [r for r in old if r[0] < cut] + [r for r in rows.get(pg, []) if r[0] >= cut]
         return {k: v for k, v in rows.items() if not k.startswith("_") or k == "_fresh"}
     if ticker in FROZEN_TICKERS:
         rows = frozen_rows(ticker, prev, src or NetSource())

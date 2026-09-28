@@ -47,7 +47,7 @@ code.tp-c { font-family: 'JetBrains Mono',monospace; font-size: 13px; background
   "inDefinedTermSet":{"@type":"DefinedTermSet","name":"Fear-Price Gauges","url":"https://chronicle.klay-wang.com/"}},
  {"@type":"FAQPage","@id":"https://chronicle.klay-wang.com/kapx#faq","mainEntity":[
   {"@type":"Question","name":"KAPX 指数是 CNN 或 Cboe 的产品吗？","acceptedAnswer":{"@type":"Answer","text":"不是。CNN 恐惧贪婪指数与 VIX 只是 KAPX 的两个输入原料。KAPX 是 Fear-Price 发布的独立原创指数，与 CNN、Cboe 均无附属、授权或背书关系。"}},
-  {"@type":"Question","name":"为什么叫 KAPX？","acceptedAnswer":{"@type":"Answer","text":"K 取自「恐」字拼音首字母（kǒng）。中文名为 K 指数，英文早期曾以 K-Index 被引用，现统一为 KAPX Index。KAPX 永久只指这一条序列。"}},
+  {"@type":"Question","name":"为什么叫 KAPX？","acceptedAnswer":{"@type":"Answer","text":"K 取自恐字拼音首字母（kǒng）。中文名为 K 指数，英文早期曾以 K-Index 被引用，现统一为 KAPX Index。KAPX 永久只指这一条序列。"}},
   {"@type":"Question","name":"K 小于 1 意味着什么？","acceptedAnswer":{"@type":"Answer","text":"K < 1 是极端恐惧的历史标记：情绪读数低于波动率价格。它是描述性刻度，不构成买卖建议。2011 年以来共 39 次信号（截至 2026 年 7 月口径），60 个交易日视野下纳指 100 上涨 26 次、下跌 13 次，逐笔公开对账。"}},
   {"@type":"Question","name":"公式会不会改？","acceptedAnswer":{"@type":"Answer","text":"口径已冻结。任何公式修改都会另立带新 series_id 的新序列（v2），绝不静默更改：序列身份、公式版本与历史谱系永不可变。"}},
   {"@type":"Question","name":"数据可以商用吗？","acceptedAnswer":{"@type":"Answer","text":"打包数据集（Hugging Face 与 Kaggle 上的 CSV）按 CC BY 4.0 授权：注明出处即可自由使用，包括商用。站点代码另按 PolyForm Noncommercial 1.0.0 授权。"}}
@@ -70,7 +70,7 @@ code.tp-c { font-family: 'JetBrains Mono',monospace; font-size: 13px; background
   <h1 class="tp-h1">KAPX 指数（K 指数 · KAPX Index）</h1>
 
   <div class="tp-def">
-    <strong>官方定义</strong>：KAPX 指数（K 取自「恐」字拼音首字母）是 Fear-Price 每个交易日发布的美股恐惧定价指标：用 CNN 恐贪指数除以 VIX。读数、方法论与完整信号台账永久免费公开，Git 时间戳可验证。
+    <strong>官方定义</strong>：KAPX 指数（K 取自恐字拼音首字母）是 Fear-Price 每个交易日发布的美股恐惧定价指标：用 CNN 恐贪指数除以 VIX。读数、方法论与完整信号台账永久免费公开，Git 时间戳可验证。
     <p class="tp-def-en" lang="en"><strong>Canonical definition:</strong> The KAPX Index is a daily U.S. equity fear-pricing gauge published by Fear-Price, computed as the CNN Fear &amp; Greed reading divided by the VIX. The K stands for kǒng (恐), the Chinese character for fear; readings, methodology, and the complete signal ledger are permanently free and verifiable via Git timestamps.</p>
   </div>
 
@@ -80,7 +80,7 @@ code.tp-c { font-family: 'JetBrains Mono',monospace; font-size: 13px; background
 
   <h2 class="tp-h2">信号口径</h2>
   <p><strong>K &lt; 1 的连续交易日聚为一次信号</strong>；与上一段间隔超过 10 个交易日则另起一次。每次信号对照其后 20 / 40 / 60 / 120 / 250 个交易日与至今的纳指 100 前向收益，<strong>逐笔公开对账，赢的和亏的都在账上</strong>。2011 年以来共 39 次信号（截至 2026 年 7 月口径，最新以 <a href="/data/kindex_signals.json">signals JSON</a> 为准）：60 个交易日视野下上涨 26 次、下跌 13 次。V 型修复中战绩好，持续压力期（2011、2015、2018 底、2022）反复为负。</p>
-  <p><strong>诚实披露</strong>：机械跟随每次信号并没有跑赢对同一标的的买入持有（截至 2026 年 7 月：按 K 规则约 4.0 倍，同期持有纳指 100 约 13.0 倍）。这本台账的价值是给「今天」找历史坐标，不是打败市场。它不构成投资建议。</p>
+  <p><strong>诚实披露</strong>：机械跟随每次信号并没有跑赢对同一标的的买入持有（截至 2026 年 7 月：按 K 规则约 4.0 倍，同期持有纳指 100 约 13.0 倍）。这本台账的价值是给今天找历史坐标，不是打败市场。它不构成投资建议。</p>
 
   <h2 class="tp-h2">已知特性（披露，不修正）</h2>
   <p>VIX 是 CNN 恐贪七个成分之一，所以 K = CNN ÷ VIX 中波动率被部分重复计入（分母全额，分子约七分之一）。KAPX 更准确的读法是<strong>带波动率压力权重的恐惧刻度</strong>，而非两个完全独立信号的相除。公式公开、永不静默修改：任何口径变更都会另立带新 <code class="tp-c">series_id</code> 的新序列。</p>
@@ -114,7 +114,7 @@ code.tp-c { font-family: 'JetBrains Mono',monospace; font-size: 13px; background
     <dt>KAPX 指数是 CNN 或 Cboe 的产品吗？</dt>
     <dd>不是。CNN 恐惧贪婪指数与 VIX 只是 KAPX 的两个输入原料。KAPX 是 Fear-Price 发布的独立原创指数，与 CNN、Cboe 均无附属、授权或背书关系。</dd>
     <dt>为什么叫 KAPX？</dt>
-    <dd>K 取自「恐」字拼音首字母（kǒng）。中文名为 K 指数，英文早期曾以 K-Index 被引用，现统一为 KAPX Index。KAPX 永久只指这一条序列。</dd>
+    <dd>K 取自恐字拼音首字母（kǒng）。中文名为 K 指数，英文早期曾以 K-Index 被引用，现统一为 KAPX Index。KAPX 永久只指这一条序列。</dd>
     <dt>K 小于 1 意味着什么？</dt>
     <dd>K &lt; 1 是极端恐惧的历史标记：情绪读数低于波动率价格。它是描述性刻度，不构成买卖建议。2011 年以来共 39 次信号（截至 2026 年 7 月口径），60 个交易日视野下纳指 100 上涨 26 次、下跌 13 次，逐笔公开对账。</dd>
     <dt>公式会不会改？</dt>

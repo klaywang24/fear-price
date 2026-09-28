@@ -16,6 +16,8 @@ jobs:
       - run: pip install yfinance pandas requests lxml
       - run: python scripts/test_build_fundamentals.py   # offline test first; a failure stops this run
       - run: python scripts/build_fundamentals.py
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}   # 2026-09-28：台积电新台币汇率改走美联储 H.10（FRED DEXTAUS）
       - run: python scripts/fetch_logos.py   # 自托管 logo 同步（新增成分股补图，已有跳过）
       - name: commit data
         run: |
