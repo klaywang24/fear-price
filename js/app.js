@@ -3033,7 +3033,19 @@
     const c = d.current, e = c.expensiveness, x = c.context, t = x.term_ladder;
     const p3 = Math.round(e.p3y);
     const col = p3 >= 60 ? "var(--danger)" : p3 <= 40 ? "var(--moss)" : "var(--gold)";
-    const verdict = p3 >= 66 ? "偏贵" : p3 >= 55 ? "略偏贵" : p3 >= 45 ? "中性" : p3 >= 34 ? "略偏便宜" : "偏便宜";
+    // 档位判定只此一处：档位标签与下面的三窗注释共用（阈值 66/55/45/34）
+    const band = (p) => p >= 66 ? "偏贵" : p >= 55 ? "略偏贵" : p >= 45 ? "中性" : p >= 34 ? "略偏便宜" : "偏便宜";
+    const verdict = band(p3);
+    // 2026-09-27 三窗注释改为随读数生成（原为写死的「近 3 年偏贵、拉长看只是中性」，读数 39 时与同卡档位自相矛盾）。
+    //   比较近 3 年与全史两档：近 3 年档位更高＝近三年的保护价整体偏低，同一价钱在近三年里排得更靠贵的一头；反之亦然。
+    //   ⚠️ 句子改动须同步 i18n.js 的三条 D 键与那条 P 正则，否则英文态整句退回中文
+    const p5 = Math.round(e.p5y), pf = Math.round(e.pfull);
+    const BANDS = ["偏便宜", "略偏便宜", "中性", "略偏贵", "偏贵"];
+    const gap = BANDS.indexOf(band(p3)) - BANDS.indexOf(band(pf));
+    const wclause = gap > 0 ? "近三年保护价整体比长期低，同一个价钱放进近三年显得更贵。"
+      : gap < 0 ? "近三年保护价整体比长期高，同一个价钱放进近三年显得更便宜。"
+      : "近 3 年与全史落在同一档。";
+    const wnote = `同一天：近 3 年${band(p3)}、近 5 年${band(p5)}、全史${band(pf)}。${wclause}三窗并陈，不藏选择。`;
     const inv = t.ratio_vix_vix1y < 1;
     const sign = (v) => (v > 0 ? "+" : "") + v.toFixed(1);
     // 2026-09-27（兜底审计后续·C3）：context 卡的某一项上游取空（如 Cboe 与雅虎 SKEW 同时取空）⇒ 整块或 value 为 null，
@@ -3067,10 +3079,10 @@
             <div class="lg-scale"><span>0 · 便宜</span><span>贵 · 100</span></div>
             <div class="lg-windows">
               <div><span>近 3 年</span><b>${p3}</b><i>主看</i></div>
-              <div><span>近 5 年</span><b>${Math.round(e.p5y)}</b><i>中期</i></div>
-              <div><span>全 史</span><b>${Math.round(e.pfull)}</b><i>长期</i></div>
+              <div><span>近 5 年</span><b>${p5}</b><i>中期</i></div>
+              <div><span>全 史</span><b>${pf}</b><i>长期</i></div>
             </div>
-            <div class="lg-wnote">同一天，近 3 年偏贵、拉长看只是中性：最近三年太平静。三窗并陈，不藏选择。</div>
+            <div class="lg-wnote">${wnote}</div>
           </div>
         </div>
       </div>

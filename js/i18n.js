@@ -370,7 +370,10 @@
     "同一批数字，除不除以成交量，指向相反的结论。所以这里不给判断，只把两把尺并排放着：你自己看它们分别说了什么。": ["The same numbers, divided by volume or not, point to opposite conclusions. So no verdict is offered here — both yardsticks are simply laid side by side, and you can see for yourself what each one says.", "", "", ""],
     // 「VIXEQ ÷ VIX」故意不建键：中英同形无需翻译，且它无汉字、÷ 是 U+00F7
     // 不在守卫的三段范围内（一-鿿 / ＀-￯ / 　-〿）→ 建了也是死键（见 f336af0）
-    "同一天，近 3 年偏贵、拉长看只是中性：最近三年太平静。三窗并陈，不藏选择。": ["Same day: rich versus the past 3 years, merely neutral over longer windows — the last three years were unusually calm. All three windows shown; nothing hidden.", "", "", ""],
+    // 2026-09-27 恐惧的标价三窗注释改为随读数生成（app.js renderLeapsGauge）；整句由下方 P 表那条正则翻译，这三条是句中的结论分句
+    "近三年保护价整体比长期低，同一个价钱放进近三年显得更贵。": ["Protection has been cheaper than usual over the last three years, so the same price ranks higher in the 3-year window.", "", "", ""],
+    "近三年保护价整体比长期高，同一个价钱放进近三年显得更便宜。": ["Protection has cost more than usual over the last three years, so the same price ranks lower in the 3-year window.", "", "", ""],
+    "近 3 年与全史落在同一档。": ["The 3-year and full-history windows fall in the same band.", "", "", ""],
     "短端平静 → 长端（你买的那截）最贵": ["calm near end → the long end (the part you buy) is priciest", "", "", ""],
     "9 天": ["9d", "", "", ""],
     "VIX 30 天": ["VIX 30d", "", "", ""],
@@ -1036,6 +1039,10 @@
     [/^今日 K 指数（(.+)）$/, ["KAPX Index today ($1)", "Indice KAPX aujourd'hui ($1)", "KAPX Index heute ($1)", "Índice KAPX hoy ($1)"]],
     [/^今日 CNN 恐贪（(.+)）$/, ["CNN Fear & Greed today ($1)", "CNN Fear & Greed today ($1)", "CNN Fear & Greed today ($1)", "CNN Fear & Greed today ($1)"]],
     [/^即：比过去三年 (\d+)% 的交易日都贵$/, ["i.e. pricier than $1% of all trading days in the past three years", "", "", ""]],
+    // 恐惧的标价三窗注释（app.js renderLeapsGauge 生成）：档位词嵌在句中、要逐个换成英文，EN 槽放函数（String.replace 接受函数替换）；
+    //   档位词与结论分句都从上面的 D 取，不另存一份译文
+    [/^同一天：近 3 年(偏贵|略偏贵|中性|略偏便宜|偏便宜)、近 5 年(偏贵|略偏贵|中性|略偏便宜|偏便宜)、全史(偏贵|略偏贵|中性|略偏便宜|偏便宜)。(.+?)三窗并陈，不藏选择。$/,
+      [(m, a, b, c, cl) => `Same day: ${D[a][0].toLowerCase()} over 3 years, ${D[b][0].toLowerCase()} over 5 years, ${D[c][0].toLowerCase()} over full history. ${D[cl] ? D[cl][0] : cl} All three windows shown; nothing hidden.`, "", "", ""]],
     [/^历时 (\d+) 天（([\d.]+) 年）$/, ["$1 days ($2 years)", "$1 jours ($2 ans)", "$1 Tage ($2 Jahre)", "$1 días ($2 años)"]],
     // 2026-08-07 EN 态全站扫描补漏：落点图与保费散点图的 marker tooltip 函数体
     // （app.js 四处 formatter，DOM 扫描测不到 hover 层，代码审计抓出）
