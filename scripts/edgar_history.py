@@ -485,6 +485,37 @@ def pick_one(F, tags, unit, kind="q", prefer_last=False):
     best = next(c for c in cands if len(c[1]) >= 0.8 * mx)     # 按传入顺序取第一个覆盖 ≥ 最大值 80% 的（盈透：母公司口径优先于含少数股东）
     return best[1], best[0]
 
+def fill_series(base, extra, tol=None):
+    """base 优先；extra 只补 base 缺的季度。tol：两者重叠季中位偏差超过 tol 就不补（口径不同，如含少数股东损益）。"""
+    if not extra: return base
+    if tol is not None:
+        ok_ = [k for k in sorted(base) if k in extra and base[k]]; ov = [abs(extra[k] / base[k] - 1) for k in ok_]
+        if ov and st.median(ov) > tol:
+            # 全部重叠不达标时只许「往后接」：最近 8 个重叠季口径一致，才补基准末期之后的季度，历史选择一律不动
+            # （博通：母公司净利 2019 停报、普通股可分配净利 2024-02 停报，含少数股东净利 2018 后与之逐位相同，但早年合伙架构差 5%）
+            rec = ov[-8:]
+            if base and len(rec) >= 4 and st.median(rec) <= tol:
+                lo = ok_[-8:][0]; out = dict(base); out.update({k: v for k, v in extra.items() if k > lo and k not in base})   # 09-27 改：最近一致窗口内的空档也补（好市多含少数股东权益 2024-09 与 2025-08 之间停报三季），窗口前的历史照旧不动
+                return dict(sorted(out.items()))
+            return base
+    out = dict(extra); out.update(base); return dict(sorted(out.items()))
+
+# 补缺顺序：含少数股东净利与母公司净利对得上时先用它（口径＝优先股分红前），对不上再退到普通股可分配净利（博通 2020：29.60 亿 vs 26.63 亿）
+NI_FILL_ORDER = ["NetIncomeLoss", "ProfitLoss", "NetIncomeLossAvailableToCommonStockholdersBasic"]
+EQ_FILL_ORDER = ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]
+
+def fill_ni(F, NI, ni_tag):
+    """净利：pick_one 选出的主标签之外，按 NI_FILL_ORDER 接备用标签（站点 build 与 Pro 包 sec_financials 共用，2026-09-28 从 build 内提出）。"""
+    for tg in NI_FILL_ORDER:
+        if tg != ni_tag: NI = fill_series(NI, quarterly(F, [tg], "USD"), 0.02)
+    return NI
+
+def fill_eq(F, EQ, eq_tag):
+    """总权益：同上，时点科目。"""
+    for tg in EQ_FILL_ORDER:
+        if tg != eq_tag: EQ = fill_series(EQ, instant(F, [tg], "USD"), 0.02)
+    return EQ
+
 def build(t, prev, src, do_stitch=True):
     B = prev or {}; flags = []
     F = src.facts(t)
@@ -500,26 +531,10 @@ def build(t, prev, src, do_stitch=True):
     EQ, eq_tag = pick_one(F, ["StockholdersEquity","StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], "USD", "i", prefer_last=True)
     SHi = I(SH_INST, "shares"); SHd = quarterly(F, SH_DUR, "shares", derive=False); CASH = I(CASH_TAGS)
     SHi = {k: v for k, v in SHi.items() if v and v > 0}; SHd = {k: v for k, v in SHd.items() if v and v > 0}   # 多类别股汇总层会记 0（Robinhood 2021）：0 股当缺，不当「没有市净率」
-    def fill(base, extra, tol=None):
-        """base 优先；extra 只补 base 缺的季度。tol：两者重叠季中位偏差超过 tol 就不补（口径不同，如含少数股东损益）。"""
-        if not extra: return base
-        if tol is not None:
-            ok_ = [k for k in sorted(base) if k in extra and base[k]]; ov = [abs(extra[k] / base[k] - 1) for k in ok_]
-            if ov and st.median(ov) > tol:
-                # 全部重叠不达标时只许「往后接」：最近 8 个重叠季口径一致，才补基准末期之后的季度，历史选择一律不动
-                # （博通：母公司净利 2019 停报、普通股可分配净利 2024-02 停报，含少数股东净利 2018 后与之逐位相同，但早年合伙架构差 5%）
-                rec = ov[-8:]
-                if base and len(rec) >= 4 and st.median(rec) <= tol:
-                    lo = ok_[-8:][0]; out = dict(base); out.update({k: v for k, v in extra.items() if k > lo and k not in base})   # 09-27 改：最近一致窗口内的空档也补（好市多含少数股东权益 2024-09 与 2025-08 之间停报三季），窗口前的历史照旧不动
-                    return dict(sorted(out.items()))
-                return base
-        out = dict(extra); out.update(base); return dict(sorted(out.items()))
+    fill = fill_series      # 2026-09-28：原本就地定义的补缺函数提到模块层（Pro 包要调同一份），函数体一字未改
     for tg in EPS_TAGS:
         if tg != eps_tag: EPS = fill(EPS, quarterly(F, [tg], "USD/shares"), 0.02)
-    for tg in ["NetIncomeLoss", "ProfitLoss", "NetIncomeLossAvailableToCommonStockholdersBasic"]:   # 补缺顺序：含少数股东净利与母公司净利对得上时先用它（口径＝优先股分红前），对不上再退到普通股可分配净利（博通 2020：29.60 亿 vs 26.63 亿）
-        if tg != ni_tag: NI = fill(NI, quarterly(F, [tg], "USD"), 0.02)
-    for tg in ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]:
-        if tg != eq_tag: EQ = fill(EQ, instant(F, [tg], "USD"), 0.02)
+    NI = fill_ni(F, NI, ni_tag); EQ = fill_eq(F, EQ, eq_tag)
     # XBRL 起点：该公司第一份带结构化数据的定期报告的本期末。之前的期在 XBRL 里只是后来年报的比较数（可能已重述）。
     cur = [a["end"] for tg in ("NetIncomeLoss", "ProfitLoss", "EarningsPerShareDiluted") for a in _tag_recs(F, tg, "USD" if tg != "EarningsPerShareDiluted" else "USD/shares")
            if "start" in a and a.get("form", "").startswith(("10-Q", "10-K")) and "filed" in a and 0 <= (_d(a["filed"]) - _d(a["end"])).days <= 120]

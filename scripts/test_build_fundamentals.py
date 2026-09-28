@@ -205,6 +205,17 @@ def main():
     r2 = eh.quarterly(fx({"RevenueFromContractWithCustomerIncludingAssessedTax": 110,
                           "RevenueFromContractWithCustomerExcludingAssessedTax": 100}), eh.REV_TAGS, "USD")
     check("revenue merge: ExcludingAssessedTax wins when both tax variants exist", r2.get("2019-03-31") == 100)
+    # 2026-09-28：补缺函数提到模块层（fill_series / fill_ni），Pro 包与站点共用。锁博通形状：主标签停报后，
+    #   备用标签最近 8 个重叠季一致才往后接；早年差 5% 的历史不动；最近几季也对不上就一季都不接。
+    #   样本要让「整体中位差 > 容差」成立（早年 16 季差 5%、最近 8 季一致），否则走的是普通补缺，测不到往后接那条分支。
+    base = {f"20{y}-{m}": 100.0 for y in range(14, 20) for m in ("03-31", "06-30", "09-30", "12-31")}
+    alt = {k: (v * 1.05 if k < "2018" else v) for k, v in base.items()}
+    alt.update({"2020-03-31": 120.0, "2020-06-30": 121.0})
+    got = eh.fill_series(base, alt, 0.02)
+    check("fill: backup tag continues past the base's last quarter when the recent 8 overlaps agree (Broadcom shape)",
+          got.get("2020-06-30") == 121.0 and got["2014-03-31"] == 100.0)
+    bad = {k: v * 1.05 for k, v in base.items()}; bad["2020-03-31"] = 120.0
+    check("fill: backup tag that disagrees recently is not appended", "2020-03-31" not in eh.fill_series(base, bad, 0.02))
     print("pass" if not FAILS else f"FAIL {len(FAILS)}")
     return 1 if FAILS else 0
 
