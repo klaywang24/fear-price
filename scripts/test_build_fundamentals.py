@@ -221,10 +221,13 @@ def main():
     import tempfile as _tf
     _d = _tf.mkdtemp(); _old = os.environ.get("RUNNER_TEMP"); os.environ["RUNNER_TEMP"] = _d
     try:
+        import contextlib, io   # 收掉 check_carried 打印的 ::error::，否则 Actions 会把这个故意喂的样本当成真错误标红（09-28 首跑实见）
         json.dump({"TSM": ["pe", "eps"]}, open(os.path.join(_d, "fund_carried.json"), "w"))
-        check("check_carried: one single-source ticker carried fails the job", bf.check_carried(5) == 1)
+        with contextlib.redirect_stdout(io.StringIO()): _rc = bf.check_carried(5)
+        check("check_carried: one single-source ticker carried fails the job", _rc == 1)
         json.dump({"AAPL": ["pe"], "MC.PA": ["pe"]}, open(os.path.join(_d, "fund_carried.json"), "w"))
-        check("check_carried: one ordinary ticker carried stays under the limit", bf.check_carried(5) == 0)
+        with contextlib.redirect_stdout(io.StringIO()): _rc = bf.check_carried(5)
+        check("check_carried: one ordinary ticker carried stays under the limit", _rc == 0)
     finally:
         if _old is None: os.environ.pop("RUNNER_TEMP", None)
         else: os.environ["RUNNER_TEMP"] = _old
