@@ -1,19 +1,19 @@
 {
  "series": {
   "VIXHY": {
-   "through": "09/30/2026",
-   "rows": 3713,
-   "sha": "ee617709af3cb747c85b5d12cdb134ed7d3ef04a2b2434dd33f80bb99ab4e2bf",
+   "through": "10/01/2026",
+   "rows": 3714,
+   "sha": "94acb8e81681cad5f53be77bfe75eb6301ff31360f42a8962f0bda4983a2dc63",
    "source": "cboe-json-v1"
   },
   "VIXIG": {
-   "through": "09/30/2026",
-   "rows": 3706,
-   "sha": "0535a3068209139b40b2786b10993ebd7fc4ad4fb4cf12385a2ee74a4e3c25cf",
+   "through": "10/01/2026",
+   "rows": 3707,
+   "sha": "59133f2b91c5c528023abb32fac7817bd9d89e3d592cecaf44fe0f07ae2fdaa0",
    "source": "cboe-json-v1"
   }
  },
- "updated": "2026-10-01T19:00:51+00:00",
+ "updated": "2026-10-02T18:40:14+00:00",
  "archived": {
   "VIXHY": {
    "through": "08/14/2026",
