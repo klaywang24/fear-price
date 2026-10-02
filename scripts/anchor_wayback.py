@@ -334,7 +334,7 @@ def snapshot_age_days(snap: dict | None) -> int | None:
     return (datetime.now(timezone.utc) - t).days
 
 
-# ── 🆕 新生网址宽限（2026-10-01 22:5x EDT · Klay 拍板「改」）────────────────────
+# ── 🆕 新生网址宽限（2026-10-01 22:2x EDT 拍板·22:31 落地 · Klay「改」）────────────────────
 # 【病】当日 commit 页是**今天才出生的网址**。别的 8 个网址都有旧快照兜着 3 天 SLA，
 #   它没有：提交后 6 秒就探，IA 还没收录 ⇒ probe=none ⇒ 当场算「超期」报红。
 #   实证：09-30 至 10-01 health_log 三次「锚定日志」红，10-01 那次 save_http=200、只是没收录完；
