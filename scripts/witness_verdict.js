@@ -30,6 +30,14 @@
         return { status: "bad", names: [],
           detail: `${rec.date} 记录自相矛盾：顶层聚合 SLA内${nOk}/超期${nOut}/未测${nUnk}，按明细重算 ${rOk}/${rOut}/${rUnk} —— 生产端或判据漂移，先查谁改了` };
     }
+    // 🆕 2026-10-01：新生网址宽限的兜底——补探队列里拖过 3 天仍没收录的，红（与 python 同改）
+    const nOver = rec.pending_overdue || 0;
+    if (nOver > 0) {
+      const names = (rec.pending_overdue_urls || []).map(u => (u || "?").replace("https://", "").slice(0, 52));
+      return { status: "bad", names,
+        detail: `${rec.date} 锚定：补探队列里 ${nOver} 个网址超过 3 天仍未被 IA 收录 —— 超期的是：${names.join("、") || "（记录里没有逐条明细）"}` };
+    }
+    const nAwait = res.filter(r => r.awaiting_index).length;
     const nm = r => {
       let s = (r.url || "?").replace("https://", "").slice(0, 52);
       if (r.spn_status === "success" && r.spn_timestamp) s += `（当轮已存 ${r.spn_timestamp}·等 IA 索引，非漏存）`;
@@ -56,7 +64,8 @@
       return { status: "unknown", names: [],
         detail: `${rec.date} 锚定记录里一个在 SLA 内的存档都没有（计数全 0 或无明细）—— 判不了，不算正常` };
     }
-    return { status: "ok", names: [], detail: `${rec.date} 锚定正常，${nOk} 个存档全部在 SLA 内` + saveNote() };
+    return { status: "ok", names: [], detail: `${rec.date} 锚定正常，${nOk} 个存档全部在 SLA 内`
+      + (nAwait ? `（其中 ${nAwait} 个是今日新网址·已提交·等 IA 收录，3 天宽限）` : "") + saveNote() };
   }
   return { anchorVerdict };
 });

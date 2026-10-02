@@ -203,6 +203,15 @@ def anchor_verdict(rec: dict, age: int | None) -> dict:
                     "detail": (f"{rec.get('date')} 记录自相矛盾：顶层聚合 SLA内{n_ok}/超期{n_out}/未测{n_unk}，"
                                f"按明细重算 {r_ok}/{r_out}/{r_unk} —— 生产端或判据漂移，先查谁改了")}
 
+    # 🆕 2026-10-01：新生网址宽限的兜底——补探队列里拖过 3 天仍没收录的，红（与看板 JS 同改）
+    n_over = rec.get("pending_overdue") or 0
+    if n_over > 0:
+        urls = [u.replace("https://", "")[:52] for u in (rec.get("pending_overdue_urls") or [])]
+        return {"status": "bad", "age": age,
+                "detail": (f"{rec.get('date')} 锚定：补探队列里 {n_over} 个网址超过 3 天仍未被 IA 收录 —— 超期的是："
+                           + ("、".join(urls) or "（记录里没有逐条明细）"))}
+    n_await = sum(1 for r in res if r.get("awaiting_index"))
+
     def _names(pred):
         out = []
         for r in res:
@@ -236,7 +245,9 @@ def anchor_verdict(rec: dict, age: int | None) -> dict:
         return {"status": "unknown", "age": age,
                 "detail": f"{rec.get('date')} 锚定记录里一个在 SLA 内的存档都没有（计数全 0 或无明细）—— 判不了，不算正常"}
     return {"status": "ok", "age": age,
-            "detail": f"{rec.get('date')} 锚定正常，{n_ok} 个存档全部在 SLA 内" + _save_note(rec)}
+            "detail": (f"{rec.get('date')} 锚定正常，{n_ok} 个存档全部在 SLA 内"
+                       + (f"（其中 {n_await} 个是今日新网址·已提交·等 IA 收录，3 天宽限）" if n_await else "")
+                       + _save_note(rec))}
 
 
 def check_anchor_log() -> dict:

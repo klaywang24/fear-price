@@ -1,5 +1,5 @@
 {
- "_what": "见证链体检「锚定日志」判据的固定样本（2026-09-23 建）。python 与看板 JS 两个实现都必须过同一份；改判据先改这里。每条 expect 是必须给出的 status。",
+ "_what": "见证链体检「锚定日志」判据的固定样本（2026-09-23 建）。python 与看板 JS 两个实现都必须过同一份；改判据先改这里。每条 expect 是必须给出的 status。 2026-10-01 加 3 条：新生网址宽限一正两负（awaiting_index / pending_overdue）。",
  "_why": "这道闸 2026-09-23 前只读 results[0]、连报 8 天绿；建成时没有负向样本，「它在看正确的字段」从未被证明过。第一条样本就是那次事故的形状。",
  "cases": [
   {
@@ -160,6 +160,81 @@
     "out_of_sla": 0,
     "not_probed": 0,
     "results": []
+   }
+  },
+  {
+   "name": "正向·今日新 commit 页已提交(200)但 IA 未收录 ⇒ 宽限内不红（2026-10-01 f8748fd 原形，修前此形状判红）",
+   "age": 0,
+   "expect": "ok",
+   "rec": {
+    "date": "2026-10-01",
+    "within_sla": 2,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "pending_overdue": 0,
+    "results": [
+     {
+      "url": "https://chronicle.klay-wang.com/data/ledger_hashes.jsonl",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://github.com/klaywang24/fear-price/commit/f8748fd5208d2cb7d0040ef9624de2b284c6618c",
+      "probe": "none",
+      "within_sla": true,
+      "awaiting_index": true,
+      "save_http": 200
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·今日新 commit 页提交失败(-1) ⇒ 当天红（2026-09-30 eeac00a 原形，宽限不覆盖提交失败）",
+   "age": 0,
+   "expect": "bad",
+   "expect_named": 1,
+   "rec": {
+    "date": "2026-09-30",
+    "within_sla": 1,
+    "out_of_sla": 1,
+    "not_probed": 0,
+    "pending_overdue": 0,
+    "results": [
+     {
+      "url": "https://chronicle.klay-wang.com/data/ledger_hashes.jsonl",
+      "probe": "ok",
+      "within_sla": true
+     },
+     {
+      "url": "https://github.com/klaywang24/fear-price/commit/eeac00abeefa2645535dc87468a52d8391d4e346",
+      "probe": "none",
+      "within_sla": false,
+      "save_http": -1
+     }
+    ]
+   }
+  },
+  {
+   "name": "负向·当日 9 个全绿但补探队列有 1 个拖过 3 天未收录 ⇒ 红（宽限的兜底，缺它宽限＝放过）",
+   "age": 0,
+   "expect": "bad",
+   "expect_named": 1,
+   "rec": {
+    "date": "2026-10-04",
+    "within_sla": 1,
+    "out_of_sla": 0,
+    "not_probed": 0,
+    "pending_overdue": 1,
+    "pending_overdue_urls": [
+     "https://github.com/klaywang24/fear-price/commit/eeac00abeefa2645535dc87468a52d8391d4e346"
+    ],
+    "results": [
+     {
+      "url": "https://chronicle.klay-wang.com/data/ledger_hashes.jsonl",
+      "probe": "ok",
+      "within_sla": true
+     }
+    ]
    }
   }
  ]

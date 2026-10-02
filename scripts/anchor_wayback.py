@@ -334,6 +334,39 @@ def snapshot_age_days(snap: dict | None) -> int | None:
     return (datetime.now(timezone.utc) - t).days
 
 
+# ── 🆕 新生网址宽限（2026-10-01 22:5x EDT · Klay 拍板「改」）────────────────────
+# 【病】当日 commit 页是**今天才出生的网址**。别的 8 个网址都有旧快照兜着 3 天 SLA，
+#   它没有：提交后 6 秒就探，IA 还没收录 ⇒ probe=none ⇒ 当场算「超期」报红。
+#   实证：09-30 至 10-01 health_log 三次「锚定日志」红，10-01 那次 save_http=200、只是没收录完；
+#   IA 收录快的日子就绿 ⇒ 红绿随 IA 速度抖动，**同一把 3 天尺子唯独对它是 0 天**。
+# 【修】只对「今天出生 + 本轮提交成功(2xx)」的网址：探不到算 SLA 内并标 awaiting_index，
+#   同时排进补探队列；**提交失败照旧当天红**（09-30 eeac00a 那种 save_http=-1 是真没存上）。
+# 【兜底】队列里 since 起超过 STALE_DAYS 天仍没收录的 ⇒ pending_overdue 计数 ⇒ 体检报红。
+#   ⇒ 对新网址的要求与老网址同一把尺子：3 天内必须能在 IA 公开查到，否则红。
+# 🚫 不看 SPN 回执改判定（上方 _spn_status 注释的规矩不变）：宽限只认「网址年龄」与「提交 HTTP 码」。
+def classify(probe: str, age: int | None, save_code, born_today: bool) -> tuple[bool, bool]:
+    """→ (within_sla, awaiting_index)。纯函数，selftest 直接喂。"""
+    if age is not None and age <= STALE_DAYS:
+        return True, False
+    if (born_today and probe == "none"
+            and isinstance(save_code, int) and 200 <= save_code < 300):
+        return True, True
+    return False, False
+
+
+def overdue_pending(pending: list, today: str) -> list:
+    """队列里自 since 起已超过 STALE_DAYS 天（日历日）仍未离队的条目。"""
+    t = datetime.strptime(today, "%Y-%m-%d")
+    out = []
+    for e in pending:
+        try:
+            if (t - datetime.strptime(e.get("since", ""), "%Y-%m-%d")).days > STALE_DAYS:
+                out.append(e)
+        except ValueError:
+            out.append(e)          # since 解析不出 ⇒ 判不了年龄，宁报不漏
+    return out
+
+
 def _selftest() -> int:
     """补探队列的纯逻辑自检（零网络）。双向：该离队的必须离队，该留的必须留。
 
@@ -379,6 +412,18 @@ def _selftest() -> int:
         len([x for x in [{"url": "y", "attempts": ZOMBIE_ATTEMPTS - 1}]
              if x["attempts"] >= ZOMBIE_ATTEMPTS]), 0)
 
+    # 🆕 2026-10-01 新生网址宽限（正向 1 + 负向 4，全取自 09-30/10-01 真实形状）
+    chk("正·今日新网址+提交200+探不到 ⇒ SLA 内且等收录(10-01 f8748fd)",
+        classify("none", None, 200, True), (True, True))
+    chk("负·今日新网址+提交失败-1 ⇒ 当天红(09-30 eeac00a)",
+        classify("none", None, -1, True), (False, False))
+    chk("负·老网址探不到 ⇒ 不给宽限", classify("none", None, 200, False), (False, False))
+    chk("负·老网址快照 8 天 ⇒ 超期(09-23 /kapx)", classify("ok", 8, 200, False), (False, False))
+    chk("负·队列 since 09-27、今天 10-01（4 天）⇒ 逾期必须点名",
+        len(overdue_pending([{"url": "c", "since": "2026-09-27"}], "2026-10-01")), 1)
+    chk("正·队列 since 09-28（3 天）⇒ 仍在宽限内",
+        len(overdue_pending([{"url": "c", "since": "2026-09-28"}], "2026-10-01")), 0)
+
     print(f"\n队列自检 {ok} 过 / {bad} 败")
     return 1 if bad else 0
 
@@ -396,6 +441,7 @@ def main() -> int:
     # 此前按 UTC 写 ⇒ 美东晚 8 点后手跑会差一天，同 anchor_hashes 的病）
     today = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
     results, fresh, stale, unknown = [], 0, 0, 0
+    born = {f"https://github.com/klaywang24/fear-price/commit/{args.sha}"} if args.sha else set()
 
     for u in targets(args.sha):
         code = None
@@ -404,7 +450,7 @@ def main() -> int:
             time.sleep(6)
         probe, snap = latest_snapshot(u)
         age = snapshot_age_days(snap)
-        ok = age is not None and age <= STALE_DAYS
+        ok, awaiting = classify(probe, age, code, u in born)
         if probe == "unknown":
             unknown += 1
         elif ok:
@@ -413,10 +459,12 @@ def main() -> int:
             stale += 1
         results.append({"url": u, "save_http": code, "probe": probe,
                         "confirmed_age_days": age, "within_sla": ok,
+                        **({"awaiting_index": True} if awaiting else {}),
                         **dict(LAST_SPN), **(snap or {})})
-        mark = {"unknown": "❔", "none": "🔴"}.get(probe, "✅" if ok else "🟡")
+        mark = "⏳" if awaiting else {"unknown": "❔", "none": "🔴"}.get(probe, "✅" if ok else "🟡")
         ts = (f"{snap['timestamp']}（{age} 天前）" if snap
-              else ("这次没测到" if probe == "unknown" else "确实无快照"))
+              else ("这次没测到" if probe == "unknown"
+                    else ("今日新网址·已提交·等 IA 收录（3 天宽限）" if awaiting else "确实无快照")))
         print(f"  {mark} {u[-52:]:<52} save={code} 已确认快照={ts}")
 
     # ⚠️ 字段语义：save_http = 今天这次调用；confirmed_* = 此刻已完成并可查的快照，
@@ -424,7 +472,10 @@ def main() -> int:
     # ── 补探队列：入队 → 预算内补探 → 回写（详见 PENDING 上方注释）──
     pend = _load_pending()
     for r in results:
-        if r["probe"] != "unknown" and not r["within_sla"]:
+        if r.get("awaiting_index"):
+            # 宽限不是放过：排进队列，后续每轮补探；3 天内没收录 ⇒ pending_overdue ⇒ 红
+            enqueue(pend, r["url"], today, "今日新网址·已提交·等收录")
+        elif r["probe"] != "unknown" and not r["within_sla"]:
             enqueue(pend, r["url"], today,
                     "确实无快照" if r["probe"] == "none"
                     else f"超期 {r.get('confirmed_age_days')} 天")
@@ -463,6 +514,8 @@ def main() -> int:
     pend["pending"] = [e for e in pend["pending"] if e["url"] not in _done]
     pend["resolved_recent"] = (resolved + pend.get("resolved_recent", []))[:20]
     zombies = [e for e in pend["pending"] if int(e.get("attempts", 0)) >= ZOMBIE_ATTEMPTS]
+    # 当轮刚入队的新生网址 since=today，不会落进这里；只有拖过 3 天的才算
+    overdue = overdue_pending(pend["pending"], today)
     pend.update({
         "_what": "锚定补探队列：当轮「确实无快照/已超期」的 URL 排这里，以后每轮回头补探+重提交。"
                  "**必须进 git** —— CI 每次都是全新机器，不入仓则重试只存在于当轮的想象里。",
@@ -494,6 +547,9 @@ def main() -> int:
            #    补 probed/retried/skipped 三个数，让「它动过」这件事进入可查的产物。
            "pending_len": len(pend["pending"]), "pending_resolved": len(resolved),
            "pending_zombies": len(zombies),
+           # 🆕 2026-10-01：新生网址宽限的兜底——体检读它，>0 即红（见 classify 上方注释）
+           "pending_overdue": len(overdue),
+           "pending_overdue_urls": [e["url"] for e in overdue],
            "pending_probed": min(len(queue), RETRY_BUDGET),
            "pending_retried": retried, "pending_skipped": skipped,
            "results": results}
