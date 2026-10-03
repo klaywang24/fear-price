@@ -828,13 +828,21 @@ def baseline_feed():
     p = os.path.join(REPO, "feed.xml")
     return (open(p, encoding="utf-8").read() if os.path.exists(p) else ""), "feed.xml(磁盘·取不到 git)"
 
-def shrink_check(new_slugs, baseline_xml, cap=FEED_CAP):
+def shrink_check(new_slugs, baseline_xml, cap=FEED_CAP, produced=None):
     """缩水闸：返回「上线版有、这次没有」的 slug 列表。空＝放行。
     🔴 2026-09-03 立：源被搬走（08-26 冻结源重编号 / 09-03 日夹按月归档）时生成器只会少出、不会报错；
     少出的产物照样有实质 diff ⇒ 22:40 那班照样提交上线（fbd53e16 / bff56e82 两次实犯）。
-    窗口已满（≥cap 条）时被挤出窗口的最老条目不算缩水。真要删条目走 --allow-shrink。"""
+    窗口已满（≥cap 条）时被挤出窗口的最老条目不算缩水。真要删条目走 --allow-shrink。
+
+    🔧 2026-10-02 22:5x EDT 改（Klay 令「治本」）：传 `produced`（本次**实际生成出来的全部页面**）时，
+       判据改成「上线版有、本次根本没生成」。闸要防的是源丢了导致页面出不来，不是条目滑出 RSS 窗口。
+       旧判据按日期前缀认「最老被挤出」，同一天两期（07-26 日更＋本周回顾）被窗口切开时，
+       滑出去的那期与窗口最老一期同日，被误判缩水 ⇒ 10-02 22:40 整轮拒写，09-30 收官与 10-01 日更没上站，
+       且窗口已切在两期中间，不改会每晚复现。不传 produced 时保留旧判据（回放旧事故用）。"""
     new = set(new_slugs)
     miss = feed_slugs(baseline_xml) - new
+    if produced is not None:
+        return sorted(miss - set(produced))
     if len(new) >= cap and new:
         floor = min(x[:10] for x in new)
         miss = {x for x in miss if x[:10] >= floor}
@@ -853,6 +861,21 @@ def _selftest():
     w = [(datetime.date(2026, 1, 1) + datetime.timedelta(days=i)).isoformat() for i in range(61)]
     chk("合成：窗口满 60 滑一天（最老被挤出）放行", shrink_check(w[1:], mk(w[:60])) == [])
     chk("合成：窗口满 60 却少了中间一条 必红", shrink_check(w[1:30] + w[31:] + ["2026-12-31"], mk(w[:60])) == [w[30]])
+    # 2026-10-02 实犯形状：窗口最老是同一天两期，滑两格把它们切开（日更留、周报出窗）
+    #   上线版最老三条＝07-26 日更、07-26 周报、07-24（与 10-02 HEAD:feed.xml 末尾同形）；
+    #   新进两期后最老两格（07-26 周报、07-24）出窗，切点正好落在同日两期中间。
+    tie = [(datetime.date(2026, 9, 30) - datetime.timedelta(days=i)).isoformat() for i in range(57)] + \
+          ["2026-07-26", "2026-07-26-weekly", "2026-07-24"]
+    newwin = ["2026-10-02", "2026-10-01"] + tie[:58]            # 60 条：末尾是 07-26 日更
+    chk("10-02 实犯：同日两期被窗口切开、页面照常生成 ⇒ 放行（传 produced）",
+        shrink_check(newwin, mk(tie), produced=newwin + ["2026-07-26-weekly", "2026-07-24"]) == [])
+    chk("10-02 实犯：同一输入不传 produced 的旧判据确会误红（证明病因在判据）",
+        shrink_check(newwin, mk(tie)) == ["2026-07-26-weekly"])
+    chk("负向：页面根本没生成（源被搬走）⇒ 传 produced 也必红",
+        shrink_check(newwin, mk(tie), produced=newwin + ["2026-07-24"]) == ["2026-07-26-weekly"])
+    chk("负向：窗口中间一条没生成 ⇒ 传 produced 也必红",
+        shrink_check(w[1:30] + w[31:] + ["2026-12-31"], mk(w[:60]), produced=w[:30] + w[31:] + ["2026-12-31"]) == [w[30]])
+    #   （w[0] 滑出窗口但页面照常生成，所以在 produced 里；真正没生成的只有 w[30]）
     for good, bad, why in (("69110db7", "bff56e82", "09-03 日夹按月归档"),
                            ("1b9d161f", "fbd53e16", "08-26 冻结源重编号")):
         g = subprocess.run(["git", "show", f"{good}:feed.xml"], cwd=REPO, capture_output=True, text=True)
@@ -1020,7 +1043,7 @@ def main():
         # 🔴 缩水闸（2026-09-03 立）：写 feed/索引/台账之前先跟**上线版**比，少了就硬红、一个字不写。
         base_xml, base_name = baseline_feed()
         planned = [x[0] for x in sorted(done, key=lambda x: x[1], reverse=True)[:FEED_CAP]]
-        missing = shrink_check(planned, base_xml)
+        missing = shrink_check(planned, base_xml, produced=[x[0] for x in done])
         if missing and not a.allow_shrink:
             print(f"\n🔴 缩水闸：上线版（{base_name}）{len(feed_slugs(base_xml))} 条里有 {len(missing)} 条这次没出"
                   f"（本次共 {len(planned)} 条），feed/索引/台账一个字不写：\n   缺 " + "、".join(missing[:8])
