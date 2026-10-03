@@ -15,12 +15,17 @@
   {
    "url": "https://github.com/klaywang24/fear-price/commit/f8748fd5208d2cb7d0040ef9624de2b284c6618c",
    "since": "2026-10-01",
-   "attempts": 1,
+   "attempts": 2,
    "last_try": "2026-10-02",
    "why": "确实无快照"
   }
  ],
  "resolved_recent": [
+  {
+   "url": "https://github.com/klaywang24/fear-price/commit/d91b4ddb7803f523efca465960fad25efbd052ef",
+   "on": "2026-10-02",
+   "timestamp": null
+  },
   {
    "url": "https://github.com/klaywang24/fear-price/commit/cd978e3ca5f62384c701102ea5c003add3a175da",
    "on": "2026-09-25",
